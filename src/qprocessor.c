@@ -887,13 +887,18 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 					}
 					free (sky_tuple);
 				}
-				free (skyline_result_list->buffer);
-				skyline_result_list->buffer - (void**) malloc ((max_heap->size+1)*sizeof(void*));
-				memcpy (skyline_result_list->buffer, max_heap->buffer+1, max_heap->size*sizeof(void*));
-				skyline_result_list->head = 0;
-				skyline_result_list->tail = max_heap->size;
-				skyline_result_list->size = max_heap->size;
-				skyline_result_list->capacity = max_heap->size+1;
+
+				clear_queue (skyline_result_list);
+
+				while (max_heap->size) {
+					data_container_t *const before = remove_from_priority_queue (max_heap);
+					data_pair_t *const after = (data_pair_t *const) malloc (sizeof(data_pair_t));
+					insert_at_tail_of_queue (skyline_result_list,after);
+					after->dimensions = before->dimensions;
+					after->object = before->object;
+					after->key = before->key;
+					free (before);
+				}
 				delete_priority_queue (max_heap);
 			}
 
