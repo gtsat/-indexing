@@ -140,6 +140,14 @@ void handle (int fd, char const method[], char const url[], char const folder[])
 	char* request = url;
 
 	if (*request == '/') {
+
+		unsigned i = strlen(request)-1;
+		while (i && request[i] == '/') {
+			request [i--] = '\0';
+		}
+		request [i+1] = ';';
+		request [i+2] = '\0';
+
 		char* data = NULL;
 		clock_t start = clock();
 		if (!strcmp(method,"DELETE")) {
@@ -149,9 +157,6 @@ void handle (int fd, char const method[], char const url[], char const folder[])
 		}else if (!strcmp(method,"PUT")) {
 			LOG (info,"Processing insertion sub-request '%s'.\n",request);
 		}else if (!strcmp(method,"GET")) {
-			unsigned rend = strlen (request);
-			request [rend] = ';';
-			request [rend+1] = '\0';
 			data = qprocessor (request,folder);
 		}
 		clock_t end = clock();

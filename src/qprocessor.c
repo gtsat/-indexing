@@ -59,10 +59,6 @@ char* qprocessor (char command[], char const folder[]) {
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5&corn=II;";
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5/BAY.rtree?corn=II/-10;";
 	//char command[] = "/NY.rtree?corn=oo/BAY.rtree?corn=oo/NW.rtree?corn=oo/5;"
-	for (unsigned i=strlen(command)-2; command[i]=='/'; --i) {
-		command[i+1] = '\0';
-		command[i]=';';
-	}
 
 	fprintf (fptr,"%s",command);
 	rewind (fptr);
@@ -76,7 +72,6 @@ char* qprocessor (char command[], char const folder[]) {
 
 	srand48(time(NULL));
 	//pthread_rwlock_init (&server_lock,NULL);
-	server_trees = new_symbol_table (NULL,&strcompare);
 	char *buffer = NULL;
 	while (stack->size) {
 		fifo_t *const result = process_command (stack,folder);
@@ -665,6 +660,11 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 static
 tree_t* get_rtree (char const*const filepath) {
 	pthread_rwlock_rdlock (&server_lock);
+	if (server_trees == NULL) {
+		pthread_rwlock_unlock (&server_lock);
+		pthread_rwlock_wrlock (&server_lock);
+		server_trees = new_symbol_table (NULL,&strcompare);
+	}
 	tree_t* tree = get (server_trees,filepath);
 	pthread_rwlock_unlock (&server_lock);
 
