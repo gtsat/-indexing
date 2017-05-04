@@ -18,6 +18,7 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -226,15 +227,13 @@ typedef struct {
 
 	size_t indexed_records;
 
-	unsigned dimensions;
+	size_t leaf_entries;
+	size_t internal_entries;
 
 	unsigned tree_size;
-
 	unsigned page_size;
 
-	unsigned leaf_entries;
-	unsigned internal_entries;
-
+	unsigned char dimensions;
 	boolean is_dirty;
 } tree_t;
 
@@ -281,7 +280,7 @@ typedef struct {
 	index_t* key;
 	object_t object;
 
-	unsigned dimensions;
+	unsigned char dimensions;
 } data_pair_t;
 
 typedef struct {
@@ -290,7 +289,7 @@ typedef struct {
 
 	double sort_key;
 
-	unsigned dimensions;
+	unsigned char dimensions;
 } data_container_t ;
 
 typedef struct {
@@ -341,8 +340,8 @@ typedef struct {
 
 	double sort_key;
 
-	unsigned dimensions;
-	unsigned cardinality;
+	unsigned char dimensions;
+	unsigned char cardinality;
 } multibox_container_t;
 
 typedef struct {
@@ -351,8 +350,8 @@ typedef struct {
 
 	double sort_key;
 
-	unsigned dimensions;
-	unsigned cardinality;
+	unsigned char dimensions;
+	unsigned char cardinality;
 } multidata_container_t;
 
 
@@ -415,12 +414,20 @@ enum message_t {info=1,warn,error};
 
 #define logging warn 
 
-#define LOG(level,message...)	if (logging<=level)\
+#define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\
-				case info: fprintf(stderr," ** INFO - "message);break;\
-				case warn: fprintf(stderr," ** WARNING - "message);break;\
-				case error: fprintf(stderr," ** ERROR - "message);break;\
-				default: fprintf(stderr," "message);\
+				case info:\
+					fprintf(stderr," ** INFO - "message);\
+					break;\
+				case warn: \
+					fprintf(stderr," ** WARNING - "message);\
+					break;\
+				case error: \
+					fprintf(stderr," ** ERROR - "message);\
+					break;\
+				default: \
+					fprintf(stderr," "message);\
+				}\
 				}
 
 /** LOGGING DEFINITIONS END **/

@@ -51,8 +51,8 @@ boolean INDEX_BOXES;
 
 static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"Content-type: text/json\n\n"
-					"{\n\t\"status\": \"SUCCESS\",\n"
-					"\t\"message\": \"UNDER CONSTRUCTION.\",\n"
+					"{\n\t\"status\": \"%s\",\n"
+					"\t\"message\": \"%s.\",\n"
 					"\t\"proctime\": %u,\n"
 					"\t\"data\": ";
 
@@ -161,8 +161,22 @@ void handle (int fd, char const method[], char const url[], char const folder[])
 		}
 		clock_t end = clock();
 
+		boolean free_data;
+		char *result_code;
+		char *result_message;
+		if (data != NULL) {
+			free_data = true;
+			result_code = "SUCCESS";
+			result_message = "Successful execution";
+		}else{
+			free_data = false;
+			data = " null\n";
+			result_code = "FAILURE";
+			result_message = "Syntax error";
+		}
+
 		char response[BUFSIZ];
-		snprintf (response,sizeof(response),ok_response,((end-start)*1000/CLOCKS_PER_SEC));
+		snprintf (response,sizeof(response),ok_response,result_code,result_message,((end-start)*1000/CLOCKS_PER_SEC));
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
@@ -170,7 +184,8 @@ void handle (int fd, char const method[], char const url[], char const folder[])
 		if (write (fd,data,strlen(data)*sizeof(char)) < strlen(data)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
-		free (data);
+
+		if (free_data) free (data);
 
 		char body_end[] = "}\n";
 

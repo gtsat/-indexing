@@ -28,7 +28,7 @@
 #include"rtree.h"
 #include"defs.h"
 
-#define MEMORY_BOUND 1<<10
+#define MEMORY_BOUND 1<<16
 
 extern FILE* yyin;
 extern FILE* yyout;
@@ -73,6 +73,11 @@ char* qprocessor (char command[], char const folder[]) {
 	//pthread_rwlock_init (&server_lock,NULL);
 	while (stack->size) {
 		fifo_t *const result = process_command (stack,folder);
+
+		if (result == NULL) {
+			delete_stack (stack);
+			return NULL;
+		}
 
 		unsigned long buffer_size = BUFSIZ<<1;
 		buffer = (char *const) malloc (sizeof(char)*buffer_size);
@@ -267,9 +272,9 @@ char* qprocessor (char command[], char const folder[]) {
 		free (entry);
 	}
 	delete_symbol_table (server_trees);
-*/
-	pthread_rwlock_destroy (&server_lock);
 
+	pthread_rwlock_destroy (&server_lock);
+*/
 	return buffer;
 }
 
@@ -288,7 +293,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"QUERY PROCESSOR WAS EXPECTING THE START OF A NEW COMMAND... \n");
 			clear_stack(stack);
-			return new_queue();
+			return NULL;
 		}
 
 		boolean is_closest_pairs_operation = false;
@@ -306,8 +311,13 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 		lifo_t *const subq_trees = new_stack();
 		while (stack->size && peek_at_stack (stack) == (void*)'/') {
 			tree_t *const subq_tree = process_subquery (stack,folder);
-			insert_into_stack (subq_trees,subq_tree);
-			LOG (info,"Processed subquery returned %u tuples. \n",subq_tree->indexed_records);
+			if (subq_tree == NULL) {
+				delete_stack (subq_trees);
+				return NULL;
+			}else{
+				insert_into_stack (subq_trees,subq_tree);
+				LOG (info,"Processed subquery returned %u tuples. \n",subq_tree->indexed_records);
+			}
 		}
 
 
@@ -428,7 +438,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 		delete_stack (subq_trees);
 
 		return result;
-	}else return new_queue();
+	}else return NULL;
 }
 
 
@@ -679,6 +689,7 @@ tree_t* get_rtree (char const*const filepath) {
 		}
 		return tree;
 	}else{
+		pthread_rwlock_unlock (&server_lock);
 		return NULL;
 	}
 }
@@ -921,7 +932,8 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 		return result_tree;
 	}else{
 		LOG (info,"WAS EXPECTING THE START OF A NEW SUBQUERY... \n");
-		return new_queue();
+		clear_stack (stack);
+		return NULL;
 	}
 }
 
