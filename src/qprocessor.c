@@ -33,25 +33,22 @@
 extern FILE* yyin;
 extern FILE* yyout;
 
-//int yyparse (void);
-
-lifo_t* stack;
-
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
-
 
 static tree_t* process_subquery (lifo_t *const, char const folder[]);
 static fifo_t* process_command (lifo_t *const, char const folder[]);
 static fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static tree_t* create_temp_rtree (fifo_t *const partial_result, unsigned const page_size, unsigned const dimensions);
+static tree_t* get_rtree (char const*const filepath);
 static int strcompare (key__t x, key__t y) {
 	return strcmp ((char const*const)x,(char const*const)y);
 }
 
 
 char* qprocessor (char command[], char const folder[]) {
+	get_rtree (NULL);
 	unlink ("/tmp/cached_command.txt");
 	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
 	//char command[] = "/NY.rtree?key=41.127369,-73.529746;";
@@ -63,16 +60,17 @@ char* qprocessor (char command[], char const folder[]) {
 	fprintf (fptr,"%s",command);
 	rewind (fptr);
 
-	stack = new_stack();
 	yyin = fptr;
-	yyparse();
+
+	lifo_t *const stack = new_stack();
+	yyparse(stack);
 	fclose (fptr);
 
 	//unroll(); return 0;
 
 	srand48(time(NULL));
-	//pthread_rwlock_init (&server_lock,NULL);
 	char *buffer = NULL;
+	//pthread_rwlock_init (&server_lock,NULL);
 	while (stack->size) {
 		fifo_t *const result = process_command (stack,folder);
 
@@ -80,7 +78,6 @@ char* qprocessor (char command[], char const folder[]) {
 		buffer = (char *const) malloc (sizeof(char)*buffer_size);
 		char *guard = buffer + buffer_size;
 		char* result_string = buffer;
-		char* fdptr = buffer;
 
 		unsigned rid = 0;
 		*result_string = '\0';
@@ -261,7 +258,7 @@ char* qprocessor (char command[], char const folder[]) {
 	}
 
 	delete_stack (stack);
-
+/*
 	fifo_t *const server_tree_entries = get_entries (server_trees);
 	while (server_tree_entries->size) {
 		symbol_table_entry_t *const entry = remove_tail_of_queue (server_tree_entries);
@@ -270,7 +267,7 @@ char* qprocessor (char command[], char const folder[]) {
 		free (entry);
 	}
 	delete_symbol_table (server_trees);
-
+*/
 	pthread_rwlock_destroy (&server_lock);
 
 	return buffer;
@@ -290,7 +287,8 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"QUERY PROCESSOR WAS EXPECTING THE START OF A NEW COMMAND... \n");
-			abort ();
+			clear_stack(stack);
+			return new_queue();
 		}
 
 		boolean is_closest_pairs_operation = false;
@@ -665,20 +663,24 @@ tree_t* get_rtree (char const*const filepath) {
 		pthread_rwlock_wrlock (&server_lock);
 		server_trees = new_symbol_table (NULL,&strcompare);
 	}
-	tree_t* tree = get (server_trees,filepath);
-	pthread_rwlock_unlock (&server_lock);
 
-	if (tree == NULL) {
-		pthread_rwlock_wrlock (&server_lock);
-		tree = load_rtree (filepath);
-		set (server_trees,filepath,tree);
+	if (filepath != NULL) {
+		tree_t* tree = get (server_trees,filepath);
 		pthread_rwlock_unlock (&server_lock);
-		LOG (info,"Loaded from the disk R#-Tree: '%s'\n",tree->filename);
-	}else{
-		LOG (info,"Retrieved R#-Tree: '%s'\n",tree->filename)
-	}
 
-	return tree;
+		if (tree == NULL) {
+			pthread_rwlock_wrlock (&server_lock);
+			tree = load_rtree (filepath);
+			set (server_trees,filepath,tree);
+			pthread_rwlock_unlock (&server_lock);
+			LOG (info,"Loaded from the disk R#-Tree: '%s'\n",tree->filename);
+		}else{
+			LOG (info,"Retrieved R#-Tree: '%s'\n",tree->filename)
+		}
+		return tree;
+	}else{
+		return NULL;
+	}
 }
 
 
@@ -919,7 +921,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 		return result_tree;
 	}else{
 		LOG (info,"WAS EXPECTING THE START OF A NEW SUBQUERY... \n");
-		return NULL;
+		return new_queue();
 	}
 }
 

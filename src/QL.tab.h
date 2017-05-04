@@ -30,6 +30,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
+#include "defs.h"
+
 #ifndef YY_YY_QL_TAB_H_INCLUDED
 # define YY_YY_QL_TAB_H_INCLUDED
 /* Debug traces.  */
@@ -79,6 +81,6 @@ typedef union YYSTYPE YYSTYPE;
 
 extern YYSTYPE yylval;
 
-int yyparse (void);
+int yyparse (lifo_t *const stack);
 
 #endif /* !YY_YY_QL_TAB_H_INCLUDED  */

@@ -73,19 +73,10 @@
 	int yylex (void);
 	void yyerror (char*);
 
-	void unroll (void);
+	//void unroll (void);
 
 
 	#define vsize 512
-	unsigned vindex = 0;
-	double varray [vsize];
-
-	unsigned key_cardinality;
-	unsigned predicates_cardinality;
-
-	boolean const verbose = true;
-
-	extern lifo_t* stack;
 
 #line 91 "QL.tab.c" /* yacc.c:339  */
 
@@ -156,7 +147,7 @@ typedef union YYSTYPE YYSTYPE;
 
 extern YYSTYPE yylval;
 
-int yyparse (void);
+int yyparse (lifo_t *const stack);
 
 #endif /* !YY_YY_QL_TAB_H_INCLUDED  */
 
@@ -1020,8 +1011,18 @@ int yynerrs;
 `----------*/
 
 int
-yyparse (void)
+yyparse (lifo_t *const stack)
 {
+
+	unsigned vindex = 0;
+	double varray [vsize];
+
+	unsigned key_cardinality;
+	unsigned predicates_cardinality;
+
+	boolean const verbose = true;
+
+
     int yystate;
     /* Number of tokens to shift before error messages enabled.  */
     int yyerrstatus;
