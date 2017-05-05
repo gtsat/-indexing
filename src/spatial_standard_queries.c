@@ -686,7 +686,7 @@ fifo_t* distance_join (double const theta,
 	}
 
 	unsigned const cardinality = trees->size;
-	unsigned dimensions = UINT_MAX;
+	unsigned dimensions = ULONG_MAX;
 	for (unsigned i=0; i<trees->size; ++i) {
 		if (((tree_t *const)trees->buffer[i])->dimensions < dimensions) {
 			dimensions = ((tree_t *const)trees->buffer[i])->dimensions;
@@ -906,7 +906,7 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 
 	index_t threshold = closest ? INDEX_T_MAX : -INDEX_T_MAX;
 	unsigned const cardinality = trees->size;
-	unsigned dimensions = UINT_MAX;
+	unsigned dimensions = ULONG_MAX;
 
 	for (unsigned i=0; i<trees->size; ++i) {
 		if (((tree_t*)trees->buffer[i])->dimensions < dimensions) {

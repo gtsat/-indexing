@@ -28,8 +28,8 @@ swap_t* new_swap (size_t const capacity) {
 	swap->qp = (size_t*) malloc ((1+capacity)*sizeof(size_t));
 
 	for (register size_t i=0; i<=capacity; ++i) {
-		swap->identifiers[i] = UINT_MAX;
-		swap->qp[i] = UINT_MAX;
+		swap->identifiers[i] = ULONG_MAX;
+		swap->qp[i] = ULONG_MAX;
 	}
 
 	swap->capacity = capacity;
@@ -50,8 +50,8 @@ void delete_swap (swap_t *const swap) {
 
 void clear_swap (swap_t *const swap) {
 	for (register size_t i=0; i<=swap->capacity; ++i) {
-		swap->identifiers[i] = UINT_MAX;
-		swap->qp[i] = UINT_MAX;
+		swap->identifiers[i] = ULONG_MAX;
+		swap->qp[i] = ULONG_MAX;
 	}
 	swap->size = 0;
 }
@@ -140,8 +140,8 @@ static size_t del_min (swap_t *const swap) {
 	exch (swap,1,swap->size--);
 	sink (swap,1);
 
-	swap->qp[min] = UINT_MAX;
-	swap->pq[swap->size+1] = UINT_MAX;
+	swap->qp[min] = ULONG_MAX;
+	swap->pq[swap->size+1] = ULONG_MAX;
 
 	return min;
 }
@@ -151,19 +151,19 @@ static void delete (swap_t *const swap, size_t i) {
 	exch (swap,index,swap->size--);
 	swim (swap,index);
 	sink (swap,index);
-	swap->keys[i] = UINT_MAX;
-	swap->qp[i] = UINT_MAX;
+	swap->keys[i] = ULONG_MAX;
+	swap->qp[i] = ULONG_MAX;
 
-	swap->identifiers[i-1] = UINT_MAX;
+	swap->identifiers[i-1] = ULONG_MAX;
 }
 
 static size_t get_available (swap_t const*const swap) {
 	for (register size_t i=0; i<swap->capacity; ++i) {
-		if (swap->identifiers[i] == UINT_MAX) {
+		if (swap->identifiers[i] == ULONG_MAX) {
 			return i;
 		}
 	}
-	return UINT_MAX;
+	return ULONG_MAX;
 }
 
 static size_t get_index (swap_t const*const swap, size_t const id) {
@@ -172,16 +172,16 @@ static size_t get_index (swap_t const*const swap, size_t const id) {
 			return i;
 		}
 	}
-	return UINT_MAX;
+	return ULONG_MAX;
 }
 
 boolean is_active_identifier (swap_t const*const swap, size_t const id) {
-	return get_index (swap,id) != UINT_MAX;
+	return get_index (swap,id) != ULONG_MAX;
 }
 
 void print_identifiers_priorities (swap_t const*const swap) {
 	for (register size_t i=0; i<swap->capacity; ++i) {
-		if (swap->qp[i] != UINT_MAX) {
+		if (swap->qp[i] != ULONG_MAX) {
 			LOG (info,"Identifier %u has priority %lf. \n",swap->identifiers[i],swap->keys[i+1]);
 		}
 	}
@@ -189,11 +189,11 @@ void print_identifiers_priorities (swap_t const*const swap) {
 
 boolean unset_priority (swap_t *const swap, size_t const id) {
 	size_t alias = get_index (swap,id);
-	if (alias != UINT_MAX) {
+	if (alias != ULONG_MAX) {
 		assert (alias <= swap->capacity);
-		assert (swap->qp[alias+1] != UINT_MAX);
+		assert (swap->qp[alias+1] != ULONG_MAX);
 		assert (swap->identifiers[alias] == id);
-		swap->identifiers[alias] = UINT_MAX;
+		swap->identifiers[alias] = ULONG_MAX;
 
 		delete (swap,alias+1);
 
@@ -209,15 +209,15 @@ boolean unset_priority (swap_t *const swap, size_t const id) {
 size_t set_priority (swap_t *const swap, size_t const id, double const priority) {
 	size_t alias = get_index (swap,id);
 
-	if (alias != UINT_MAX) {
+	if (alias != ULONG_MAX) {
 		assert (alias <= swap->capacity);
-		assert (swap->qp[alias+1] != UINT_MAX);
+		assert (swap->qp[alias+1] != ULONG_MAX);
 		assert (swap->identifiers[alias] == id);
 
 		increase_key (swap,alias+1,priority);
 	}else if (swap->size < swap->capacity) {
 		alias = get_available (swap);
-		assert (alias != UINT_MAX);
+		assert (alias != ULONG_MAX);
 
 		swap->identifiers[alias] = id;
 
@@ -226,7 +226,7 @@ size_t set_priority (swap_t *const swap, size_t const id, double const priority)
 		alias = del_min (swap);
 
 		size_t previous = swap->identifiers[alias-1];
-		assert (previous != UINT_MAX);
+		assert (previous != ULONG_MAX);
 		assert (previous != id);
 
 		swap->identifiers[alias-1] = id;
@@ -234,6 +234,6 @@ size_t set_priority (swap_t *const swap, size_t const id, double const priority)
 
 		return previous;
 	}
-	return UINT_MAX;
+	return ULONG_MAX;
 }
 

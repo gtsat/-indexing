@@ -500,7 +500,7 @@ static void update_boxes (tree_t *const tree, size_t page_id) {
 
 size_t counter = 0;
 size_t compute_page_priority (tree_t *const tree, size_t const page_id) {
-	//return UINT_MAX - log2(page_id) / log2(tree->internal_entries); // Lowest Level First (LLF)
+	//return ULONG_MAX - log2(page_id) / log2(tree->internal_entries); // Lowest Level First (LLF)
 	return counter++; //time(0); // LRU
 }
 
@@ -620,7 +620,7 @@ page_t* load_rtree_page (tree_t *const tree, size_t const position) {
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		assert (swapped != position);
-		if (swapped != UINT_MAX) {
+		if (swapped != ULONG_MAX) {
 			LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
 				LOG (error,"Unable to flush page %u...\n",swapped);
@@ -732,7 +732,7 @@ static void new_root (tree_t *const tree) {
 				pthread_rwlock_unlock (&tree->tree_lock);
 
 				assert (swapped != entry->key);
-				if (swapped != UINT_MAX) {
+				if (swapped != ULONG_MAX) {
 					LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,entry->key);
 					if (flush_page (tree,swapped) != swapped) {
 						LOG (error,"Unable to flush page %u...\n",swapped);
@@ -774,7 +774,7 @@ static void new_root (tree_t *const tree) {
 	size_t swapped = set_priority (tree->swap,0,compute_page_priority(tree,0));
 	assert (is_active_identifier (tree->swap,0));
 	assert (swapped);
-	if (swapped != UINT_MAX) {
+	if (swapped != ULONG_MAX) {
 		LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,0);
 		assert (LOADED_PAGE(swapped) != NULL);
 
@@ -985,10 +985,10 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 			assert (page_lock != NULL);
 			assert (parent_lock != NULL);
 
-			insert_at_tail_of_queue (inception_queue,UINT_MAX);
+			insert_at_tail_of_queue (inception_queue,ULONG_MAX);
 			do{
 				size_t inception = remove_head_of_queue (inception_queue);
-				if (inception != UINT_MAX) {
+				if (inception != ULONG_MAX) {
 					LOG (info,"TRANSPOSING PAGE IDENTIFIER %u TO %u.\n",inception,TRANSPOSE_PAGE_POSITION(inception));
 					insert_at_tail_of_queue (inception_queue,TRANSPOSE_PAGE_POSITION(inception));
 				}else break;
@@ -1138,7 +1138,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 	boolean update_flag = false;
 
 	size_t old_child=0, new_child=0, new_id=0;
-	insert_at_head_of_queue (inception_queue,UINT_MAX);
+	insert_at_head_of_queue (inception_queue,ULONG_MAX);
 	size_t inception = remove_tail_of_queue (inception_queue);
 
 	fifo_t* transposed_ids = new_queue();
@@ -1155,7 +1155,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
 					inception = remove_tail_of_queue (inception_queue);
-					if (inception != UINT_MAX) {
+					if (inception != ULONG_MAX) {
 						new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 						insert_at_head_of_queue (inception_queue,new_id);
 					}else break;
@@ -1195,7 +1195,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
 					inception = remove_tail_of_queue (inception_queue);
-					if (inception != UINT_MAX) {
+					if (inception != ULONG_MAX) {
 						new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 						insert_at_head_of_queue (inception_queue,new_id);
 					}else break;
@@ -1224,7 +1224,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 	delete_stack (lo_pages);
 	delete_stack (hi_pages);
 
-	size_t swapped = UINT_MAX;
+	size_t swapped = ULONG_MAX;
 	boolean safety_precaution = unset_priority (tree->swap,position);
 
 	priority_queue_t *const sorted_pages = new_priority_queue (&mincompare_symbol_table_entries);
@@ -1248,7 +1248,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 			assert (swapped != entry->key);
 			assert (swapped != lo_id);
 			assert (swapped != hi_id);
-			if (swapped != UINT_MAX) {
+			if (swapped != ULONG_MAX) {
 				LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,entry->key);
 				assert (LOADED_PAGE(swapped) != NULL);
 				if (flush_page (tree,swapped) != swapped) {
@@ -1290,7 +1290,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 	assert (swapped != lo_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	if (swapped != UINT_MAX) {
+	if (swapped != ULONG_MAX) {
 		LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,lo_id);
 		if (flush_page (tree,swapped) != swapped) {
 			LOG (error,"Unable to flush page %u...\n",swapped);
@@ -1304,7 +1304,7 @@ static size_t halve_internal (tree_t *const tree, size_t position, fifo_t *const
 	assert (swapped != hi_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	if (swapped != UINT_MAX) {
+	if (swapped != ULONG_MAX) {
 		LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,hi_id);
 		assert (LOADED_PAGE(swapped) != NULL);
 		if (flush_page (tree,swapped) != swapped) {
@@ -1463,10 +1463,10 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 			assert (page_lock != NULL);
 			assert (parent_lock != NULL);
 
-			insert_at_tail_of_queue (inception_queue,UINT_MAX);
+			insert_at_tail_of_queue (inception_queue,ULONG_MAX);
 			do{
 				size_t inception = remove_head_of_queue (inception_queue);
-				if (inception != UINT_MAX) {
+				if (inception != ULONG_MAX) {
 					size_t transposed_inception = TRANSPOSE_PAGE_POSITION(inception);
 					LOG (info,"TRANSPOSING PAGE IDENTIFIER %u TO %u.\n",inception,transposed_inception);
 					insert_at_tail_of_queue (inception_queue,transposed_inception);
@@ -1575,7 +1575,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 
 		fifo_t* transposed_ids = new_queue();
 
-		insert_at_head_of_queue (inception_queue,UINT_MAX);
+		insert_at_head_of_queue (inception_queue,ULONG_MAX);
 		size_t inception = remove_tail_of_queue (inception_queue);
 
 		boolean update_flag = false;
@@ -1598,7 +1598,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
 						inception = remove_tail_of_queue (inception_queue);
-						if (inception != UINT_MAX) {
+						if (inception != ULONG_MAX) {
 							new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 							insert_at_head_of_queue (inception_queue,new_id);
 						}else break;
@@ -1626,7 +1626,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
 						inception = remove_tail_of_queue (inception_queue);
-						if (inception != UINT_MAX) {
+						if (inception != ULONG_MAX) {
 							new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 							insert_at_head_of_queue (inception_queue,new_id);
 						}else break;
@@ -1688,7 +1688,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
 						inception = remove_tail_of_queue (inception_queue);
-						if (inception != UINT_MAX) {
+						if (inception != ULONG_MAX) {
 							new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 							insert_at_head_of_queue (inception_queue,new_id);
 						}else break;
@@ -1727,7 +1727,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
 						inception = remove_tail_of_queue (inception_queue);
-						if (inception != UINT_MAX) {
+						if (inception != ULONG_MAX) {
 							new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 							insert_at_head_of_queue (inception_queue,new_id);
 						}else break;
@@ -1765,7 +1765,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
 					inception = remove_tail_of_queue (inception_queue);
-					if (inception != UINT_MAX) {
+					if (inception != ULONG_MAX) {
 						new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 						insert_at_head_of_queue (inception_queue,new_id);
 					}else break;
@@ -1802,7 +1802,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
 					inception = remove_tail_of_queue (inception_queue);
-					if (inception != UINT_MAX) {
+					if (inception != ULONG_MAX) {
 						new_id = CHILD_ID(new_id,CHILD_OFFSET(inception));
 						insert_at_head_of_queue (inception_queue,new_id);
 					}else break;
@@ -1825,7 +1825,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 			delete_queue (tmp_queue);
 		}
 
-		size_t swapped = UINT_MAX;
+		size_t swapped = ULONG_MAX;
 		boolean safety_precaution = unset_priority (tree->swap,position);
 
 		priority_queue_t *const sorted_pages = new_priority_queue (&mincompare_symbol_table_entries);
@@ -1852,7 +1852,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 				assert (swapped != entry->key);
 				assert (swapped != lo_id);
 				assert (swapped != hi_id);
-				if (swapped != UINT_MAX) {
+				if (swapped != ULONG_MAX) {
 					LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,entry->key);
 					if (flush_page (tree,swapped) != swapped) {
 						LOG (error,"Unable to flush page %u...\n",swapped);
@@ -1890,7 +1890,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 		assert (swapped != lo_id);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
-		if (swapped != UINT_MAX) {
+		if (swapped != ULONG_MAX) {
 			LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,lo_id);
 			if (flush_page (tree,swapped) != swapped) {
 				LOG (error,"Unable to flush page %u...\n",swapped);
@@ -1905,7 +1905,7 @@ static size_t split_internal (tree_t *const tree, size_t position, fifo_t *const
 		assert (swapped != hi_id);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
-		if (swapped != UINT_MAX) {
+		if (swapped != ULONG_MAX) {
 			LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,hi_id);
 			assert (LOADED_PAGE(swapped) != NULL);
 			if (flush_page (tree,swapped) != swapped) {
@@ -2207,7 +2207,7 @@ static size_t split_leaf (tree_t *const tree, size_t position) {
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	assert (swapped != position);
-	if (swapped != UINT_MAX) {
+	if (swapped != ULONG_MAX) {
 		LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,position);
 		if (flush_page (tree,swapped) != swapped) {
 			LOG (error,"Unable to flush page %u...\n",swapped);
@@ -2223,7 +2223,7 @@ static size_t split_leaf (tree_t *const tree, size_t position) {
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	assert (swapped != hi_id);
-	if (swapped != UINT_MAX) {
+	if (swapped != ULONG_MAX) {
 		LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,hi_id);
 		if (flush_page (tree,swapped) != swapped) {
 			LOG (error,"Unable to flush page %u...\n",swapped);
@@ -2293,7 +2293,7 @@ static void cascade_deletion (tree_t *const tree, size_t const page_id, unsigned
 					size_t swapped = set_priority (tree->swap,entry->key,compute_page_priority(tree,entry->key));
 					assert (is_active_identifier (tree->swap,entry->key));
 					assert (swapped != entry->key);
-					if (swapped != page_id && swapped != UINT_MAX) {
+					if (swapped != page_id && swapped != ULONG_MAX) {
 						LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,entry->key);
 						assert (LOADED_PAGE(swapped) != NULL);
 						if (flush_page (tree,swapped) != swapped) {
@@ -2435,7 +2435,7 @@ static void cascade_deletion (tree_t *const tree, size_t const page_id, unsigned
 				pthread_rwlock_unlock (&tree->tree_lock);
 
 				assert (swapped != entry->key);
-				if (swapped != UINT_MAX) {
+				if (swapped != ULONG_MAX) {
 					LOG (info,"Swapping page %u for page %u from the disk.\n",swapped,entry->key);
 					if (flush_page (tree,swapped) != swapped) {
 						LOG (error,"Unable to flush page %u...\n",swapped);
@@ -2732,7 +2732,7 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 	tree->indexed_records++;
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	size_t minload = UINT_MAX;
+	size_t minload = ULONG_MAX;
 	size_t minpos = 0;
 	size_t minexp = 0;
 	page_t* minleaf = NULL;

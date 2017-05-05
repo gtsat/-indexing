@@ -98,14 +98,14 @@ COMMANDS :
 	| COMMANDS COMMAND '/' INTEGER ';'	{
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)UINT_MAX);
+						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<ival>4;
 					}
 	| COMMANDS COMMAND '/' INTEGER '/' ';'	{
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)UINT_MAX);
+						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<ival>4;
 					}

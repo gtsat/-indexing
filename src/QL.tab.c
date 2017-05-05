@@ -1332,7 +1332,7 @@ yyreduce:
     {
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)UINT_MAX);
+						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
 						varray [vindex++] = (yyvsp[-1].ival);
 					}
@@ -1344,7 +1344,7 @@ yyreduce:
     {
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)UINT_MAX);
+						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
 						varray [vindex++] = (yyvsp[-2].ival);
 					}

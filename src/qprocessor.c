@@ -451,7 +451,7 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 
 	size_t const outer_cardinality = partial_results->size;
 	size_t inner_cardinality = 0;
-	unsigned dimensions = UINT_MAX;
+	unsigned dimensions = ULONG_MAX;
 
 	for (unsigned i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];
@@ -569,7 +569,7 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 
 	size_t const outer_cardinality = partial_results->size;
 	size_t inner_cardinality = 0;
-	unsigned dimensions = UINT_MAX;
+	unsigned dimensions = ULONG_MAX;
 
 	for (unsigned i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];

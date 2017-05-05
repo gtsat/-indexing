@@ -84,7 +84,7 @@ static const size_t initial_capacity = 11;
 typedef size_t 	object_t;
 typedef float 	index_t;
 
-#define OBJECT_T_MAX 	UINT_MAX
+#define OBJECT_T_MAX 	ULONG_MAX
 #define INDEX_T_MAX 	FLT_MAX
 
 
