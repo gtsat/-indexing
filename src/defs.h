@@ -48,31 +48,31 @@ typedef struct {
 
 	int (*compare) (void const*const,void const*const);
 
-	unsigned capacity;
-	unsigned size;
+	size_t capacity;
+	size_t size;
 } priority_queue_t;
 
 typedef struct {
 	void** buffer;
 
-	unsigned capacity;
-	unsigned size;
+	size_t capacity;
+	size_t size;
 
-	unsigned head;
-	unsigned tail;
+	size_t head;
+	size_t tail;
 } fifo_t;
 
 typedef struct {
 	void** buffer;
 
-	unsigned capacity;
-	unsigned size;
+	size_t capacity;
+	size_t size;
 } lifo_t;
 
 typedef enum {false=0,true} boolean;
 
 
-static const unsigned initial_capacity = 11;
+static const size_t initial_capacity = 11;
 
 /**** BASIC DEFINITIONS END ****/
 
@@ -81,11 +81,11 @@ static const unsigned initial_capacity = 11;
 
 #define fairness_threshold 	.5
 
-typedef unsigned	object_t;
-typedef float		index_t;
+typedef size_t 	object_t;
+typedef float 	index_t;
 
-#define OBJECT_T_MAX	UINT_MAX
-#define INDEX_T_MAX	FLT_MAX
+#define OBJECT_T_MAX 	UINT_MAX
+#define INDEX_T_MAX 	FLT_MAX
 
 
 typedef struct {
@@ -140,7 +140,7 @@ typedef union {
 } node_t;
 
 typedef struct {
-	unsigned short records;
+	unsigned records;
 	unsigned char is_leaf      : 1;
 	unsigned char is_dirty     : 1;
 } header_t;
@@ -155,7 +155,7 @@ typedef struct {
 
 /*** SYMBOL-TABLE DEFINITIONS BEGIN ***/
 
-typedef unsigned long key__t;
+typedef size_t key__t;
 typedef void* value_t;
 
 typedef struct {
@@ -172,7 +172,7 @@ typedef struct tree_node  {
 	value_t value;
 	key__t key;
 
-	unsigned size;
+	size_t size;
 
 	color_t color;
 } tree_node_t;
@@ -183,7 +183,7 @@ typedef struct {
 	int (*compare) (key__t const, key__t const);
 
 	value_t default_value;
-	unsigned size;
+	size_t size;
 } symbol_table_t;
 
 /*** SYMBOL-TABLE DEFINITIONS END ***/
@@ -196,14 +196,14 @@ typedef struct {
  */
 
 typedef struct {
-	unsigned *pq;
-	unsigned *qp;
+	size_t *pq;
+	size_t *qp;
 	double *keys;
 
-	unsigned *identifiers;
+	size_t *identifiers;
 
-	unsigned size;
-	unsigned capacity;
+	size_t size;
+	size_t capacity;
 } swap_t;
 
 /*** SWAP DEFINITIONS END ***/
@@ -294,14 +294,14 @@ typedef struct {
 
 typedef struct {
 	interval_t* box;
-	unsigned id;
+	size_t id;
 
 	double sort_key;
 } box_container_t;
 
 typedef struct {
 	object_range_t* range;
-	unsigned id;
+	size_t id;
 
 	double sort_key;
 } range_container_t;
@@ -336,7 +336,7 @@ boolean dominated_box (interval_t const[],index_t const[],boolean const[],unsign
 
 typedef struct {
 	interval_t* boxes;
-	unsigned* page_ids;
+	size_t* page_ids;
 
 	double sort_key;
 

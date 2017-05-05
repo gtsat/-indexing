@@ -45,7 +45,7 @@ unsigned PAGESIZE;
 char const* DATASET;
 char const* HEAPFILE;
 
-unsigned IO_COUNTER;
+size_t IO_COUNTER;
 
 boolean INDEX_BOXES;
 
@@ -134,14 +134,14 @@ void process_arguments (int argc,char *argv[]) {
 
 
 static
-void handle (int fd, char const method[], char const url[], char const folder[]) {
+void handle (int fd, char const method[], char url[], char const folder[]) {
 	LOG (info,"Server received request: %s %s\n",method,url);
 
 	char* request = url;
 
 	if (*request == '/') {
 
-		unsigned i = strlen(request)-1;
+		size_t i = strlen(request)-1;
 		while (i && request[i] == '/') {
 			request [i--] = '\0';
 		}

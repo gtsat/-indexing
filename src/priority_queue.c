@@ -172,7 +172,7 @@ void* remove_from_priority_queue (priority_queue_t *const priority_queue) {
 }
 
 
-void* remove_priority_queue_element (priority_queue_t *const priority_queue, unsigned pos) {
+void* remove_priority_queue_element (priority_queue_t *const priority_queue, size_t const pos) {
 	if (pos && pos <= priority_queue->size) {
 		void *const element = priority_queue->buffer[pos];
 

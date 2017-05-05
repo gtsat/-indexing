@@ -15,10 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "buffer.h"
 #include "defs.h"
 
-void** adjust_buffer (void** buffer, unsigned const old_size, unsigned const new_size) {
+void** adjust_buffer (void** buffer, size_t const old_size, size_t const new_size) {
 	if (!new_size) {
 		return buffer;
 	}

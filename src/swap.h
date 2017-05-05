@@ -17,13 +17,13 @@
  * at any given time!
  */
 
-unsigned set_priority (swap_t *const, unsigned const id, double const priority);
-boolean unset_priority (swap_t *const, unsigned const id);
+size_t set_priority (swap_t *const, size_t const id, double const priority);
+boolean unset_priority (swap_t *const, size_t const id);
 
-swap_t* new_swap (unsigned const capacity);
+swap_t* new_swap (size_t const capacity);
 void delete_swap (swap_t *const);
 void clear_swap (swap_t *const);
 
-boolean is_active_identifier (swap_t const*const, unsigned const);
+boolean is_active_identifier (swap_t const*const, size_t const);
 
 #endif /* __SWAP_H__ */

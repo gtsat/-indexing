@@ -58,7 +58,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 		insert_at_tail_of_queue (browse,0);
 
 		while (browse->size) {
-			unsigned const page_id = remove_head_of_queue (browse);
+			size_t const page_id = remove_head_of_queue (browse);
 
 			page_t const*const page = load_rtree_page(tree,page_id);
 
@@ -95,7 +95,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 
 		LOG (warn,"Unable to retrieve any record associated with key ( ");
 		if (logging <= warn) {
-			for (unsigned int i=0; i<tree->dimensions; ++i)
+			for (unsigned i=0; i<tree->dimensions; ++i)
 				fprintf (stderr,"%f ",key[i]);
 			fprintf (stderr,")...\n");
 		}
@@ -138,7 +138,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 	insert_at_tail_of_queue (browse,0);
 
 	while (browse->size) {
-		unsigned const page_id = remove_head_of_queue (browse);
+		size_t const page_id = remove_head_of_queue (browse);
 
 		page_t const*const page = load_rtree_page(tree,page_id);
 
@@ -175,7 +175,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 	if (!result->size) {
 		LOG (warn,"Unable to retrieve any records associated with key ( ");
 		if (logging <= warn) {
-			for (unsigned int i=0; i<tree->dimensions; ++i) {
+			for (unsigned i=0; i<tree->dimensions; ++i) {
 				fprintf (stderr,"%f ",key[i]);
 			}
 			fprintf (stderr,")...\n");
@@ -212,7 +212,7 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 	insert_at_tail_of_queue (browse,0);
 
 	while (browse->size) {
-		unsigned const page_id = (unsigned const) remove_head_of_queue (browse);
+		size_t const page_id = remove_head_of_queue (browse);
 		page_t const*const page = load_rtree_page(tree,page_id);
 
 		pthread_rwlock_rdlock (&tree->tree_lock);
@@ -298,7 +298,7 @@ fifo_t* bounded_search (tree_t *const tree,
 			break;
 		}
 
-		unsigned const page_id = container->id;
+		size_t const page_id = container->id;
 		page_t const*const page = load_rtree_page(tree,page_id);
 
 		free (container);
@@ -429,7 +429,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 
 		while (browse->size) {
 			container = remove_from_priority_queue (browse);
-			unsigned const page_id = container->id;
+			size_t const page_id = container->id;
 
 			free (container);
 
@@ -525,7 +525,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 
 	insert_at_tail_of_queue (result_browse,0);
 	while (result_browse->size) {
-		unsigned const page_id = remove_head_of_queue (result_browse);
+		size_t const page_id = remove_head_of_queue (result_browse);
 		page_t const*const page = load_rtree_page(tree,page_id);
 
 		pthread_rwlock_rdlock (&tree->tree_lock);
@@ -700,11 +700,11 @@ fifo_t* distance_join (double const theta,
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
 	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
+	container->page_ids = (size_t*) malloc (cardinality*sizeof(size_t));
 	container->cardinality = cardinality;
 	container->dimensions = dimensions;
 
-	bzero (container->page_ids,cardinality*sizeof(unsigned));
+	bzero (container->page_ids,cardinality*sizeof(size_t));
 
 	for (unsigned i=0; i<cardinality; ++i) {
 		pthread_rwlock_rdlock (&TREE(i)->tree_lock);
@@ -723,7 +723,7 @@ fifo_t* distance_join (double const theta,
 
 		boolean all_leaves = true;
 		for (unsigned i=0; i<container->cardinality; ++i) {
-			unsigned const page_id = container->page_ids[i];
+			size_t const page_id = container->page_ids[i];
 			page_t const*const page = load_rtree_page (TREE(i),page_id);
 
 			pthread_rwlock_rdlock (&TREE(i)->tree_lock);
@@ -758,8 +758,8 @@ fifo_t* distance_join (double const theta,
 					do{
 						multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-						new_container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-						memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(unsigned));
+						new_container->page_ids = (size_t*) malloc (cardinality*sizeof(size_t));
+						memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(size_t));
 						new_container->page_ids[i] = page_id*TREE(i)->internal_entries+j+1;
 
 						new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
@@ -827,15 +827,14 @@ fifo_t* distance_join (double const theta,
 					for (unsigned j=0; j<i; ++j) {
 						pthread_rwlock_unlock (page_locks[j]);
 					}
-
 					goto reset_search_operation;
 				}
 			}
 
-			unsigned offsets [cardinality];
-			bzero (offsets,cardinality*sizeof(unsigned));
+			size_t offsets [cardinality];
+			bzero (offsets,cardinality*sizeof(size_t));
 
-			for (unsigned j=0,i=0;;++j) {
+			for (size_t j=0,i=0;;++j) {
 				if (offsets[i] >= pages[i]->header.records) {
 					offsets[i++] = 0;
 					if (i >= cardinality)
@@ -921,8 +920,8 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 	reset_search_operation:;
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-	bzero (container->page_ids,cardinality*sizeof(unsigned));
+	container->page_ids = (size_t*) malloc (cardinality*sizeof(size_t));
+	bzero (container->page_ids,cardinality*sizeof(size_t));
 
 	container->sort_key = closest ? 0 : DBL_MAX;
 	container->cardinality = cardinality;
@@ -964,7 +963,7 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 
 		boolean all_leaves = true;
 		for (unsigned i=0; i<container->cardinality; ++i) {
-			unsigned const page_id = container->page_ids[i];
+			size_t const page_id = container->page_ids[i];
 			page_t const*const page = load_rtree_page (TREE(i),page_id);
 
 			pthread_rwlock_rdlock (&TREE(i)->tree_lock);
@@ -998,8 +997,8 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 				for (register unsigned j=0; j<page->header.records; ++j) {
 					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(unsigned));
+					new_container->page_ids = (size_t*) malloc (cardinality*sizeof(size_t));
+					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(size_t));
 					new_container->page_ids[i] = page_id*TREE(i)->internal_entries+j+1;
 
 					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
@@ -1068,10 +1067,10 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 				}
 			}
 
-			unsigned offsets [cardinality];
-			bzero (offsets,cardinality*sizeof(unsigned));
+			size_t offsets [cardinality];
+			bzero (offsets,cardinality*sizeof(size_t));
 
-			for (unsigned j=0,i=0;;++j) {
+			for (size_t j=0,i=0;;++j) {
 				if (offsets[i] >= pages[i]->header.records) {
 					offsets[i++] = 0;
 					if (i >= cardinality)

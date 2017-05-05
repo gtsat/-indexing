@@ -13,7 +13,7 @@ void* peek_priority_queue (priority_queue_t const*const);
 
 void* remove_from_priority_queue (priority_queue_t *const);
 
-void* remove_priority_queue_element (priority_queue_t *const, unsigned position);
+void* remove_priority_queue_element (priority_queue_t *const, size_t const position);
 
 void insert_into_priority_queue (priority_queue_t *const, void *const);
 

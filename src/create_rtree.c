@@ -25,7 +25,7 @@ unsigned PAGESIZE;
 char* DATASET;
 char* HEAPFILE;
 
-unsigned IO_COUNTER;
+size_t IO_COUNTER;
 
 boolean INDEX_BOXES;
 
@@ -108,7 +108,7 @@ int main (int argc, char* argv[]) {
 
 	if (DIMENSIONS && PAGESIZE && DATASET && HEAPFILE) {
 		unlink (HEAPFILE);
-		tree_t* tree = new_rtree (HEAPFILE,DIMENSIONS,PAGESIZE);
+		tree_t* tree = new_rtree (HEAPFILE,PAGESIZE,DIMENSIONS);
 		insert_records_from_textfile (tree,DATASET);
 		//flush_dirty_pages (tree);
 		//delete_records_from_textfile (tree,DATASET);

@@ -27,9 +27,9 @@
 #include "skyline_queries.h"
 
 static boolean validate_skyline (fifo_t const*const queue, boolean const corner[], unsigned const dimensions) {
-	for (unsigned i=0; i<queue->size; ++i) {
+	for (size_t i=0; i<queue->size; ++i) {
 		data_pair_t const*const i_entry = (data_pair_t const*const) queue->buffer[i];
-		for (unsigned j=i+1; j<queue->size; ++j) {
+		for (size_t j=i+1; j<queue->size; ++j) {
 			data_pair_t const*const j_entry = (data_pair_t const*const) queue->buffer[j];
 			if (dominated_key (i_entry->key,j_entry->key,corner,dimensions)) {
 				LOG (error," X Object %u should not dominate on object %u...\n",j_entry->object,i_entry->object);
@@ -109,7 +109,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 
 	while (browse->size) {
 		container = remove_from_priority_queue(browse);
-		unsigned const page_id = container->id;
+		size_t const page_id = container->id;
 		page_t const*const page = load_rtree_page(tree,page_id);
 
 		free (container);
@@ -146,7 +146,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 					data_container_t *const leaf_entry = (data_container_t *const) remove_from_priority_queue (candidates);
 
 	                boolean is_dominated = false;
-	                for (register unsigned j=0; j<skyline->size;) {
+	                for (register size_t j=0; j<skyline->size;) {
 	                        data_pair_t *const pair = (data_pair_t *const) skyline->buffer[j];
 	                        if (dominated_key (pair->key,leaf_entry->key,corner,tree->dimensions)) {
 	                                if (j < skyline->size-1) {
@@ -182,7 +182,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 					}
 
 					boolean is_dominated = false;
-					for (register unsigned j=0; j<skyline->size; ++j) {
+					for (register size_t j=0; j<skyline->size; ++j) {
 						if (dominated_box (page->node.internal.BOX(i),
 											((data_pair_t const*const)skyline->buffer[j])->key,
 											corner,tree->dimensions)) {

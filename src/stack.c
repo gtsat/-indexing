@@ -34,7 +34,7 @@ fifo_t* transform_into_queue (lifo_t *const stack) {
 	return queue;
 }
 
-void* get_stack_element (lifo_t const*const stack, unsigned const k) {
+void* get_stack_element (lifo_t const*const stack, size_t const k) {
 	return k > stack->size ? NULL : stack->buffer[k];
 }
 
@@ -115,7 +115,7 @@ void insert_into_stack (lifo_t *const stack, void *const element) {
 }
 
 
-void* remove_from_position (lifo_t *const stack, unsigned const k) {
+void* remove_from_position (lifo_t *const stack, size_t const k) {
 	if (k < stack->size) {
 		void *const element = stack->buffer [k];
 
@@ -140,7 +140,7 @@ void* remove_from_position (lifo_t *const stack, unsigned const k) {
 	}
 }
 
-void insert_into_position (lifo_t *const stack, unsigned const pos, void *const element) {
+void insert_into_position (lifo_t *const stack, size_t const pos, void *const element) {
 	if (stack->size == stack->capacity) {
 		void** new_buffer = adjust_buffer (stack->buffer,stack->capacity,stack->capacity<<1);
 		if (new_buffer != stack->buffer) {

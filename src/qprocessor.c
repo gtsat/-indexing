@@ -79,12 +79,12 @@ char* qprocessor (char command[], char const folder[]) {
 			return NULL;
 		}
 
-		unsigned long buffer_size = BUFSIZ<<1;
+		size_t buffer_size = BUFSIZ<<1;
 		buffer = (char *const) malloc (sizeof(char)*buffer_size);
 		char *guard = buffer + buffer_size;
 		char* result_string = buffer;
 
-		unsigned rid = 0;
+		size_t rid = 0;
 		*result_string = '\0';
 		result_string = strcat (result_string,"[ \n");
 		result_string += strlen(result_string);
@@ -95,7 +95,7 @@ char* qprocessor (char command[], char const folder[]) {
 				data_pair_t *const tuple = remove_tail_of_queue (result);
 
 				if (guard - result_string < BUFSIZ) {
-					unsigned resultlen = strlen(buffer);
+					size_t resultlen = strlen(buffer);
 
 					char *const old_buffer = buffer;
 					buffer_size <<= 1;
@@ -163,7 +163,7 @@ char* qprocessor (char command[], char const folder[]) {
 				multidata_container_t *const tuple = remove_tail_of_queue (result);
 
 				if (guard - result_string < BUFSIZ) {
-					unsigned resultlen = strlen(buffer);
+					size_t resultlen = strlen(buffer);
 
 					char *const old_buffer = buffer;
 					buffer_size <<= 1;
@@ -280,8 +280,8 @@ char* qprocessor (char command[], char const folder[]) {
 
 static
 int treesize_compare (void *const x, void *const y) {
-	unsigned xsize = ((tree_t *const)x)->indexed_records;
-	unsigned ysize = ((tree_t *const)y)->indexed_records;
+	size_t xsize = ((tree_t *const)x)->indexed_records;
+	size_t ysize = ((tree_t *const)y)->indexed_records;
 	if (xsize > ysize) return -1;
 	else if (xsize < ysize) return 1;
 	else return 0;
@@ -339,7 +339,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 			lifo_t* partial_results = new_stack();
 			boolean has_tail = false;
 			do{
-				unsigned cartesian_size = 0;
+				size_t cartesian_size = 0;
 				lifo_t *const to_be_joined = new_stack();
 
 				while (subq_trees->size && 
@@ -449,8 +449,8 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 		return new_queue();
 	}
 
-	unsigned const outer_cardinality = partial_results->size;
-	unsigned inner_cardinality = 0;
+	size_t const outer_cardinality = partial_results->size;
+	size_t inner_cardinality = 0;
 	unsigned dimensions = UINT_MAX;
 
 	for (unsigned i=0; i<partial_results->size; ++i) {
@@ -473,10 +473,10 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 
 	priority_queue_t* data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
 
-	unsigned offsets [outer_cardinality];
-	bzero (offsets,outer_cardinality*sizeof(unsigned));
+	size_t offsets [outer_cardinality];
+	bzero (offsets,outer_cardinality*sizeof(size_t));
 
-	for (unsigned j=0,i=0;;++j) {
+	for (size_t j=0,i=0;;++j) {
 		if (offsets[i] >= ((fifo_t *const)partial_results->buffer[i])->size) {
 			offsets[i++] = 0;
 			if (i >= outer_cardinality)
@@ -567,8 +567,8 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 		return new_queue();
 	}
 
-	unsigned const outer_cardinality = partial_results->size;
-	unsigned inner_cardinality = 0;
+	size_t const outer_cardinality = partial_results->size;
+	size_t inner_cardinality = 0;
 	unsigned dimensions = UINT_MAX;
 
 	for (unsigned i=0; i<partial_results->size; ++i) {
@@ -591,10 +591,10 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 
 	priority_queue_t* data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
 
-	unsigned offsets [outer_cardinality];
-	bzero (offsets,outer_cardinality*sizeof(unsigned));
+	size_t offsets [outer_cardinality];
+	bzero (offsets,outer_cardinality*sizeof(size_t));
 
-	for (unsigned j=0,i=0;;++j) {
+	for (size_t j=0,i=0;;++j) {
 		if (offsets[i] >= ((fifo_t *const)partial_results->buffer[i])->size) {
 			offsets[i++] = 0;
 			if (i >= outer_cardinality)
