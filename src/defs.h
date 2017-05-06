@@ -82,10 +82,10 @@ static const size_t initial_capacity = 11;
 #define fairness_threshold 	.5
 
 typedef size_t 	object_t;
-typedef float 	index_t;
+typedef size_t 	index_t;
 
 #define OBJECT_T_MAX 	ULONG_MAX
-#define INDEX_T_MAX 	FLT_MAX
+#define INDEX_T_MAX 	ULONG_MAX
 
 
 typedef struct {
@@ -227,10 +227,10 @@ typedef struct {
 
 	size_t indexed_records;
 
+	size_t tree_size;
 	size_t leaf_entries;
 	size_t internal_entries;
 
-	unsigned tree_size;
 	unsigned page_size;
 
 	unsigned char dimensions;
@@ -412,7 +412,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {info=1,warn,error};
 
-#define logging warn 
+#define logging info 
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

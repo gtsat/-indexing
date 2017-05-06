@@ -208,7 +208,7 @@ typedef struct {
 } handler_args;
 
 static
-void handle_connection (void const*const args) {
+void handle_connection (void *const args) {
 	char const*const folder = ((handler_args const*const)args)->folder;
 	int const fd = ((handler_args const*const)args)->connection;
 	free (args);
@@ -421,6 +421,11 @@ char *quotes [] = {
 	"\t -----------------\n"
 	"\t RATM - \"Wake up\"\n\n",
 
+	"\n\t\"It has to start somewhere, It has to start sometime,\n"
+	"\t What better place than here, what better time than now?\"\n"
+	"\t ------------------------\n"
+	"\t RATM - \"Guerilla Radio\"\n\n",
+
 	"\n\t\"I can feel it coming in the air tonight, oh Lord\n"
 	"\t And I've been waiting for this moment for all my life, Oh Lord\"\n"
 	"\t -----------------------------------\n"
@@ -440,6 +445,6 @@ char *quotes [] = {
 static
 char* pull_random_quote (void) {
 	srand(time(NULL));
-	return quotes[rand()%11];
+	return quotes[rand()%12];
 }
 

@@ -32,10 +32,10 @@ static boolean validate_skyline (fifo_t const*const queue, boolean const corner[
 		for (size_t j=i+1; j<queue->size; ++j) {
 			data_pair_t const*const j_entry = (data_pair_t const*const) queue->buffer[j];
 			if (dominated_key (i_entry->key,j_entry->key,corner,dimensions)) {
-				LOG (error," X Object %u should not dominate on object %u...\n",j_entry->object,i_entry->object);
+				LOG (error," X Object %lu should not dominate on object %lu...\n",j_entry->object,i_entry->object);
 				return false;
 			}else if (dominated_key (j_entry->key,i_entry->key,corner,dimensions)) {
-				LOG (error," X Object %u should not dominate on object %u...\n",i_entry->object,j_entry->object);
+				LOG (error," X Object %lu should not dominate on object %lu...\n",i_entry->object,j_entry->object);
 				return false;
 			}
 		}

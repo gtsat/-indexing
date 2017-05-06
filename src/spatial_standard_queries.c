@@ -35,7 +35,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Query key ( ");
 		if (logging <= warn) {
 			for (unsigned i=0; i < tree->dimensions; ++i) {
-				fprintf (stderr, "%f ", key[i]);
+				fprintf (stderr, "%12lf ", (double)key[i]);
 			}
 			fprintf (stderr,") does not belong in the indexed area...\n");
 		}
@@ -43,7 +43,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Root-box: \n");
 		if (logging <= warn) {
 			for (unsigned i=0; i < tree->dimensions; ++i) {
-				fprintf (stderr, "\t\t( %f %f )\n", tree->root_box[i].start, tree->root_box[i].end);
+				fprintf (stderr, "\t\t( %12lf %12lf )\n", (double)tree->root_box[i].start, (double)tree->root_box[i].end);
 			}
 			fprintf (stderr,"\n");
 		}
@@ -96,7 +96,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Unable to retrieve any record associated with key ( ");
 		if (logging <= warn) {
 			for (unsigned i=0; i<tree->dimensions; ++i)
-				fprintf (stderr,"%f ",key[i]);
+				fprintf (stderr,"%12lf ",(double)key[i]);
 			fprintf (stderr,")...\n");
 		}
 
@@ -115,7 +115,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Query key ( ");
 		if (logging <= warn) {
 			for (unsigned i=0; i < tree->dimensions; ++i) {
-				fprintf (stderr, "%f ", key[i]);
+				fprintf (stderr, "%12lf ", (double)key[i]);
 			}
 			fprintf (stderr,") does not belong in the indexed area...\n");
 		}
@@ -123,7 +123,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Root-box: \n");
 		if (logging <= warn) {
 			for (unsigned i=0; i < tree->dimensions; ++i) {
-				fprintf (stderr, "\t\t( %f %f )\n", tree->root_box[i].start, tree->root_box[i].end);
+				fprintf (stderr, "\t\t( %12lf %12lf )\n", (double)tree->root_box[i].start, (double)tree->root_box[i].end);
 			}
 			fprintf (stderr,"\n");
 		}
@@ -176,7 +176,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 		LOG (warn,"Unable to retrieve any records associated with key ( ");
 		if (logging <= warn) {
 			for (unsigned i=0; i<tree->dimensions; ++i) {
-				fprintf (stderr,"%f ",key[i]);
+				fprintf (stderr,"%12lf ",(double)key[i]);
 			}
 			fprintf (stderr,")...\n");
 		}
@@ -686,7 +686,7 @@ fifo_t* distance_join (double const theta,
 	}
 
 	unsigned const cardinality = trees->size;
-	unsigned dimensions = ULONG_MAX;
+	unsigned dimensions = UINT_MAX;
 	for (unsigned i=0; i<trees->size; ++i) {
 		if (((tree_t *const)trees->buffer[i])->dimensions < dimensions) {
 			dimensions = ((tree_t *const)trees->buffer[i])->dimensions;
@@ -906,7 +906,7 @@ fifo_t* x_tuples (unsigned const k, boolean const closest, boolean const use_avg
 
 	index_t threshold = closest ? INDEX_T_MAX : -INDEX_T_MAX;
 	unsigned const cardinality = trees->size;
-	unsigned dimensions = ULONG_MAX;
+	unsigned dimensions = UINT_MAX;
 
 	for (unsigned i=0; i<trees->size; ++i) {
 		if (((tree_t*)trees->buffer[i])->dimensions < dimensions) {

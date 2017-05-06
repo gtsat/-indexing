@@ -69,7 +69,7 @@ value_t get (symbol_table_t const*const rbtree, key__t const key) {
 			if (key==ptr->key)
 				return ptr->value;
 	}
-	LOG (info,"Requested key %u was not found in the symbol-table...\n",key);
+	LOG (info,"Requested key %lu was not found in the symbol-table...\n",key);
 	return rbtree->default_value;
 }
 
@@ -435,7 +435,7 @@ tree_node_t* insert_node_recursive (symbol_table_t const*const rbtree,
 }
 
 void set (symbol_table_t *const rbtree, key__t const key, value_t const value) {
-	//LOG (info,"Inserting into the symbol-table value %u indexed by key %u.\n",value,key);
+	//LOG (info,"Inserting into the symbol-table value %lu indexed by key %lu.\n",value,key);
 	rbtree->root = insert_node_recursive (rbtree,rbtree->root,key,value);
 	rbtree->size = rbtree->root->size;
 }
@@ -542,9 +542,9 @@ value_t unset (symbol_table_t *const rbtree, key__t const key) {
 		value = get ((symbol_table_t const*const)rbtree,key);
 		if (value != rbtree->default_value) {
 			rbtree->root = remove_key_recursive (rbtree,rbtree->root,key);
-			//LOG (info,"Successfully removed from the symbol-table value %u indexed by key %u.\n",value,key);
+			//LOG (info,"Successfully removed from the symbol-table value %lu indexed by key %lu.\n",value,key);
 		}else{
-			LOG (warn,"No entry indexed by key %u was found in the symbol-table to be removed...\n",key);
+			LOG (warn,"No entry indexed by key %lu was found in the symbol-table to be removed...\n",key);
 		}
 	}
 	rbtree->size = (rbtree->root!=NULL?rbtree->root->size:0);

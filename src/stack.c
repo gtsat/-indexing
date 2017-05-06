@@ -135,7 +135,7 @@ void* remove_from_position (lifo_t *const stack, size_t const k) {
 
 		return element;
 	}else{
-		LOG (error,"Cannot remove from position %u in a stack of %u elements...\n",k,stack->size);
+		LOG (error,"Cannot remove from position %lu in a stack of %lu elements...\n",k,stack->size);
 		return NULL;
 	}
 }
@@ -157,7 +157,7 @@ void insert_into_position (lifo_t *const stack, size_t const pos, void *const el
 		stack->buffer [pos] = element;
 		stack->size++;
 	}else{
-		LOG (error,"Cannot add an element in a list of %u elements at position %u...\n",stack->size,pos);
+		LOG (error,"Cannot add an element in a list of %lu elements at position %lu...\n",stack->size,pos);
 		abort ();
 	}
 }

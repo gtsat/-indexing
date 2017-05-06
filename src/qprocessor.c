@@ -19,6 +19,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<limits.h>
+#include<unistd.h>
 #include"QL.tab.h"
 #include"symbol_table.h"
 #include"skyline_queries.h"
@@ -90,7 +91,7 @@ char* qprocessor (char command[], char const folder[]) {
 		result_string += strlen(result_string);
 
 		if (strchr(command,'/') == strrchr(command,'/')) {
-			LOG (info,"Processed query returned %u tuples. \n",result->size);
+			LOG (info,"Processed query returned %lu tuples. \n",result->size);
 			while (result->size) {
 				data_pair_t *const tuple = remove_tail_of_queue (result);
 
@@ -108,17 +109,17 @@ char* qprocessor (char command[], char const folder[]) {
 					result_string = buffer + resultlen;
 				}
 
-				sprintf (result_string,"\t{ \"rid\": %u, ",rid++);
+				sprintf (result_string,"\t{ \"rid\": %lu, ",rid++);
 				result_string += strlen(result_string);
 
-				sprintf (result_string,"\"objects\": [%u], ",tuple->object);
+				sprintf (result_string,"\"objects\": [%lu], ",tuple->object);
 				result_string += strlen(result_string);
 
 				result_string = strcat (result_string,"\"keys\": [[");
 				result_string += strlen (result_string);
 
 				for (unsigned j=0; j<tuple->dimensions; ++j) {
-					sprintf (result_string,"%8lf,",tuple->key[j]);
+					sprintf (result_string,"%12lf,",(double)tuple->key[j]);
 					result_string += strlen(result_string);
 				}
 
@@ -158,7 +159,7 @@ char* qprocessor (char command[], char const folder[]) {
 				free (tuple);
 			}
 		}else{
-			LOG (info,"Processed join returned %u tuples. \n",result->size);
+			LOG (info,"Processed join returned %lu tuples. \n",result->size);
 			while (result->size) {
 				multidata_container_t *const tuple = remove_tail_of_queue (result);
 
@@ -176,13 +177,13 @@ char* qprocessor (char command[], char const folder[]) {
 					result_string = buffer + resultlen;
 				}
 
-				sprintf (result_string,"\t{ \"rid\": %u, ",rid++);
+				sprintf (result_string,"\t{ \"rid\": %lu, ",rid++);
 				result_string += strlen(result_string);
 
 				result_string = strcat (result_string,"\"objects\": [");
 				result_string += strlen(result_string);
 				for (unsigned i=0; i<tuple->cardinality; ++i) {
-					sprintf (result_string,"%u,",tuple->objects[i]);
+					sprintf (result_string,"%lu,",tuple->objects[i]);
 					result_string += strlen(result_string);
 				}
 
@@ -196,7 +197,7 @@ char* qprocessor (char command[], char const folder[]) {
 					result_string++;
 
 					for (unsigned j=0; j<tuple->dimensions; ++j) {
-						sprintf (result_string,"%8lf,",tuple->keys[i*tuple->dimensions+j]);
+						sprintf (result_string,"%12lf,",(double)tuple->keys[i*tuple->dimensions+j]);
 						result_string += strlen(result_string);
 					}
 
@@ -316,7 +317,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 				return NULL;
 			}else{
 				insert_into_stack (subq_trees,subq_tree);
-				LOG (info,"Processed subquery returned %u tuples. \n",subq_tree->indexed_records);
+				LOG (info,"Processed subquery returned %lu tuples. \n",subq_tree->indexed_records);
 			}
 		}
 
@@ -353,7 +354,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 					insert_into_stack (to_be_joined,top);
 				}
 
-				LOG (info,"Executing join \#%u...\n",partial_results->size);
+				LOG (info,"Executing join \#%lu...\n",partial_results->size);
 
 				fifo_t *const partial_result = is_closest_pairs_operation
 					? x_tuples (threshold,closest,use_avg,pairwise,to_be_joined)
@@ -381,7 +382,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 				}
 			}while (subq_trees->size);
 
-			//printf ("partial_results->size: %u\n\n",partial_results->size);
+			//printf ("partial_results->size: %lu\n\n",partial_results->size);
 
 			fifo_t* top_level_list = NULL;
 			if (partial_results->size > 1) {
@@ -451,9 +452,9 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 
 	size_t const outer_cardinality = partial_results->size;
 	size_t inner_cardinality = 0;
-	unsigned dimensions = ULONG_MAX;
+	unsigned dimensions = UINT_MAX;
 
-	for (unsigned i=0; i<partial_results->size; ++i) {
+	for (size_t i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];
 		if (partial_result->size) {
 			if (has_tail && i == partial_results->size-1) {
@@ -466,7 +467,7 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 				}
 			}
 		}else{
-			LOG (error,"Partial result-set %u contains no records...\n",i);
+			LOG (error,"Partial result-set %lu contains no records...\n",i);
 			return new_queue();
 		}
 	}
@@ -569,9 +570,9 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 
 	size_t const outer_cardinality = partial_results->size;
 	size_t inner_cardinality = 0;
-	unsigned dimensions = ULONG_MAX;
+	unsigned dimensions = UINT_MAX;
 
-	for (unsigned i=0; i<partial_results->size; ++i) {
+	for (size_t i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];
 		if (partial_result->size) {
 			if (has_tail && i == partial_results->size-1) {
@@ -584,7 +585,7 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 				}
 			}
 		}else{
-			LOG (error,"Partial result-set %u contains no records...\n",i);
+			LOG (error,"Partial result-set %lu contains no records...\n",i);
 			return new_queue();
 		}
 	}
@@ -830,14 +831,14 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 		tree_t* result_tree = NULL;
 		if (lookups->size) {
 			fifo_t *const lookups_result_list = new_queue();
-			LOG (info,"lookups stack-size: %u \n",lookups->size);
+			LOG (info,"lookups stack-size: %lu \n",lookups->size);
 
 			while (lookups->size) {
 				index_t *const lookup = remove_from_stack (lookups);
-				LOG (info,"lookup-key: ( %f %f ) \n",lookup[0],lookup[1]);
+				LOG (info,"lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
 
 				fifo_t *const partial = find_all_in_rtree (tree,lookup);
-				LOG (info,"Adding %u new tuples in the result...\n",partial->size);
+				LOG (info,"Adding %lu new tuples in the result...\n",partial->size);
 
 				while (partial->size) {
 					data_pair_t *const pair = (data_pair_t*) malloc (sizeof(data_pair_t));
@@ -853,7 +854,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 			}
 
 			if (lookups_result_list->size) {
-				LOG (info,"Creating materialized view for the result consisting of %u records... \n",lookups_result_list->size);
+				LOG (info,"Creating materialized view for the result consisting of %lu records... \n",lookups_result_list->size);
 				tree = create_temp_rtree (lookups_result_list,tree->page_size,tree->dimensions);
 				delete_rtree_flag = true;
 			}
@@ -861,13 +862,13 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 
 		if (bounded_dimensionality && !is_skyline) {
 			fifo_t *const bounded_result_list = bounded_search (tree,from,to,bound+1,*bound,bounded_dimensionality-1);
-			LOG (info,"Bounded search result contains %u tuples.\n",bounded_result_list->size);
+			LOG (info,"Bounded search result contains %lu tuples.\n",bounded_result_list->size);
 
 			result_tree = create_temp_rtree (bounded_result_list,tree->page_size,tree->dimensions);
 		}else
 		if (is_skyline) {
 			fifo_t *const skyline_result_list = skyline_constrained (tree,corner,from,to);
-			LOG (info,"Skyline result contains %u tuples.\n",skyline_result_list->size);
+			LOG (info,"Skyline result contains %lu tuples.\n",skyline_result_list->size);
 
 			if (bounded_dimensionality) {
 
@@ -918,7 +919,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 			result_tree = create_temp_rtree (skyline_result_list,tree->page_size,tree->dimensions);
 		}else{
 			fifo_t *const range_result_list = range (tree,from,to);
-			LOG (info,"Range query result contains %u tuples.\n",range_result_list->size);
+			LOG (info,"Range query result contains %lu tuples.\n",range_result_list->size);
 
 			result_tree = create_temp_rtree (range_result_list,tree->page_size,tree->dimensions);
 		}

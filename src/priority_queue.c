@@ -195,7 +195,7 @@ void* remove_priority_queue_element (priority_queue_t *const priority_queue, siz
 	}else if (!pos) {
 		LOG (error,"Invalid position...\n");
 	}else{
-		LOG (error,"Cannot remove from position %u in a priority-queue of %u elements...\n",pos,priority_queue->size);
+		LOG (error,"Cannot remove from position %lu in a priority-queue of %lu elements...\n",pos,priority_queue->size);
 	}
 	return NULL;
 }

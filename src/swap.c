@@ -182,7 +182,7 @@ boolean is_active_identifier (swap_t const*const swap, size_t const id) {
 void print_identifiers_priorities (swap_t const*const swap) {
 	for (register size_t i=0; i<swap->capacity; ++i) {
 		if (swap->qp[i] != ULONG_MAX) {
-			LOG (info,"Identifier %u has priority %lf. \n",swap->identifiers[i],swap->keys[i+1]);
+			LOG (info,"Identifier %lu has priority %lf. \n",swap->identifiers[i],swap->keys[i+1]);
 		}
 	}
 }
