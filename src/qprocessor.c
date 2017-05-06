@@ -37,8 +37,8 @@ extern FILE* yyout;
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
 
-static tree_t* process_subquery (lifo_t *const, char const folder[]);
-static fifo_t* process_command (lifo_t *const, char const folder[]);
+static fifo_t* process_command (lifo_t *const, char const folder[], char message[]);
+static tree_t* process_subquery (lifo_t *const, char const folder[], char message[]);
 static fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static tree_t* create_temp_rtree (fifo_t *const partial_result, unsigned const page_size, unsigned const dimensions);
@@ -48,7 +48,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 
-char* qprocessor (char command[], char const folder[]) {
+char* qprocessor (char command[], char const folder[], char message[]) {
 	get_rtree (NULL);
 	unlink ("/tmp/cached_command.txt");
 	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
@@ -64,7 +64,8 @@ char* qprocessor (char command[], char const folder[]) {
 	yyin = fptr;
 
 	lifo_t *const stack = new_stack();
-	yyparse(stack);
+	double varray [BUFSIZ];
+	yyparse(stack,varray);
 	fclose (fptr);
 
 	//unroll(); return 0;
@@ -73,7 +74,7 @@ char* qprocessor (char command[], char const folder[]) {
 	char *buffer = NULL;
 	//pthread_rwlock_init (&server_lock,NULL);
 	while (stack->size) {
-		fifo_t *const result = process_command (stack,folder);
+		fifo_t *const result = process_command (stack,folder,message);
 
 		if (result == NULL) {
 			delete_stack (stack);
@@ -276,6 +277,11 @@ char* qprocessor (char command[], char const folder[]) {
 
 	pthread_rwlock_destroy (&server_lock);
 */
+	if (buffer != NULL) {
+		strcpy (message,"Successful operation.");
+	}else{
+		strcpy (message,"Syntax error.");
+	}
 	return buffer;
 }
 
@@ -289,10 +295,11 @@ int treesize_compare (void *const x, void *const y) {
 }
 
 static
-fifo_t* process_command (lifo_t *const stack, char const folder[]) {
+fifo_t* process_command (lifo_t *const stack, char const folder[], char message[]) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
-			LOG (error,"QUERY PROCESSOR WAS EXPECTING THE START OF A NEW COMMAND... \n");
+			LOG (error,"Syntax error: Command was not ended properly.\n");
+			strcpy (message,"Syntax error.");
 			clear_stack(stack);
 			return NULL;
 		}
@@ -311,7 +318,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 		 */
 		lifo_t *const subq_trees = new_stack();
 		while (stack->size && peek_at_stack (stack) == (void*)'/') {
-			tree_t *const subq_tree = process_subquery (stack,folder);
+			tree_t *const subq_tree = process_subquery (stack,folder,message);
 			if (subq_tree == NULL) {
 				delete_stack (subq_trees);
 				return NULL;
@@ -439,7 +446,11 @@ fifo_t* process_command (lifo_t *const stack, char const folder[]) {
 		delete_stack (subq_trees);
 
 		return result;
-	}else return NULL;
+	}else{
+		strcpy (message,"Syntax error: No query has been parsed to be processed.");
+		LOG (error,"Syntax error: Command has not been parsed to be processed.\n");
+		return NULL;
+	}
 }
 
 
@@ -682,9 +693,11 @@ tree_t* get_rtree (char const*const filepath) {
 		if (tree == NULL) {
 			pthread_rwlock_wrlock (&server_lock);
 			tree = load_rtree (filepath);
-			set (server_trees,filepath,tree);
+			if (tree != NULL) {
+				set (server_trees,filepath,tree);
+				LOG (info,"Loaded from the disk R#-Tree: '%s'\n",tree->filename);
+			}
 			pthread_rwlock_unlock (&server_lock);
-			LOG (info,"Loaded from the disk R#-Tree: '%s'\n",tree->filename);
 		}else{
 			LOG (info,"Retrieved R#-Tree: '%s'\n",tree->filename)
 		}
@@ -697,7 +710,7 @@ tree_t* get_rtree (char const*const filepath) {
 
 
 static
-tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
+tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[]) {
 	if (peek_at_stack (stack) == (void*)'/') {
 		remove_from_stack (stack);
 		LOG (info,"UNROLLING NEW SUBQUERY... \n");
@@ -711,6 +724,11 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 		free (filename);
 
 		tree_t* tree = get_rtree (filepath);
+		if (tree == NULL) {
+			sprintf (message,"Cannot perform an operation on heapfile '%s' because it does not exist.",filepath);
+			LOG (error,"Cannot perform an operation on heapfile '%s' because it does not exist.\n",filepath);
+			return NULL;
+		}
 
 		index_t from [tree->dimensions];
 		index_t to [tree->dimensions];
@@ -932,7 +950,8 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[]) {
 
 		return result_tree;
 	}else{
-		LOG (info,"WAS EXPECTING THE START OF A NEW SUBQUERY... \n");
+		LOG (error,"Syntax error: Was expecting the start of a new subquery.");
+		strcpy (message,"Syntax error.");
 		clear_stack (stack);
 		return NULL;
 	}

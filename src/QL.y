@@ -12,7 +12,6 @@
 	void unroll (void);
 
 
-	#define vsize 512
 	unsigned vindex = 0;
 	double varray [vsize];
 

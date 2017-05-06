@@ -52,7 +52,7 @@ boolean INDEX_BOXES;
 static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\": \"%s\",\n"
-					"\t\"message\": \"%s.\",\n"
+					"\t\"message\": \"%s\",\n"
 					"\t\"proctime\": %u,\n"
 					"\t\"data\": ";
 
@@ -148,6 +148,10 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		request [i+1] = ';';
 		request [i+2] = '\0';
 
+		char message [BUFSIZ];
+		bzero (message,BUFSIZ);
+		*message = '\0';
+
 		char* data = NULL;
 		clock_t start = clock();
 		if (!strcmp(method,"DELETE")) {
@@ -157,26 +161,23 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}else if (!strcmp(method,"PUT")) {
 			LOG (info,"Processing insertion sub-request '%s'.\n",request);
 		}else if (!strcmp(method,"GET")) {
-			data = qprocessor (request,folder);
+			data = qprocessor (request,folder,message);
 		}
 		clock_t end = clock();
 
 		boolean free_data;
 		char *result_code;
-		char *result_message;
 		if (data != NULL) {
 			free_data = true;
 			result_code = "SUCCESS";
-			result_message = "Successful execution";
 		}else{
 			free_data = false;
 			data = " null\n";
 			result_code = "FAILURE";
-			result_message = "Syntax error";
 		}
 
 		char response[BUFSIZ];
-		snprintf (response,sizeof(response),ok_response,result_code,result_message,((end-start)*1000/CLOCKS_PER_SEC));
+		snprintf (response,sizeof(response),ok_response,result_code,message,((end-start)*1000/CLOCKS_PER_SEC));
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}

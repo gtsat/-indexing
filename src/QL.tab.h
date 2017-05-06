@@ -81,6 +81,6 @@ typedef union YYSTYPE YYSTYPE;
 
 extern YYSTYPE yylval;
 
-int yyparse (lifo_t *const stack);
+int yyparse (lifo_t *const stack, double varray[]);
 
 #endif /* !YY_YY_QL_TAB_H_INCLUDED  */

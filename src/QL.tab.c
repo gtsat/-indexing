@@ -76,7 +76,6 @@
 	//void unroll (void);
 
 
-	#define vsize 512
 
 #line 91 "QL.tab.c" /* yacc.c:339  */
 
@@ -147,7 +146,7 @@ typedef union YYSTYPE YYSTYPE;
 
 extern YYSTYPE yylval;
 
-int yyparse (lifo_t *const stack);
+int yyparse (lifo_t *const stack, double varray[]);
 
 #endif /* !YY_YY_QL_TAB_H_INCLUDED  */
 
@@ -1011,11 +1010,10 @@ int yynerrs;
 `----------*/
 
 int
-yyparse (lifo_t *const stack)
+yyparse (lifo_t *const stack, double varray[])
 {
 
 	unsigned vindex = 0;
-	double varray [vsize];
 
 	unsigned key_cardinality;
 	unsigned predicates_cardinality;
