@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
 #include <strings.h>
@@ -35,12 +36,21 @@
 
 #define PERMS 0644
 
-extern unsigned DIMENSIONS;
-extern unsigned PAGESIZE;
-
-#define BANDGUARD 0
+extern uint32_t DIMENSIONS;
+extern uint32_t PAGESIZE;
 
 #define THREAD_STACK_SIZE (getpagesize()<<6)
+
+
+typedef union {
+	double fval;
+	uint64_t uval;
+} serializable_float64_t;
+
+typedef union {
+	float fval;
+	uint32_t uval;
+} serializable_float32_t;
 
 
 typedef struct {
@@ -48,31 +58,31 @@ typedef struct {
 
 	int (*compare) (void const*const,void const*const);
 
-	size_t capacity;
-	size_t size;
+	uint64_t capacity;
+	uint64_t size;
 } priority_queue_t;
 
 typedef struct {
 	void** buffer;
 
-	size_t capacity;
-	size_t size;
+	uint64_t capacity;
+	uint64_t size;
 
-	size_t head;
-	size_t tail;
+	uint64_t head;
+	uint64_t tail;
 } fifo_t;
 
 typedef struct {
 	void** buffer;
 
-	size_t capacity;
-	size_t size;
+	uint64_t capacity;
+	uint64_t size;
 } lifo_t;
 
 typedef enum {false=0,true} boolean;
 
 
-static const size_t initial_capacity = 11;
+static const uint64_t initial_capacity = 11;
 
 /**** BASIC DEFINITIONS END ****/
 
@@ -81,11 +91,11 @@ static const size_t initial_capacity = 11;
 
 #define fairness_threshold 	.5
 
-typedef size_t 	object_t;
-typedef size_t 	index_t;
+typedef uint64_t 	object_t;
+typedef double	 	index_t;
 
 #define OBJECT_T_MAX 	ULONG_MAX
-#define INDEX_T_MAX 	ULONG_MAX
+#define INDEX_T_MAX 	DBL_MAX
 
 
 typedef struct {
@@ -108,7 +118,7 @@ typedef struct {
 /***** N-TREE DEFINITIONS BEGIN *****/
 
 typedef float arc_weight_t;
-typedef unsigned char arc_pointer_t;
+typedef uint16_t arc_pointer_t;
 
 /**
  * only arc sources information is kept in internal nodes,
@@ -140,9 +150,9 @@ typedef union {
 } node_t;
 
 typedef struct {
-	unsigned records;
-	unsigned char is_leaf      : 1;
-	unsigned char is_dirty     : 1;
+	uint32_t records;
+	unsigned char is_leaf :1;
+	unsigned char is_dirty :1;
 } header_t;
 
 typedef struct {
@@ -155,7 +165,7 @@ typedef struct {
 
 /*** SYMBOL-TABLE DEFINITIONS BEGIN ***/
 
-typedef size_t key__t;
+typedef uint64_t key__t;
 typedef void* value_t;
 
 typedef struct {
@@ -172,7 +182,7 @@ typedef struct tree_node  {
 	value_t value;
 	key__t key;
 
-	size_t size;
+	uint64_t size;
 
 	color_t color;
 } tree_node_t;
@@ -183,7 +193,7 @@ typedef struct {
 	int (*compare) (key__t const, key__t const);
 
 	value_t default_value;
-	size_t size;
+	uint64_t size;
 } symbol_table_t;
 
 /*** SYMBOL-TABLE DEFINITIONS END ***/
@@ -196,14 +206,14 @@ typedef struct {
  */
 
 typedef struct {
-	size_t *pq;
-	size_t *qp;
+	uint64_t *pq;
+	uint64_t *qp;
 	double *keys;
 
-	size_t *identifiers;
+	uint64_t *identifiers;
 
-	size_t size;
-	size_t capacity;
+	uint64_t size;
+	uint64_t capacity;
 } swap_t;
 
 /*** SWAP DEFINITIONS END ***/
@@ -225,15 +235,15 @@ typedef struct {
 	char* filename;
 
 
-	size_t indexed_records;
+	uint64_t indexed_records;
 
-	size_t tree_size;
-	size_t leaf_entries;
-	size_t internal_entries;
+	uint64_t tree_size;
+	uint64_t leaf_entries;
+	uint64_t internal_entries;
 
-	unsigned page_size;
+	uint32_t page_size;
 
-	unsigned char dimensions;
+	uint16_t dimensions;
 	boolean is_dirty;
 } tree_t;
 
@@ -280,7 +290,7 @@ typedef struct {
 	index_t* key;
 	object_t object;
 
-	unsigned char dimensions;
+	uint16_t dimensions;
 } data_pair_t;
 
 typedef struct {
@@ -289,19 +299,19 @@ typedef struct {
 
 	double sort_key;
 
-	unsigned char dimensions;
+	uint16_t dimensions;
 } data_container_t ;
 
 typedef struct {
 	interval_t* box;
-	size_t id;
+	uint64_t id;
 
 	double sort_key;
 } box_container_t;
 
 typedef struct {
 	object_range_t* range;
-	size_t id;
+	uint64_t id;
 
 	double sort_key;
 } range_container_t;
@@ -313,35 +323,35 @@ typedef struct {
  */
 
 
-boolean equal_keys (index_t const[],index_t const[], unsigned const);
+boolean equal_keys (index_t const[],index_t const[], uint32_t const);
 
-boolean key_enclosed_by_box (index_t const[],interval_t const[],unsigned const);
-boolean box_enclosed_by_box (interval_t const[],interval_t const[],unsigned const);
+boolean key_enclosed_by_box (index_t const[],interval_t const[],uint32_t const);
+boolean box_enclosed_by_box (interval_t const[],interval_t const[],uint32_t const);
 
-boolean overlapping_boxes  (interval_t const[],interval_t const[],unsigned const);
+boolean overlapping_boxes  (interval_t const[],interval_t const[],uint32_t const);
 
 int mincompare_symbol_table_entries (void const*const, void const*const);
 int mincompare_containers (void const*const, void const*const);
 int maxcompare_containers (void const*const, void const*const);
 
-double key_to_key_distance (index_t const[],index_t const[],unsigned const);
-double key_to_box_mindistance (index_t const[],interval_t const[],unsigned const);
-double key_to_box_maxdistance (index_t const[],interval_t const[],unsigned const);
-double box_to_box_mindistance (interval_t const[],interval_t const[],unsigned const);
-double box_to_box_maxdistance (interval_t const[],interval_t const[],unsigned const);
+double key_to_key_distance (index_t const[],index_t const[],uint32_t const);
+double key_to_box_mindistance (index_t const[],interval_t const[],uint32_t const);
+double key_to_box_maxdistance (index_t const[],interval_t const[],uint32_t const);
+double box_to_box_mindistance (interval_t const[],interval_t const[],uint32_t const);
+double box_to_box_maxdistance (interval_t const[],interval_t const[],uint32_t const);
 
-boolean dominated_key (index_t const[],index_t const[],boolean const[], unsigned const);
-boolean dominated_box (interval_t const[],index_t const[],boolean const[],unsigned const);
+boolean dominated_key (index_t const[],index_t const[],boolean const[], uint32_t const);
+boolean dominated_box (interval_t const[],index_t const[],boolean const[],uint32_t const);
 
 
 typedef struct {
 	interval_t* boxes;
-	size_t* page_ids;
+	uint64_t* page_ids;
 
 	double sort_key;
 
-	unsigned char dimensions;
-	unsigned char cardinality;
+	uint16_t dimensions;
+	uint16_t cardinality;
 } multibox_container_t;
 
 typedef struct {
@@ -350,33 +360,33 @@ typedef struct {
 
 	double sort_key;
 
-	unsigned char dimensions;
-	unsigned char cardinality;
+	uint16_t dimensions;
+	uint16_t cardinality;
 } multidata_container_t;
 
 
 int mincompare_multicontainers (void const*const, void const*const);
 int maxcompare_multicontainers (void const*const, void const*const);
 
-double mindistance_ordered_multikey (multidata_container_t const*const, unsigned const);
-double maxdistance_ordered_multikey (multidata_container_t const*const, unsigned const);
-double avgdistance_ordered_multikey (multidata_container_t const*const, unsigned const);
+double mindistance_ordered_multikey (multidata_container_t const*const, uint32_t const);
+double maxdistance_ordered_multikey (multidata_container_t const*const, uint32_t const);
+double avgdistance_ordered_multikey (multidata_container_t const*const, uint32_t const);
 
-double max_mindistance_ordered_multibox (multibox_container_t const*const, unsigned const);
-double min_maxdistance_ordered_multibox (multibox_container_t const*const, unsigned const);
-double avg_mindistance_ordered_multibox (multibox_container_t const*const, unsigned const);
-double avg_maxdistance_ordered_multibox (multibox_container_t const*const, unsigned const);
+double max_mindistance_ordered_multibox (multibox_container_t const*const, uint32_t const);
+double min_maxdistance_ordered_multibox (multibox_container_t const*const, uint32_t const);
+double avg_mindistance_ordered_multibox (multibox_container_t const*const, uint32_t const);
+double avg_maxdistance_ordered_multibox (multibox_container_t const*const, uint32_t const);
 
-double mindistance_pairwise_multikey (multidata_container_t const*const, unsigned const);
-double maxdistance_pairwise_multikey (multidata_container_t const*const, unsigned const);
-double avgdistance_pairwise_multikey (multidata_container_t const*const, unsigned const);
+double mindistance_pairwise_multikey (multidata_container_t const*const, uint32_t const);
+double maxdistance_pairwise_multikey (multidata_container_t const*const, uint32_t const);
+double avgdistance_pairwise_multikey (multidata_container_t const*const, uint32_t const);
 
-double max_mindistance_pairwise_multibox (multibox_container_t const*const, unsigned const);
-double min_maxdistance_pairwise_multibox (multibox_container_t const*const, unsigned const);
-double avg_mindistance_pairwise_multibox (multibox_container_t const*const, unsigned const);
-double avg_maxdistance_pairwise_multibox (multibox_container_t const*const, unsigned const);
+double max_mindistance_pairwise_multibox (multibox_container_t const*const, uint32_t const);
+double min_maxdistance_pairwise_multibox (multibox_container_t const*const, uint32_t const);
+double avg_mindistance_pairwise_multibox (multibox_container_t const*const, uint32_t const);
+double avg_maxdistance_pairwise_multibox (multibox_container_t const*const, uint32_t const);
 
-double pairwise_mindistance (fifo_t const*const, unsigned);
+double pairwise_mindistance (fifo_t const*const, uint32_t);
 
 
 /*
@@ -412,7 +422,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {info=1,warn,error};
 
-#define logging info 
+#define logging warn
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

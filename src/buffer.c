@@ -17,7 +17,7 @@
 
 #include "defs.h"
 
-void** adjust_buffer (void** buffer, size_t const old_size, size_t const new_size) {
+void** adjust_buffer (void** buffer, uint64_t const old_size, uint64_t const new_size) {
 	if (!new_size) {
 		return buffer;
 	}

@@ -34,18 +34,18 @@
 #include <stdlib.h>
 #include <time.h>
 
-unsigned PORT;
+uint32_t PORT;
 char const* HOST;
 char const* FOLDER;
 
 
-unsigned DIMENSIONS;
-unsigned PAGESIZE;
+uint32_t DIMENSIONS;
+uint32_t PAGESIZE;
 
 char const* DATASET;
 char const* HEAPFILE;
 
-size_t IO_COUNTER;
+uint64_t IO_COUNTER;
 
 boolean INDEX_BOXES;
 
@@ -141,7 +141,7 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 
 	if (*request == '/') {
 
-		size_t i = strlen(request)-1;
+		uint64_t i = strlen(request)-1;
 		while (i && request[i] == '/') {
 			request [i--] = '\0';
 		}
@@ -217,7 +217,7 @@ void handle_connection (void *const args) {
 	LOG (info,"Handling new connection for file descriptor %u.\n",fd)
 
 	char buffer[BUFSIZ];
-	ssize_t bytes_read = read (fd,buffer,sizeof(buffer)-1);
+	uint64_t bytes_read = read (fd,buffer,sizeof(buffer)-1);
 	if (bytes_read) {
 		char url[sizeof(buffer)];
 		char method[sizeof(buffer)];
@@ -317,7 +317,7 @@ void server_run (struct in_addr const local_address, uint16_t const port, char c
 
 
 static 
-void server_start (char const hostname[], unsigned const port_number, char const folder[]) {
+void server_start (char const hostname[], uint32_t const port_number, char const folder[]) {
 	//struct hostent *local_hostname = gethostbyname (hostname);
 	struct in_addr local_address;
 	local_address.s_addr = hostname != NULL ? inet_addr (hostname) : INADDR_ANY;

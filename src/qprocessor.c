@@ -39,9 +39,9 @@ pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 static fifo_t* process_command (lifo_t *const, char const folder[], char message[]);
 static tree_t* process_subquery (lifo_t *const, char const folder[], char message[]);
-static fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
+static fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
-static tree_t* create_temp_rtree (fifo_t *const partial_result, unsigned const page_size, unsigned const dimensions);
+static tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_size, uint32_t const dimensions);
 static tree_t* get_rtree (char const*const filepath);
 static int strcompare (key__t x, key__t y) {
 	return strcmp ((char const*const)x,(char const*const)y);
@@ -81,12 +81,12 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 			return NULL;
 		}
 
-		size_t buffer_size = BUFSIZ<<1;
+		uint64_t buffer_size = BUFSIZ<<1;
 		buffer = (char *const) malloc (sizeof(char)*buffer_size);
 		char *guard = buffer + buffer_size;
 		char* result_string = buffer;
 
-		size_t rid = 0;
+		uint64_t rid = 0;
 		*result_string = '\0';
 		result_string = strcat (result_string,"[ \n");
 		result_string += strlen(result_string);
@@ -97,7 +97,7 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 				data_pair_t *const tuple = remove_tail_of_queue (result);
 
 				if (guard - result_string < BUFSIZ) {
-					size_t resultlen = strlen(buffer);
+					uint64_t resultlen = strlen(buffer);
 
 					char *const old_buffer = buffer;
 					buffer_size <<= 1;
@@ -119,7 +119,7 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 				result_string = strcat (result_string,"\"keys\": [[");
 				result_string += strlen (result_string);
 
-				for (unsigned j=0; j<tuple->dimensions; ++j) {
+				for (uint32_t j=0; j<tuple->dimensions; ++j) {
 					sprintf (result_string,"%12lf,",(double)tuple->key[j]);
 					result_string += strlen(result_string);
 				}
@@ -165,7 +165,7 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 				multidata_container_t *const tuple = remove_tail_of_queue (result);
 
 				if (guard - result_string < BUFSIZ) {
-					size_t resultlen = strlen(buffer);
+					uint64_t resultlen = strlen(buffer);
 
 					char *const old_buffer = buffer;
 					buffer_size <<= 1;
@@ -183,7 +183,7 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 
 				result_string = strcat (result_string,"\"objects\": [");
 				result_string += strlen(result_string);
-				for (unsigned i=0; i<tuple->cardinality; ++i) {
+				for (uint32_t i=0; i<tuple->cardinality; ++i) {
 					sprintf (result_string,"%lu,",tuple->objects[i]);
 					result_string += strlen(result_string);
 				}
@@ -193,11 +193,11 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 				result_string = strcat (result_string,"], \"keys\": [");
 				result_string += strlen (result_string);
 
-				for (unsigned i=0; i<tuple->cardinality; ++i) {
+				for (uint32_t i=0; i<tuple->cardinality; ++i) {
 					*result_string = '[';
 					result_string++;
 
-					for (unsigned j=0; j<tuple->dimensions; ++j) {
+					for (uint32_t j=0; j<tuple->dimensions; ++j) {
 						sprintf (result_string,"%12lf,",(double)tuple->keys[i*tuple->dimensions+j]);
 						result_string += strlen(result_string);
 					}
@@ -287,8 +287,8 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 
 static
 int treesize_compare (void *const x, void *const y) {
-	size_t xsize = ((tree_t *const)x)->indexed_records;
-	size_t ysize = ((tree_t *const)y)->indexed_records;
+	uint64_t xsize = ((tree_t *const)x)->indexed_records;
+	uint64_t ysize = ((tree_t *const)y)->indexed_records;
 	if (xsize > ysize) return -1;
 	else if (xsize < ysize) return 1;
 	else return 0;
@@ -347,7 +347,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 			lifo_t* partial_results = new_stack();
 			boolean has_tail = false;
 			do{
-				size_t cartesian_size = 0;
+				uint64_t cartesian_size = 0;
 				lifo_t *const to_be_joined = new_stack();
 
 				while (subq_trees->size && 
@@ -379,7 +379,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					tree_t *const remaining_tree = remove_from_stack(subq_trees);
 					index_t from [remaining_tree->dimensions];
 					index_t to [remaining_tree->dimensions];
-					for (unsigned i=0; i<remaining_tree->dimensions; ++i) {
+					for (uint32_t i=0; i<remaining_tree->dimensions; ++i) {
 						from[i] = -INDEX_T_MAX;
 						to[i] = INDEX_T_MAX;
 					}
@@ -431,7 +431,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		tree_t *const subq_tree = remove_from_stack (subq_trees);
 		index_t from [subq_tree->dimensions];
 		index_t to [subq_tree->dimensions];
-		for (unsigned i=0; i<subq_tree->dimensions; ++i) {
+		for (uint32_t i=0; i<subq_tree->dimensions; ++i) {
 			from [i] = -INDEX_T_MAX;
 			to [i] = INDEX_T_MAX;
 		}
@@ -455,24 +455,24 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 
 static
-fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail) {
+fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail) {
 	if (k <= 0) {
 		LOG (warn,"No point for zero or negative result-sizes in joins...\n");
 		return new_queue();
 	}
 
-	size_t const outer_cardinality = partial_results->size;
-	size_t inner_cardinality = 0;
-	unsigned dimensions = UINT_MAX;
+	uint64_t const outer_cardinality = partial_results->size;
+	uint64_t inner_cardinality = 0;
+	uint32_t dimensions = UINT_MAX;
 
-	for (size_t i=0; i<partial_results->size; ++i) {
+	for (uint64_t i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];
 		if (partial_result->size) {
 			if (has_tail && i == partial_results->size-1) {
 				++inner_cardinality;
 			}else{
 				inner_cardinality += ((multidata_container_t *const)partial_result->buffer[partial_result->head])->cardinality;
-				unsigned const dimensionality_i = ((multidata_container_t *const)partial_result->buffer[partial_result->head])->dimensions;
+				uint32_t const dimensionality_i = ((multidata_container_t *const)partial_result->buffer[partial_result->head])->dimensions;
 				if (dimensionality_i < dimensions) {
 					dimensions = dimensionality_i;
 				}
@@ -485,10 +485,10 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 
 	priority_queue_t* data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
 
-	size_t offsets [outer_cardinality];
-	bzero (offsets,outer_cardinality*sizeof(size_t));
+	uint64_t offsets [outer_cardinality];
+	bzero (offsets,outer_cardinality*sizeof(uint64_t));
 
-	for (size_t j=0,i=0;;++j) {
+	for (uint64_t j=0,i=0;;++j) {
 		if (offsets[i] >= ((fifo_t *const)partial_results->buffer[i])->size) {
 			offsets[i++] = 0;
 			if (i >= outer_cardinality)
@@ -501,7 +501,7 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 			dest_container->dimensions = dimensions;
 			dest_container->cardinality = 0;
 
-			for (unsigned offset=0; offset<outer_cardinality; ++offset) {
+			for (uint32_t offset=0; offset<outer_cardinality; ++offset) {
 				assert (offset < partial_results->size);
 				assert (offsets[offset] < ((fifo_t *const)partial_results->buffer[offset])->size);
 
@@ -521,7 +521,7 @@ fifo_t* top_level_in_mem_closest_pairs (unsigned const k, boolean const less_tha
 						src_container->objects,
 						src_container->cardinality*sizeof(object_t));
 
-					for (unsigned c=0; c<src_container->cardinality; ++c) {
+					for (uint32_t c=0; c<src_container->cardinality; ++c) {
 						memcpy (dest_container->keys+(dest_container->cardinality+c)*dimensions,
 							src_container->keys+c*src_container->dimensions,
 							dimensions*sizeof(index_t));
@@ -579,18 +579,18 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 		return new_queue();
 	}
 
-	size_t const outer_cardinality = partial_results->size;
-	size_t inner_cardinality = 0;
-	unsigned dimensions = UINT_MAX;
+	uint64_t const outer_cardinality = partial_results->size;
+	uint64_t inner_cardinality = 0;
+	uint32_t dimensions = UINT_MAX;
 
-	for (size_t i=0; i<partial_results->size; ++i) {
+	for (uint64_t i=0; i<partial_results->size; ++i) {
 		fifo_t *const partial_result = partial_results->buffer[i];
 		if (partial_result->size) {
 			if (has_tail && i == partial_results->size-1) {
 				++inner_cardinality;
 			}else{
 				inner_cardinality += ((multidata_container_t *const)partial_result->buffer[partial_result->head])->cardinality;
-				unsigned const dimensionality_i = ((multidata_container_t *const)partial_result->buffer[partial_result->head])->dimensions;
+				uint32_t const dimensionality_i = ((multidata_container_t *const)partial_result->buffer[partial_result->head])->dimensions;
 				if (dimensionality_i < dimensions) {
 					dimensions = dimensionality_i;
 				}
@@ -603,10 +603,10 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 
 	priority_queue_t* data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
 
-	size_t offsets [outer_cardinality];
-	bzero (offsets,outer_cardinality*sizeof(size_t));
+	uint64_t offsets [outer_cardinality];
+	bzero (offsets,outer_cardinality*sizeof(uint64_t));
 
-	for (size_t j=0,i=0;;++j) {
+	for (uint64_t j=0,i=0;;++j) {
 		if (offsets[i] >= ((fifo_t *const)partial_results->buffer[i])->size) {
 			offsets[i++] = 0;
 			if (i >= outer_cardinality)
@@ -619,7 +619,7 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 			dest_container->cardinality = 0;
 			dest_container->dimensions = dimensions;
 
-			for (unsigned offset=0; offset<outer_cardinality; ++offset) {
+			for (uint32_t offset=0; offset<outer_cardinality; ++offset) {
 				if (has_tail && offset == outer_cardinality - 1) {
 					data_pair_t const*const src_container = ((fifo_t *const)partial_results->buffer[offset])->buffer[offsets[offset]];
 					dest_container->objects[dest_container->cardinality] = src_container->object;
@@ -636,7 +636,7 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 						src_container->objects,
 						src_container->cardinality*sizeof(object_t));
 
-					for (unsigned c=0; c<src_container->cardinality; ++c) {
+					for (uint32_t c=0; c<src_container->cardinality; ++c) {
 						memcpy (dest_container->keys+(dest_container->cardinality+c)*dimensions,
 							src_container->keys+c*src_container->dimensions,
 							dimensions*sizeof(index_t));
@@ -737,7 +737,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		index_t bound [tree->dimensions+1];
 
 		bzero (corner,tree->dimensions*sizeof(boolean));
-		for (unsigned i=0; i<tree->dimensions; ++i) {
+		for (uint32_t i=0; i<tree->dimensions; ++i) {
 			from [i] = -INDEX_T_MAX;
 			to [i] = INDEX_T_MAX;
 		}
@@ -746,18 +746,18 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 
 		boolean is_skyline = false;
-		unsigned bounded_dimensionality = 0;
+		uint32_t bounded_dimensionality = 0;
 
-		unsigned const pcardinality = remove_from_stack (stack);
-		for (unsigned j=0; j<pcardinality; ++j) {
-			unsigned const operation = remove_from_stack (stack);
-			unsigned const kcardinality = remove_from_stack (stack);
+		uint32_t const pcardinality = remove_from_stack (stack);
+		for (uint32_t j=0; j<pcardinality; ++j) {
+			uint32_t const operation = remove_from_stack (stack);
+			uint32_t const kcardinality = remove_from_stack (stack);
 
 			switch (operation) {
 				case LOOKUP:
 					LOG (info,"LOOKUP ");
 					index_t *const lookup = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
-					unsigned i=0;
+					uint32_t i=0;
                     for (i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
                             double* tmp = remove_from_stack (stack);
@@ -767,7 +767,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					}
 
 					if (i < tree->dimensions) {
-						for (unsigned k=0; k<i; ++k) {
+						for (uint32_t k=0; k<i; ++k) {
 							if (lookup[k] > from[k]) {
 								lookup[k] = from[k];
 							}
@@ -782,7 +782,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					break;
 				case FROM:
 					LOG (info,"FROM ");
-                    for (unsigned i=0; i<kcardinality; ++i) {
+                    for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
                             double* tmp = remove_from_stack (stack);
                             if (logging <= info) fprintf (stderr,"%lf ",*tmp);
@@ -794,7 +794,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					break;
 				case TO:
 					LOG (info,"TO ");
-                    for (unsigned i=0; i<kcardinality; ++i) {
+                    for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
                         	double* tmp = remove_from_stack (stack);
                         	if (logging <= info) fprintf (stderr,"%lf ",*tmp);
@@ -807,7 +807,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 				case BOUND:
 					LOG (info,"BOUND ");
 					bounded_dimensionality = kcardinality;
-                    for (unsigned i=0; i<kcardinality; ++i) {
+                    for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i <= tree->dimensions) {
                         	double* tmp = remove_from_stack (stack);
                         	if (logging <= info) fprintf (stderr,"%lf ",*tmp);
@@ -820,8 +820,8 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					char *const bitfield = remove_from_stack (stack);
 					LOG (info,"SKYLINE - BITFIELD '%s'",bitfield);
 
-					unsigned length = strlen (bitfield);
-					for (unsigned i=0; i<length; ++i) {
+					uint32_t length = strlen (bitfield);
+					for (uint32_t i=0; i<length; ++i) {
 						if (bitfield[i]=='O' || bitfield[i]=='o') {
 							corner[i] = false;
 						}else if (bitfield[i]=='I' || bitfield[i]=='i') {
@@ -963,7 +963,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
  * sub-query to be joined with other results from a complex query.
  */
 static
-tree_t* create_temp_rtree (fifo_t *const partial_result, unsigned const page_size, unsigned const dimensions) {
+tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_size, uint32_t const dimensions) {
         char filename[32];
         strcpy (filename,"/tmp/tree.");
         sprintf (filename+10,"%lx",lrand48());

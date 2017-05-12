@@ -19,7 +19,7 @@
 #include "queue.h"
 #include "buffer.h"
 
-void* get_queue_element (fifo_t const*const queue, size_t const k) {
+void* get_queue_element (fifo_t const*const queue, uint64_t const k) {
 	if (k > queue->size){
 		return NULL;
 	}else if (queue->head+k < queue->capacity) {

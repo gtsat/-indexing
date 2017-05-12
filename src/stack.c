@@ -34,7 +34,7 @@ fifo_t* transform_into_queue (lifo_t *const stack) {
 	return queue;
 }
 
-void* get_stack_element (lifo_t const*const stack, size_t const k) {
+void* get_stack_element (lifo_t const*const stack, uint64_t const k) {
 	return k > stack->size ? NULL : stack->buffer[k];
 }
 
@@ -115,7 +115,7 @@ void insert_into_stack (lifo_t *const stack, void *const element) {
 }
 
 
-void* remove_from_position (lifo_t *const stack, size_t const k) {
+void* remove_from_position (lifo_t *const stack, uint64_t const k) {
 	if (k < stack->size) {
 		void *const element = stack->buffer [k];
 
@@ -140,7 +140,7 @@ void* remove_from_position (lifo_t *const stack, size_t const k) {
 	}
 }
 
-void insert_into_position (lifo_t *const stack, size_t const pos, void *const element) {
+void insert_into_position (lifo_t *const stack, uint64_t const pos, void *const element) {
 	if (stack->size == stack->capacity) {
 		void** new_buffer = adjust_buffer (stack->buffer,stack->capacity,stack->capacity<<1);
 		if (new_buffer != stack->buffer) {
@@ -165,15 +165,15 @@ void insert_into_position (lifo_t *const stack, size_t const pos, void *const el
 /**
  * Old-school binary search.
  */
-unsigned find_position_in_sorted (lifo_t *const stack, void *const element, int (*cmp)(void const*const,void const*const)) {
+uint64_t find_position_in_sorted (lifo_t *const stack, void *const element, int (*cmp)(void const*const,void const*const)) {
 	if (!stack->size) {
 		LOG (info,"Unable to find element in an empty list. Returns 0 for initial import.\n");
 		return 0;
 	}
 
-	unsigned m = 0;
-	unsigned lo = 0;
-	unsigned hi = stack->size;
+	uint64_t m = 0;
+	uint64_t lo = 0;
+	uint64_t hi = stack->size;
 	for (m=(stack->size>>1); m<hi; m=(lo+hi)>>1) {
 		if (cmp (stack->buffer[lo],stack->buffer[hi-1]) > 0) {
 			LOG (error,"List elements do not appear in order...\n");

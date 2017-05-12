@@ -69,7 +69,7 @@ value_t get (symbol_table_t const*const rbtree, key__t const key) {
 			if (key==ptr->key)
 				return ptr->value;
 	}
-	LOG (info,"Requested key %lu was not found in the symbol-table...\n",key);
+	LOG (info,"Requested key %lx was not found in the symbol-table...\n",key);
 	return rbtree->default_value;
 }
 
@@ -435,7 +435,7 @@ tree_node_t* insert_node_recursive (symbol_table_t const*const rbtree,
 }
 
 void set (symbol_table_t *const rbtree, key__t const key, value_t const value) {
-	//LOG (info,"Inserting into the symbol-table value %lu indexed by key %lu.\n",value,key);
+	LOG (info,"Inserting into the symbol-table value %lx indexed by key %lu.\n",value,key);
 	rbtree->root = insert_node_recursive (rbtree,rbtree->root,key,value);
 	rbtree->size = rbtree->root->size;
 }

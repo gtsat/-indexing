@@ -81,9 +81,9 @@ priority_queue_t* new_priority_queue (int (*cmp) (void const*const,void const*co
 	return priority_queue;
 }
 
-static size_t sink (priority_queue_t *const priority_queue, size_t position) {
+static uint64_t sink (priority_queue_t *const priority_queue, uint64_t position) {
 	while ((position<<1) <= priority_queue->size) {
-		size_t other = position<<1;
+		uint64_t other = position<<1;
 		if (other+1 <= priority_queue->size) {
 			if (priority_queue->compare(
 					priority_queue->buffer[other+1],
@@ -102,8 +102,8 @@ static size_t sink (priority_queue_t *const priority_queue, size_t position) {
 	return position;
 }
 
-static size_t swim (priority_queue_t *const priority_queue, size_t position) {
-	for (size_t other=(position>>1); other; other>>=1) {
+static uint64_t swim (priority_queue_t *const priority_queue, uint64_t position) {
+	for (uint64_t other=(position>>1); other; other>>=1) {
 		if (priority_queue->compare(
 				priority_queue->buffer[position],
 				priority_queue->buffer[other])<0) {
@@ -172,7 +172,7 @@ void* remove_from_priority_queue (priority_queue_t *const priority_queue) {
 }
 
 
-void* remove_priority_queue_element (priority_queue_t *const priority_queue, size_t const pos) {
+void* remove_priority_queue_element (priority_queue_t *const priority_queue, uint64_t const pos) {
 	if (pos && pos <= priority_queue->size) {
 		void *const element = priority_queue->buffer[pos];
 

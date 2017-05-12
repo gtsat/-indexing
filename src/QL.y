@@ -11,9 +11,7 @@
 
 	void unroll (void);
 
-
-	unsigned vindex = 0;
-	double varray [vsize];
+	double varray [BUFSIZ];
 
 	unsigned key_cardinality;
 	unsigned predicates_cardinality;

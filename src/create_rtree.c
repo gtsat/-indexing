@@ -19,13 +19,11 @@
 #include "unistd.h"
 #include "getopt.h"
 
-unsigned DIMENSIONS;
-unsigned PAGESIZE;
+uint32_t DIMENSIONS;
+uint32_t PAGESIZE;
 
 char* DATASET;
 char* HEAPFILE;
-
-size_t IO_COUNTER;
 
 boolean INDEX_BOXES;
 

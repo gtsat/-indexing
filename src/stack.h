@@ -14,11 +14,11 @@ void* peek_at_stack (lifo_t const*const);
 
 void insert_into_stack (lifo_t *const, void *const);
 
-void* remove_from_position (lifo_t *const stack, size_t const position);
-void* get_at_position (lifo_t const*const stack, size_t const position);
-void insert_into_position (lifo_t *const stack, size_t const pos, void *const element);
+void* remove_from_position (lifo_t *const stack, uint64_t const position);
+void* get_at_position (lifo_t const*const stack, uint64_t const position);
+void insert_into_position (lifo_t *const stack, uint64_t const pos, void *const element);
 
-unsigned find_position_in_sorted (lifo_t *const stack, void *const element, int (*cmp)(void *const,void *const));
+uint64_t find_position_in_sorted (lifo_t *const stack, void *const element, int (*cmp)(void *const,void *const));
 
 fifo_t* transform_into_queue (lifo_t *const);
 
