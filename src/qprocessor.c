@@ -371,6 +371,12 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 				while (to_be_joined->size) {
 					tree_t *const joined_tree = remove_from_stack(to_be_joined);
+
+					pthread_rwlock_wrlock (&joined_tree->tree_lock);
+					*io_counter += joined_tree->io_counter;
+					joined_tree->io_counter = 0;
+					pthread_rwlock_unlock (&joined_tree->tree_lock);
+
 					delete_rtree (joined_tree);
 				}
 				delete_stack (to_be_joined);

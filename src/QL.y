@@ -16,8 +16,6 @@
 	unsigned key_cardinality;
 	unsigned predicates_cardinality;
 
-	boolean const verbose = true;
-
 	extern lifo_t* stack;
 %}
 
@@ -109,14 +107,19 @@ COMMANDS :
 ;
 
 COMMAND : 
-	COMMAND '/' SUBQUERY		{
+	COMMAND cSUBQUERY		{
 						LOG (info,"NEW SUBQUERY PARSED. \n");
 						insert_into_stack (stack,(void*)'/');
 					}
-	| '/' SUBQUERY			{
+	| cSUBQUERY			{
 						LOG (info,"FIRST SUBQUERY PARSED. \n");
 						insert_into_stack (stack,(void*)'/');
 					}
+;
+
+cSUBQUERY:
+	'/' cSUBQUERY			{	LOG (info,"More slashes preceding subquery. \n");}
+	| '/' SUBQUERY			{	LOG (info,"Put together subquery. \n");}
 ;
 
 SUBQUERY :
