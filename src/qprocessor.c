@@ -37,8 +37,8 @@ extern FILE* yyout;
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
 
-static fifo_t* process_command (lifo_t *const, char const folder[], char message[]);
-static tree_t* process_subquery (lifo_t *const, char const folder[], char message[]);
+static fifo_t* process_command (lifo_t *const, char const folder[], char message[], uint64_t *const io_counter);
+static tree_t* process_subquery (lifo_t *const, char const folder[], char message[], uint64_t *const io_counter);
 static fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_size, uint32_t const dimensions);
@@ -48,7 +48,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 
-char* qprocessor (char command[], char const folder[], char message[]) {
+char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_counter) {
 	get_rtree (NULL);
 	unlink ("/tmp/cached_command.txt");
 	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
@@ -74,7 +74,7 @@ char* qprocessor (char command[], char const folder[], char message[]) {
 	char *buffer = NULL;
 	//pthread_rwlock_init (&server_lock,NULL);
 	while (stack->size) {
-		fifo_t *const result = process_command (stack,folder,message);
+		fifo_t *const result = process_command (stack,folder,message,io_counter);
 
 		if (result == NULL) {
 			delete_stack (stack);
@@ -295,7 +295,7 @@ int treesize_compare (void *const x, void *const y) {
 }
 
 static
-fifo_t* process_command (lifo_t *const stack, char const folder[], char message[]) {
+fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"Syntax error: Command was not ended properly.\n");
@@ -318,7 +318,9 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		 */
 		lifo_t *const subq_trees = new_stack();
 		while (stack->size && peek_at_stack (stack) == (void*)'/') {
-			tree_t *const subq_tree = process_subquery (stack,folder,message);
+			uint64_t sub_io_counter = 0;
+			tree_t *const subq_tree = process_subquery (stack,folder,message,&sub_io_counter);
+			*io_counter += sub_io_counter;
 			if (subq_tree == NULL) {
 				delete_stack (subq_trees);
 				return NULL;
@@ -710,10 +712,10 @@ tree_t* get_rtree (char const*const filepath) {
 
 
 static
-tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[]) {
+tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
 	if (peek_at_stack (stack) == (void*)'/') {
 		remove_from_stack (stack);
-		LOG (info,"UNROLLING NEW SUBQUERY... \n");
+		LOG (0,"UNROLLING NEW SUBQUERY... \n");
 
 		char *const filename = remove_from_stack (stack);
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
@@ -873,6 +875,12 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 			if (lookups_result_list->size) {
 				LOG (info,"Creating materialized view for the result consisting of %lu records... \n",lookups_result_list->size);
+
+				pthread_rwlock_wrlock (&tree->tree_lock);
+				*io_counter = tree->io_counter;
+				tree->io_counter = 0;
+				pthread_rwlock_unlock (&tree->tree_lock);
+
 				tree = create_temp_rtree (lookups_result_list,tree->page_size,tree->dimensions);
 				delete_rtree_flag = true;
 			}
@@ -946,8 +954,12 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		delete_stack (lookups);
 		if (delete_rtree_flag) {
 			delete_rtree (tree);
+		}else{
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			*io_counter = tree->io_counter;
+			tree->io_counter = 0;
+			pthread_rwlock_unlock (&tree->tree_lock);
 		}
-
 		return result_tree;
 	}else{
 		LOG (error,"Syntax error: Was expecting the start of a new subquery.");

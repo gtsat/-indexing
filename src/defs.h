@@ -241,6 +241,8 @@ typedef struct {
 	uint64_t leaf_entries;
 	uint64_t internal_entries;
 
+	uint64_t io_counter;
+
 	uint32_t page_size;
 
 	uint16_t dimensions;

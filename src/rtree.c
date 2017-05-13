@@ -747,6 +747,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 		page->header.is_dirty = false;
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
+		++tree->io_counter;
 		SET_PAGE(position,page);
 		assert (page_lock == NULL);
 		page_lock = (pthread_rwlock_t*) malloc (sizeof(pthread_rwlock_t));
@@ -979,13 +980,14 @@ tree_t* load_rtree (char const filename[]) {
 			exit (EXIT_FAILURE);
 		}
 
-		tree->is_dirty = false;
 		tree->dimensions = le16toh(tree->dimensions);
 		tree->page_size = le32toh(tree->page_size);
 		tree->tree_size = le64toh(tree->tree_size);
 		tree->indexed_records = le64toh(tree->indexed_records);
 	}
 
+	tree->io_counter = 0;
+	tree->is_dirty = false;
 	close (fd);
 
 	tree->internal_entries = (tree->page_size-sizeof(header_t)) / (sizeof(interval_t)*tree->dimensions);
@@ -1066,9 +1068,10 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 		tree->indexed_records = le64toh(tree->indexed_records);
 	}
 
-	tree->is_dirty = false;
-
 	close (fd);
+
+	tree->io_counter = 0;
+	tree->is_dirty = false;
 
 	tree->internal_entries = (tree->page_size-sizeof(header_t)) / (sizeof(interval_t)*tree->dimensions);
 	tree->leaf_entries = (tree->page_size-sizeof(header_t)) / (sizeof(index_t)*tree->dimensions + sizeof(object_t));

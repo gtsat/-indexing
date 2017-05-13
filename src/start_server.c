@@ -52,29 +52,37 @@ boolean INDEX_BOXES;
 static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\": \"%s\",\n"
+					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"%s\",\n"
-					"\t\"proctime\": %u,\n"
+					"\t\"proctime\": %lu,\n"
+					"\t\"io\": %lu,\n"
 					"\t\"data\": ";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\": \"ERROR\"\n,"
-					"\t\"message\": \"Unable to process request.\"\n"
+					"\t\"query\": \"%s\"\n"
+					"\t\"message\": \"Unable to process query from bad request.\"\n"
 					"\t\"proctime\": 0.0,\n"
+					"\t\"io\": 0,\n"
 					"}\n";
 
 static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\":\"ERROR\"\n,"
+					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"The requested URL '%s' was not found.\"\n"
 					"\t\"proctime\": 0.0,\n"
+					"\t\"io\": 0,\n"
 					"}\n";
 
 static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemented\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\":\"ERROR\"\n,"
+					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"The requested method '%s' is not implemented.\"\n"
 					"\t\"proctime\": 0.0,\n"
+					"\t\"io\": 0,\n"
 					"}\n";
 
 static
@@ -153,6 +161,7 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		*message = '\0';
 
 		char* data = NULL;
+		uint64_t io_counter = 0;
 		clock_t start = clock();
 		if (!strcmp(method,"DELETE")) {
 			LOG (info,"Processing deletion sub-request '%s'.\n",request);
@@ -161,7 +170,7 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}else if (!strcmp(method,"PUT")) {
 			LOG (info,"Processing insertion sub-request '%s'.\n",request);
 		}else if (!strcmp(method,"GET")) {
-			data = qprocessor (request,folder,message);
+			data = qprocessor (request,folder,message,&io_counter);
 		}
 		clock_t end = clock();
 
@@ -176,8 +185,8 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 			result_code = "FAILURE";
 		}
 
-		char response[BUFSIZ];
-		snprintf (response,sizeof(response),ok_response,result_code,message,((end-start)*1000/CLOCKS_PER_SEC));
+		char response[strlen(ok_response)+strlen(result_code)+strlen(message)+32];
+		sprintf (response,ok_response,result_code,request,message,((end-start)*1000/CLOCKS_PER_SEC),io_counter);
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
@@ -195,7 +204,7 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}
 	}else{
 		char response[BUFSIZ];
-		snprintf (response,sizeof(response),not_found_response_template,request);
+		sprintf (response,sizeof(response),not_found_response_template,url,request);
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
@@ -234,14 +243,14 @@ void handle_connection (void *const args) {
 			return;
 		}
 
+		char response[BUFSIZ];
 		if (strcmp(protocol,"HTTP/1.0") && strcmp(protocol,"HTTP/1.1")) {
-			if (write (fd,bad_request_response,sizeof(bad_request_response)*sizeof(char))
-												< sizeof(bad_request_response)*sizeof(char)) {
+			sprintf (response,bad_request_response,url);
+			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else if (strcmp(method,"GET") && strcmp(method,"PUT") && strcmp(method,"DELETE")) {
-			char response[BUFSIZ];
-			snprintf (response,sizeof(response),bad_method_response_template,method);
+			sprintf (response,bad_method_response_template,url,method);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
