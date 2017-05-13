@@ -29,7 +29,7 @@
 #include"rtree.h"
 #include"defs.h"
 
-#define MEMORY_BOUND 1<<16
+#define MEMORY_BOUND 1<<20
 
 extern FILE* yyin;
 extern FILE* yyout;
@@ -356,7 +356,8 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					(to_be_joined->size < 2 
 					|| MEMORY_BOUND >= cartesian_size 
 						+ ((tree_t *const)peek_at_stack (subq_trees))->indexed_records 
-						* ((tree_t *const)peek_at_stack (subq_trees))->dimensions)) {
+						* (((tree_t *const)peek_at_stack (subq_trees))->dimensions)
+						* sizeof(index_t)+sizeof(object_t))) {
 
 					tree_t *const top = remove_from_stack (subq_trees);
 					cartesian_size += top->dimensions * top->indexed_records;
