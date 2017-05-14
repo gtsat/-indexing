@@ -57,13 +57,11 @@ boolean overlapping_boxes  (interval_t const box1[],
 				interval_t const box2[],
 				uint32_t const dimensions) {
 	for (uint32_t j=0; j<dimensions; ++j) {
-		if ((box1[j].start >= box2[j].start && box1[j].start <= box2[j].end)
-		 || (box1[j].end >= box2[j].start && box1[j].end <= box2[j].end)
-		 || (box2[j].start >= box1[j].start && box2[j].start <= box1[j].end)) {
-			return true;
+		if (box1[j].start > box2[j].end || box1[j].start > box2[j].end) {
+			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 int mincompare_symbol_table_entries (void const*const x, void const*const y) {
