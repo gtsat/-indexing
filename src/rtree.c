@@ -1024,8 +1024,8 @@ tree_t* load_rtree (char const filename[]) {
 
 	pthread_rwlock_init (&tree->tree_lock,NULL);
 
-	if (!tree->tree_size && load_rtree_page (tree,0) == NULL) new_root(tree);
-
+	if (load_rtree_page (tree,0) == NULL) new_root(tree);
+	else update_rootbox (tree);
 	return tree;
 }
 
@@ -1109,7 +1109,7 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	pthread_rwlock_init (&tree->tree_lock,NULL);
 
 	if (load_rtree_page (tree,0) == NULL) new_root(tree);
-
+	else update_rootbox (tree);
 	return tree;
 }
 

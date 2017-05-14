@@ -997,9 +997,7 @@ tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_siz
                 free (data_pair->key);
                 free (data_pair);
         }
-
-	delete_queue (partial_result);
-
+        delete_queue (partial_result);
         return tree;
 }
 
