@@ -424,7 +424,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {info=1,warn,error};
 
-#define logging info
+#define logging warn
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

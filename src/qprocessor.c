@@ -29,7 +29,7 @@
 #include"rtree.h"
 #include"defs.h"
 
-#define MEMORY_BOUND 1<<20
+#define MEMORY_BOUND 1<<30
 
 extern FILE* yyin;
 extern FILE* yyout;
@@ -37,8 +37,8 @@ extern FILE* yyout;
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
 
-static fifo_t* process_command (lifo_t *const, char const folder[], char message[], uint64_t *const io_counter);
-static tree_t* process_subquery (lifo_t *const, char const folder[], char message[], uint64_t *const io_counter);
+static fifo_t* process_command (lifo_t *const, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter);
+static tree_t* process_subquery (lifo_t *const, char const folder[], char message[], uint64_t *const io_blocks_counter);
 static fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_size, uint32_t const dimensions);
@@ -48,7 +48,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 
-char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_counter) {
+char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
 	get_rtree (NULL);
 	unlink ("/tmp/cached_command.txt");
 	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
@@ -74,7 +74,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	char *buffer = NULL;
 	//pthread_rwlock_init (&server_lock,NULL);
 	while (stack->size) {
-		fifo_t *const result = process_command (stack,folder,message,io_counter);
+		fifo_t *const result = process_command (stack,folder,message,io_blocks_counter,io_mb_counter);
 
 		if (result == NULL) {
 			delete_stack (stack);
@@ -295,7 +295,7 @@ int treesize_compare (void *const x, void *const y) {
 }
 
 static
-fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
+fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"Syntax error: Command was not ended properly.\n");
@@ -318,9 +318,12 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		 */
 		lifo_t *const subq_trees = new_stack();
 		while (stack->size && peek_at_stack (stack) == (void*)'/') {
-			uint64_t sub_io_counter = 0;
-			tree_t *const subq_tree = process_subquery (stack,folder,message,&sub_io_counter);
-			*io_counter += sub_io_counter;
+			uint64_t sub_io_blocks_counter = 0;
+			tree_t *const subq_tree = process_subquery (stack,folder,message,&sub_io_blocks_counter);
+
+			*io_mb_counter += (sub_io_blocks_counter * subq_tree->page_size)/((double)(1<<20));
+			*io_blocks_counter += sub_io_blocks_counter;
+
 			if (subq_tree == NULL) {
 				delete_stack (subq_trees);
 				return NULL;
@@ -374,7 +377,8 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					tree_t *const joined_tree = remove_from_stack(to_be_joined);
 
 					pthread_rwlock_wrlock (&joined_tree->tree_lock);
-					*io_counter += joined_tree->io_counter;
+					*io_blocks_counter += joined_tree->io_counter;
+					*io_mb_counter += (joined_tree->io_counter * joined_tree->page_size)/((double)(1<<20));
 					joined_tree->io_counter = 0;
 					pthread_rwlock_unlock (&joined_tree->tree_lock);
 

@@ -54,8 +54,9 @@ static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"{\n\t\"status\": \"%s\",\n"
 					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"%s\",\n"
+					"\t\"io_blocks\": %lu,\n"
+					"\t\"io_mb\": %.3lf,\n"
 					"\t\"proctime\": %lu,\n"
-					"\t\"io\": %lu,\n"
 					"\t\"data\": ";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
@@ -63,8 +64,10 @@ static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 					"{\n\t\"status\": \"ERROR\"\n,"
 					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"Unable to process query from bad request.\"\n"
+					"\t\"io_blocks\": 0,\n"
+					"\t\"io_mb\": 0.000,\n"
 					"\t\"proctime\": 0.0,\n"
-					"\t\"io\": 0,\n"
+					"\t\"data\": null,\n"
 					"}\n";
 
 static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
@@ -72,8 +75,10 @@ static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
 					"{\n\t\"status\":\"ERROR\"\n,"
 					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"The requested URL '%s' was not found.\"\n"
+					"\t\"io_blocks\": 0,\n"
+					"\t\"io_mb\": 0.000,\n"
 					"\t\"proctime\": 0.0,\n"
-					"\t\"io\": 0,\n"
+					"\t\"data\": null,\n"
 					"}\n";
 
 static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemented\n"
@@ -81,8 +86,10 @@ static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemente
 					"{\n\t\"status\":\"ERROR\"\n,"
 					"\t\"query\": \"%s\"\n"
 					"\t\"message\": \"The requested method '%s' is not implemented.\"\n"
+					"\t\"io_blocks\": 0,\n"
+					"\t\"io_mb\": 0.000,\n"
 					"\t\"proctime\": 0.0,\n"
-					"\t\"io\": 0,\n"
+					"\t\"data\": null,\n"
 					"}\n";
 
 static
@@ -161,7 +168,8 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		*message = '\0';
 
 		char* data = NULL;
-		uint64_t io_counter = 0;
+		double io_mb_counter = 0;
+		uint64_t io_blocks_counter = 0;
 		clock_t start = clock();
 		if (!strcmp(method,"DELETE")) {
 			LOG (info,"Processing deletion sub-request '%s'.\n",request);
@@ -170,7 +178,7 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}else if (!strcmp(method,"PUT")) {
 			LOG (info,"Processing insertion sub-request '%s'.\n",request);
 		}else if (!strcmp(method,"GET")) {
-			data = qprocessor (request,folder,message,&io_counter);
+			data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter);
 		}
 		clock_t end = clock();
 
@@ -186,7 +194,9 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}
 
 		char response[strlen(ok_response)+strlen(result_code)+strlen(message)+32];
-		sprintf (response,ok_response,result_code,request,message,((end-start)*1000/CLOCKS_PER_SEC),io_counter);
+		sprintf (response,ok_response,result_code,request,message,
+				io_blocks_counter,io_mb_counter,
+				((end-start)*1000/CLOCKS_PER_SEC));
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
