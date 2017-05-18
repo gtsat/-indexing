@@ -2815,7 +2815,7 @@ static void process_records_from_textfile (tree_t *const tree, char const filena
 
 		while (!feof(fptr)) {
 			if (sizeof(object_t) == sizeof(short)) {
-				fscanf (fptr,"%sd ",&id);
+				fscanf (fptr,"%h ",&id);
 			}else if (sizeof(object_t) == sizeof(int)) {
 				fscanf (fptr,"%d ",&id);
 			}else if (sizeof(object_t) == sizeof(long)) {
@@ -2830,7 +2830,7 @@ static void process_records_from_textfile (tree_t *const tree, char const filena
 
 			for (uint16_t i=0; i<tree->dimensions; ++i) {
 				if (sizeof(index_t) == sizeof(short)) {
-					fscanf (fptr,"%sd ",coordinates+i);
+					fscanf (fptr,"%h ",coordinates+i);
 				}else if (sizeof(index_t) == sizeof(float)) {
 					fscanf (fptr,"%f ",coordinates+i);
 				}else if (sizeof(index_t) == sizeof(double)) {
