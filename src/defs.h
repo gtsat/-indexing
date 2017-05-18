@@ -91,11 +91,11 @@ static const uint64_t initial_capacity = 11;
 
 #define fairness_threshold 	.5
 
-typedef uint64_t 	object_t;
-typedef double	 	index_t;
+typedef uint32_t 	object_t;
+typedef float	 	index_t;
 
-#define OBJECT_T_MAX 	ULONG_MAX
-#define INDEX_T_MAX 	DBL_MAX
+#define OBJECT_T_MAX 	UINT_MAX
+#define INDEX_T_MAX 	FLT_MAX
 
 
 typedef struct {
@@ -424,7 +424,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {info=1,warn,error};
 
-#define logging warn
+#define logging info
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

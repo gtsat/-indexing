@@ -2814,15 +2814,28 @@ static void process_records_from_textfile (tree_t *const tree, char const filena
 		rewind (fptr);
 
 		while (!feof(fptr)) {
-			fscanf (fptr,"%lu ",&id);
+			if (sizeof(object_t) == sizeof(short)) {
+				fscanf (fptr,"%sd ",&id);
+			}else if (sizeof(object_t) == sizeof(int)) {
+				fscanf (fptr,"%d ",&id);
+			}else if (sizeof(object_t) == sizeof(long)) {
+				fscanf (fptr,"%ld ",&id);
+			}
+
 			if (insert) {
-				LOG(info,"Indexing value '%lu' by key: (",id);
+				LOG(info,"Indexing value '%ld' by key: (",id);
 			}else{
-				LOG(info,"Deleting value '%lu' indexed by key: (",id);
+				LOG(info,"Deleting value '%ld' indexed by key: (",id);
 			}
 
 			for (uint16_t i=0; i<tree->dimensions; ++i) {
-				fscanf (fptr,"%lf ",coordinates+i);
+				if (sizeof(index_t) == sizeof(short)) {
+					fscanf (fptr,"%sd ",coordinates+i);
+				}else if (sizeof(index_t) == sizeof(float)) {
+					fscanf (fptr,"%f ",coordinates+i);
+				}else if (sizeof(index_t) == sizeof(double)) {
+					fscanf (fptr,"%lf ",coordinates+i);
+				}
 
 				if (logging <= info) {
 					fprintf (stderr,"%12lf ",(double)coordinates[i]);
