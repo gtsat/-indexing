@@ -14,20 +14,20 @@
 %x		BODY
 
 DIGIT		[0-9]
-ID		[a-zA-Z][a-zA-Z0-9\._]*
+ID		[a-zA-Z0-9\._]+
 
 %%
 
-			yy_push_state(0);
-			unsigned subqueries = 0;
 
-\/			{LOG(0,"\nSubquery %d start.\n",++subqueries); yy_push_state(SUBQ); return '/';}
+			yy_push_state(0);
+
+\/			{LOG(0,"\ncSubquery start.\n"); return '/';}
+\%			{LOG(0,"\nrSubquery start.\n"); return '%';}
 
 
 =			{LOG(0,"Assignment.\n"); return '=';}
 &			{LOG(0,"Concatenation of predicates.\n"); return '&';}
 \?			{LOG(0,"Predicates.\n"); return '?';}
-\|			{LOG(0,"Key sequence delimiter.\n");}
 
 key			{LOG(0,"Keyword KEY"); return LOOKUP;}
 from			{LOG(0,"Keyword FROM."); return FROM;}

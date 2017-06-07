@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -49,6 +50,9 @@ uint64_t IO_COUNTER;
 
 boolean INDEX_BOXES;
 
+const boolean write_through = true;
+
+
 static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"Content-type: text/json\n\n"
 					"{\n\t\"status\": \"%s\",\n"
@@ -58,6 +62,17 @@ static char ok_response[] = "HTTP/1.0 200 OK\n"
 					"\t\"io_mb\": %.3lf,\n"
 					"\t\"proctime\": %lu,\n"
 					"\t\"data\": ";
+
+static char ok_data[] = "HTTP/1.0 200 OK\n"
+					"Content-type: text/json\n\n"
+					"{\n\t\"data\": ";
+
+static char metadata[] = "\t\"status\": \"%s\",\n"
+					"\t\"query\": \"%s\"\n"
+					"\t\"message\": \"%s\",\n"
+					"\t\"io_blocks\": %lu,\n"
+					"\t\"io_mb\": %.3lf,\n"
+					"\t\"proctime\": %lu,\n";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 					"Content-type: text/json\n\n"
@@ -149,7 +164,7 @@ void process_arguments (int argc,char *argv[]) {
 
 
 static
-void handle (int fd, char const method[], char url[], char const folder[]) {
+void handle (int fd, char const method[], char url[], char const body[], char const folder[]) {
 	LOG (info,"Server received request: %s %s\n",method,url);
 
 	char* request = url;
@@ -178,7 +193,17 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 		}else if (!strcmp(method,"PUT")) {
 			LOG (info,"Processing insertion sub-request '%s'.\n",request);
 		}else if (!strcmp(method,"GET")) {
-			data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter);
+			if (write_through) {
+				uint32_t message_length = strlen(ok_data);
+				if (write (fd,ok_data,strlen(ok_data)*sizeof(char)) < strlen(ok_data)*sizeof(char)) {
+					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+					data = NULL;
+				}else{
+					data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,fd);
+				}
+			}else{
+				data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,-1);
+			}
 		}
 		clock_t end = clock();
 
@@ -193,19 +218,29 @@ void handle (int fd, char const method[], char url[], char const folder[]) {
 			result_code = "FAILURE";
 		}
 
-		char response[strlen(ok_response)+strlen(result_code)+strlen(message)+32];
-		sprintf (response,ok_response,result_code,request,message,
-				io_blocks_counter,io_mb_counter,
-				((end-start)*1000/CLOCKS_PER_SEC));
-		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+		if (write_through) {
+			char response[strlen(metadata)+strlen(result_code)+strlen(message)+1];
+			sprintf (response,metadata,result_code,request,message,
+					io_blocks_counter,io_mb_counter,
+					((end-start)*1000/CLOCKS_PER_SEC));
+			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
+				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			}
+		}else{
+			char response[strlen(ok_response)+strlen(result_code)+strlen(message)+1];
+			sprintf (response,ok_response,result_code,request,message,
+					io_blocks_counter,io_mb_counter,
+					((end-start)*1000/CLOCKS_PER_SEC));
+			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
+				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			}
+
+			if (write (fd,data,strlen(data)*sizeof(char)) < strlen(data)*sizeof(char)) {
+				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			}
 		}
 
-		if (write (fd,data,strlen(data)*sizeof(char)) < strlen(data)*sizeof(char)) {
-			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
-		}
-
-		if (free_data) free (data);
+		if (free_data != NULL) free (data);
 
 		char body_end[] = "}\n";
 
@@ -236,21 +271,57 @@ void handle_connection (void *const args) {
 	LOG (info,"Handling new connection for file descriptor %u.\n",fd)
 
 	char buffer[BUFSIZ];
-	uint64_t bytes_read = read (fd,buffer,sizeof(buffer)-1);
-	if (bytes_read) {
-		char url[sizeof(buffer)];
-		char method[sizeof(buffer)];
-		char protocol[sizeof(buffer)];
+	ssize_t bytes_read = read (fd,buffer,sizeof(buffer));
+	if (bytes_read > 0) {
+		char url[BUFSIZ];
+		char method[BUFSIZ];
+		char protocol[BUFSIZ];
 
 		buffer[bytes_read] = '\0';
 
 		sscanf (buffer,"%s %s %s",method,url,protocol);
-		while (strstr(buffer,"\r\n\r\n") == NULL)
-			bytes_read = read (fd,buffer,sizeof(buffer));
 
-		if (bytes_read < 0) {
-			close (fd);
-			return;
+		ssize_t content_length = 0;
+		lifo_t* content_stack = NULL;
+		char* content = NULL;
+		do{
+			if ((content = strstr(buffer,"\r\n\r\n")) != NULL) {
+				char* cl_ptr = strstr (buffer,"content-length");
+				if (cl_ptr == NULL) cl_ptr = strstr (buffer,"Content-Length");
+
+				if (cl_ptr != NULL) {
+					cl_ptr += strlen("content-length: ");
+					content += 4;
+
+					sscanf (cl_ptr,"%u",&content_length);
+
+					content_stack = new_stack();
+					do{
+						for (;content < buffer+sizeof(buffer) && content_stack->size < content_length;
+								insert_into_stack (content_stack,*content++))
+							;
+
+						if (content_stack->size < content_length) {
+							bzero (buffer,sizeof(buffer));
+							bytes_read = read (fd,buffer,sizeof(buffer));
+							content = buffer;
+						}else{
+							insert_into_stack (content_stack,'\0');
+							break;
+						}
+					}while (bytes_read > 0);
+				}
+				break;
+			}
+		}while (bytes_read > 0);
+
+		char body [content_length+1];
+		if (content_length) {
+			char *to = body;
+			for (register uint32_t i=0; i<=content_length; ++i) {
+				*to++ = content_stack->buffer[i];
+			}
+			delete_stack (content_stack);
 		}
 
 		char response[BUFSIZ];
@@ -259,12 +330,12 @@ void handle_connection (void *const args) {
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
-		}else if (strcmp(method,"GET") && strcmp(method,"PUT") && strcmp(method,"DELETE")) {
+		}else if (strcmp(method,"GET") && strcmp(method,"POST") && strcmp(method,"PUT") && strcmp(method,"DELETE")) {
 			sprintf (response,bad_method_response_template,url,method);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
-		}else handle (fd,method,url,folder);
+		}else handle (fd,method,url,body,folder);
 	}else LOG (error,"Problematic IPC...\n");
 	close (fd);
 }

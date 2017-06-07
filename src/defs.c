@@ -18,13 +18,13 @@
 #include "defs.h"
 #include <math.h>
 
+
 boolean equal_keys (index_t const key1[],
 			index_t const key2[],
 			uint32_t const dimensions) {
 	for (uint32_t j=0; j<dimensions; ++j) {
-		//if (key1[j]!=key2[j]) {
 		double tmp = key1[j] - key2[j];
-		if (tmp*tmp < DBL_MIN) {
+		if (tmp > DBL_MIN || tmp < -DBL_MIN) {
 			return false;
 		}
 	}

@@ -6,22 +6,27 @@
 	#include"queue.h"
 	#include"stack.h"
 
-	int yylex (void);
-	void yyerror (char*);
+	#define YYERROR_VERBOSE
 
-	void unroll (void);
+	void yyerror (char*);
+	//void unroll (void);
+
+
+	/** the following are passed on yyparse() **/
+
+	lifo_t* stack;
 
 	double varray [BUFSIZ];
 
+	unsigned vindex;
 	unsigned key_cardinality;
 	unsigned predicates_cardinality;
-
-	extern lifo_t* stack;
 %}
 
 %expect 0
 %token_table
 /* %pure_parser */
+
 
 %union{
 	char* str;
@@ -29,24 +34,25 @@
 	int ival;
 }
 
-%type <str> COMMAND SUBQUERY
+%type <str> COMMAND 
+%type <str> rCOMMAND 
+%type <str> cSUBQUERY rSUBQUERY
+%type <str> SUBQUERY
 %type <str> PREDICATE
+
+%type <str> rKEY DJOIN_PRED CP_PRED
 %type <str> KEY
 
-%token <str> ID LOOKUP
-%token <str> FROM TO 
-%token <str> BOUND 
-%token <str> CORN
-
+%token <str> ID LOOKUP FROM TO BOUND CORN
 %token <str> BITFIELD
 %token <int> INTEGER
 %token <double> REAL
 
 %token ';'
-%left '/' '?'
-%left '&'
+%left '/' '%'
+%left '?' '&'
 %token '='
-%right ','
+%left ','
 
 %start COMMANDS
 
@@ -56,7 +62,7 @@ COMMANDS :
 					{
 						LOG (info,"EMPTY COMMANDS ENCOUNTERED. \n");
 					}
-	| COMMANDS ';'			{
+	| COMMANDS ';'				{
 						LOG (info,"EMPTY COMMAND ';' ENCOUNTERED. \n");
 					}
 	| COMMANDS '/' ';'		{
@@ -76,28 +82,28 @@ COMMANDS :
 						insert_into_stack (stack,';');
 						varray [vindex++] = INDEX_T_MAX;
 					}
-	| COMMANDS COMMAND '/' REAL ';'		{
+	| COMMANDS COMMAND DJOIN_PRED ';' {
 						LOG (info,"DISTANCE JOIN. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<dval>4;
 					}
-	| COMMANDS COMMAND '/' REAL '/' ';'	{
+	| COMMANDS COMMAND DJOIN_PRED '/' ';' {
 						LOG (info,"DISTANCE JOIN/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<dval>4;
 					}
-	| COMMANDS COMMAND '/' INTEGER ';'	{
+	| COMMANDS COMMAND CP_PRED ';'	{
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<ival>4;
 					}
-	| COMMANDS COMMAND '/' INTEGER '/' ';'	{
+	| COMMANDS COMMAND CP_PRED '/' ';'	{
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)ULONG_MAX);
@@ -106,20 +112,53 @@ COMMANDS :
 					}
 ;
 
-COMMAND : 
-	COMMAND cSUBQUERY		{
-						LOG (info,"NEW SUBQUERY PARSED. \n");
-						insert_into_stack (stack,(void*)'/');
+COMMAND :
+	  COMMAND cSUBQUERY		{
+						LOG (info,"NEW cSUBQUERY PARSED. \n");
 					}
 	| cSUBQUERY			{
-						LOG (info,"FIRST SUBQUERY PARSED. \n");
-						insert_into_stack (stack,(void*)'/');
+						LOG (info,"FIRST cSUBQUERY PARSED. \n");
+					}
+	| rCOMMAND rKEY			{
+						LOG (info,"REVERSE NN. \n");
+						insert_into_stack (stack,(void*)key_cardinality);
+						insert_into_stack (stack,(void*)'%');
+					}
+	| error 			{
+						LOG (error,"Erroneous command... \n");
+						yyclearin;
+						yyerrok;
+						YYABORT;
+					}
+;
+
+rCOMMAND :
+	 cSUBQUERY rSUBQUERY		{
+						LOG (info,"FIRST rSUBQUERY PARSED. \n");
+					}
+	| rCOMMAND rSUBQUERY		{
+						LOG (info,"NEW rSUBQUERY PARSED. \n");
+					}
+;
+
+rSUBQUERY :
+	'%' rSUBQUERY			{
+						LOG (info,"More slashes preceding rsubquery. \n");
+					}
+	| '%' SUBQUERY			{
+						LOG (info,"Put together rsubquery. \n");
+						insert_into_stack (stack,(void*)'%');
 					}
 ;
 
 cSUBQUERY:
-	'/' cSUBQUERY			{	LOG (info,"More slashes preceding subquery. \n");}
-	| '/' SUBQUERY			{	LOG (info,"Put together subquery. \n");}
+	'/' cSUBQUERY			{
+						LOG (info,"More slashes preceding csubquery. \n");
+					}
+	| '/' SUBQUERY			{
+						LOG (info,"Put together csubquery. \n");
+						insert_into_stack (stack,(void*)'/');
+					}
 ;
 
 SUBQUERY :
@@ -132,10 +171,6 @@ SUBQUERY :
 						LOG (info,"Parsed subquery. \n")
 						insert_into_stack (stack,(void*)predicates_cardinality);
 						insert_into_stack (stack,$<str>1);
-					}
-	| error 			{
-						LOG (error,"Erroneous subquery... \n"); 
-						yyerrok;
 					}
 ;
 
@@ -179,6 +214,27 @@ PREDICATE :
 					}
 ;
 
+rKEY :
+	 '%' rKEY			{}
+	| '%' KEY			{
+						LOG (info,"rKEY encountered.\n");
+					}
+;
+
+DJOIN_PRED :
+	 '/' DJOIN_PRED			{}
+	| '/' REAL			{
+						LOG (info,"Distance join predicate encountered.\n");
+					}
+;
+
+CP_PRED :
+	 '/' CP_PRED			{}
+	| '/' INTEGER			{
+						LOG (info,"Closest pairs predicate encountered.\n");
+					}
+;
+
 KEY : 
 	  KEY ',' REAL			{
 						insert_into_stack (stack,varray+vindex);
@@ -202,14 +258,15 @@ KEY :
 					}
 ;
 
+
 %%
 
-/*
+/***
 int main (int argc, char* argv[]) {
 	stack = new_stack();
 	yyparse();
 }
-*/
+***
 
 void unroll (void) {
 	LOG (info,"UNROLLING COMMANDS NOW... \n\n\n");
@@ -287,7 +344,7 @@ subquery:
 		printf ("%s \n", yytname[i]);
 	}
 }
-
+***/
 void yyerror (char* description) {
 	LOG (error," %s\n", description);
 }

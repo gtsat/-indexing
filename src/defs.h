@@ -82,7 +82,7 @@ typedef struct {
 typedef enum {false=0,true} boolean;
 
 
-static const uint64_t initial_capacity = 11;
+static const uint64_t initial_capacity = 51;
 
 /**** BASIC DEFINITIONS END ****/
 
@@ -92,7 +92,7 @@ static const uint64_t initial_capacity = 11;
 #define fairness_threshold 	.5
 
 typedef uint32_t 	object_t;
-typedef float	 	index_t;
+typedef float 		index_t;
 
 #define OBJECT_T_MAX 	UINT_MAX
 #define INDEX_T_MAX 	FLT_MAX
@@ -267,7 +267,7 @@ typedef struct {
 #define BOX(i)			intervals+(i)*tree->dimensions
 #define INTERVALS(i,j)		intervals[(i)*tree->dimensions+(j)]
 
-#define MBB(id)			(id)?load_rtree_page(tree,PARENT_ID(id))->node.internal.BOX(CHILD_OFFSET(id)):tree->root_box
+#define MBB(id)			(id)?load_page(tree,PARENT_ID(id))->node.internal.BOX(CHILD_OFFSET(id)):tree->root_box
 
 #define TRANSPOSE_PAGE_POSITION(id) CHILD_ID(anchor(tree,(id)),(id)-anchor(tree,(id)))
 
@@ -424,7 +424,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {info=1,warn,error};
 
-#define logging info
+#define logging 0
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

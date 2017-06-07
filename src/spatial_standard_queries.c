@@ -20,6 +20,7 @@
 #include "spatial_standard_queries.h"
 #include "priority_queue.h"
 #include "symbol_table.h"
+#include "common.h"
 #include "queue.h"
 #include "stack.h"
 #include "defs.h"
@@ -27,7 +28,7 @@
 
 object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 
-	load_rtree_page(tree,0);
+	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	if (!key_enclosed_by_box(key,tree->root_box,tree->dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);
@@ -60,7 +61,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 		while (browse->size) {
 			uint64_t const page_id = remove_head_of_queue (browse);
 
-			page_t const*const page = load_rtree_page(tree,page_id);
+			page_t const*const page = load_page(tree,page_id);
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
 			pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
@@ -107,7 +108,7 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 
 fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 
-	load_rtree_page(tree,0);
+	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	if (!key_enclosed_by_box(key,tree->root_box,tree->dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);
@@ -140,7 +141,7 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 	while (browse->size) {
 		uint64_t const page_id = remove_head_of_queue (browse);
 
-		page_t const*const page = load_rtree_page(tree,page_id);
+		page_t const*const page = load_page(tree,page_id);
 
 		pthread_rwlock_rdlock (&tree->tree_lock);
 		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
@@ -213,7 +214,7 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 
 	while (browse->size) {
 		uint64_t const page_id = remove_head_of_queue (browse);
-		page_t const*const page = load_rtree_page(tree,page_id);
+		page_t const*const page = load_page(tree,page_id);
 
 		pthread_rwlock_rdlock (&tree->tree_lock);
 		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
@@ -299,7 +300,7 @@ fifo_t* bounded_search (tree_t *const tree,
 		}
 
 		uint64_t const page_id = container->id;
-		page_t const*const page = load_rtree_page(tree,page_id);
+		page_t const*const page = load_page(tree,page_id);
 
 		free (container);
 
@@ -433,7 +434,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 
 			free (container);
 
-			page_t const*const page = load_rtree_page(tree,page_id);
+			page_t const*const page = load_page(tree,page_id);
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
 			pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
@@ -526,7 +527,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 	insert_at_tail_of_queue (result_browse,0);
 	while (result_browse->size) {
 		uint64_t const page_id = remove_head_of_queue (result_browse);
-		page_t const*const page = load_rtree_page(tree,page_id);
+		page_t const*const page = load_page(tree,page_id);
 
 		pthread_rwlock_rdlock (&tree->tree_lock);
 		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
@@ -724,7 +725,7 @@ fifo_t* distance_join (double const theta,
 		boolean all_leaves = true;
 		for (uint32_t i=0; i<container->cardinality; ++i) {
 			uint64_t const page_id = container->page_ids[i];
-			page_t const*const page = load_rtree_page (TREE(i),page_id);
+			page_t const*const page = load_page (TREE(i),page_id);
 
 			pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 			pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const) get(TREE(i)->page_locks,page_id);
@@ -809,7 +810,7 @@ fifo_t* distance_join (double const theta,
 			pthread_rwlock_t* page_locks [cardinality];
 
 			for (uint32_t i=0; i<cardinality; ++i) {
-				page_t const*const page = load_rtree_page (TREE(i),container->page_ids[i]);
+				page_t const*const page = load_page (TREE(i),container->page_ids[i]);
 
 				pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 				pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const) get(TREE(i)->page_locks,container->page_ids[i]);
@@ -964,7 +965,7 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 		boolean all_leaves = true;
 		for (uint32_t i=0; i<container->cardinality; ++i) {
 			uint64_t const page_id = container->page_ids[i];
-			page_t const*const page = load_rtree_page (TREE(i),page_id);
+			page_t const*const page = load_page (TREE(i),page_id);
 
 			pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 			pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const) get(TREE(i)->page_locks,page_id);
@@ -1035,7 +1036,7 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 			pthread_rwlock_t * page_locks [cardinality];
 
 			for (uint32_t i=0; i<cardinality; ++i) {
-				page_t const* page = load_rtree_page(TREE(i),container->page_ids[i]);
+				page_t const* page = load_page(TREE(i),container->page_ids[i]);
 
 				pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 				pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const) get(TREE(i)->page_locks,container->page_ids[i]);

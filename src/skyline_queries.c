@@ -20,6 +20,7 @@
 #include "spatial_standard_queries.h"
 #include "priority_queue.h"
 #include "symbol_table.h"
+#include "common.h"
 #include "queue.h"
 #include "stack.h"
 #include "rtree.h"
@@ -81,7 +82,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 		return new_queue();
 	}else pthread_rwlock_unlock (&tree->tree_lock);
 
-	load_rtree_page (tree,0);
+	load_page (tree,0);
 	index_t reference_point [tree->dimensions];
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
@@ -110,7 +111,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	while (browse->size) {
 		container = remove_from_priority_queue(browse);
 		uint64_t const page_id = container->id;
-		page_t const*const page = load_rtree_page(tree,page_id);
+		page_t const*const page = load_page(tree,page_id);
 
 		free (container);
 

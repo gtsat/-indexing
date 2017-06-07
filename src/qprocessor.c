@@ -38,6 +38,7 @@ symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 static fifo_t* process_command (lifo_t *const, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter);
+static tree_t* process_reverse_NN_query (lifo_t *const, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter);
 static tree_t* process_subquery (lifo_t *const, char const folder[], char message[], uint64_t *const io_blocks_counter);
 static fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
 static fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail);
@@ -48,7 +49,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 
-char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
+char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, int fd) {
 	get_rtree (NULL);
 	unlink ("/tmp/cached_command.txt");
 	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
@@ -58,6 +59,8 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5/BAY.rtree?corn=II/-10;";
 	//char command[] = "/NY.rtree?corn=oo/BAY.rtree?corn=oo/NW.rtree?corn=oo/5;"
 
+	LOG (info,"Will now initiate the processing of command '%s'.\n",command);
+
 	fprintf (fptr,"%s",command);
 	rewind (fptr);
 
@@ -65,10 +68,14 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 	lifo_t *const stack = new_stack();
 	double varray [BUFSIZ];
-	yyparse(stack,varray);
+	int parser_rval = yyparse(stack,varray);
 	fclose (fptr);
 
-	//unroll(); return 0;
+	if (parser_rval) {
+		return NULL;
+	}
+
+	//unroll (stack); exit (EXIT_SUCCESS);
 
 	srand48(time(NULL));
 	char *buffer = NULL;
@@ -77,6 +84,12 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		fifo_t *const result = process_command (stack,folder,message,io_blocks_counter,io_mb_counter);
 
 		if (result == NULL) {
+			char *null_string = "null;\n";
+			if (fd > 0) {
+				if (write (fd,null_string,sizeof(null_string)) < sizeof(null_string)) {
+					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				}
+			}
 			delete_stack (stack);
 			return NULL;
 		}
@@ -98,16 +111,24 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 				if (guard - result_string < BUFSIZ) {
 					uint64_t resultlen = strlen(buffer);
+					if (fd > 0) {
+						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
+							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+						}
+						bzero (buffer,sizeof(buffer));
+						result_string = buffer;
+						*result_string = '\0';
+					}else{
+						char *const old_buffer = buffer;
+						buffer_size <<= 1;
+						buffer = (char *const) malloc (sizeof(char)*buffer_size);
+						guard = buffer + buffer_size;
 
-					char *const old_buffer = buffer;
-					buffer_size <<= 1;
-					buffer = (char *const) malloc (sizeof(char)*buffer_size);
-					guard = buffer + buffer_size;
+						strcpy (buffer,old_buffer);
+						free (old_buffer);
 
-					strcpy (buffer,old_buffer);
-					free (old_buffer);
-
-					result_string = buffer + resultlen;
+						result_string = buffer + resultlen;
+					}
 				}
 
 				sprintf (result_string,"\t{ \"rid\": %lu, ",rid++);
@@ -166,16 +187,24 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 				if (guard - result_string < BUFSIZ) {
 					uint64_t resultlen = strlen(buffer);
+					if (fd > 0) {
+						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
+							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+						}
+						bzero (buffer,sizeof(buffer));
+						result_string = buffer;
+						*result_string = '\0';
+					}else{
+						char *const old_buffer = buffer;
+						buffer_size <<= 1;
+						buffer = (char *const) malloc (sizeof(char)*buffer_size);
+						guard = buffer + buffer_size;
 
-					char *const old_buffer = buffer;
-					buffer_size <<= 1;
-					buffer = (char *const) malloc (sizeof(char)*buffer_size);
-					guard = buffer + buffer_size;
+						strcpy (buffer,old_buffer);
+						free (old_buffer);
 
-					strcpy (buffer,old_buffer);
-					free (old_buffer);
-
-					result_string = buffer + resultlen;
+						result_string = buffer + resultlen;
+					}
 				}
 
 				sprintf (result_string,"\t{ \"rid\": %lu, ",rid++);
@@ -279,27 +308,27 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 */
 	if (buffer != NULL) {
 		strcpy (message,"Successful operation.");
+		if (fd > 0) {
+			uint64_t resultlen = strlen(buffer);
+			if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
+				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			}
+			bzero (buffer,sizeof(buffer));
+			*buffer = '\0';
+		}
 	}else{
 		strcpy (message,"Syntax error.");
 	}
 	return buffer;
 }
 
-static
-int treesize_compare (void *const x, void *const y) {
-	uint64_t xsize = ((tree_t *const)x)->indexed_records;
-	uint64_t ysize = ((tree_t *const)y)->indexed_records;
-	if (xsize > ysize) return -1;
-	else if (xsize < ysize) return 1;
-	else return 0;
-}
 
 static
 fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"Syntax error: Command was not ended properly.\n");
-			strcpy (message,"Syntax error.");
+			strcpy (message,"Syntax error: Command was not ended properly.");
 			clear_stack(stack);
 			return NULL;
 		}
@@ -317,19 +346,26 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		 * Compute sub-queries.
 		 */
 		lifo_t *const subq_trees = new_stack();
-		while (stack->size && peek_at_stack (stack) == (void*)'/') {
+		while (stack->size) {
+			tree_t *subq_tree = NULL;
 			uint64_t sub_io_blocks_counter = 0;
-			tree_t *const subq_tree = process_subquery (stack,folder,message,&sub_io_blocks_counter);
-
-			*io_mb_counter += (sub_io_blocks_counter * subq_tree->page_size)/((double)(1<<20));
-			*io_blocks_counter += sub_io_blocks_counter;
-
-			if (subq_tree == NULL) {
-				delete_stack (subq_trees);
-				return NULL;
+			if (peek_at_stack (stack) == (void*)'/') {
+				subq_tree = process_subquery (stack,folder,message,&sub_io_blocks_counter);
+			}else if (peek_at_stack (stack) == (void*)'%') {
+				subq_tree = process_reverse_NN_query (stack,folder,message,&sub_io_blocks_counter,io_mb_counter);
 			}else{
+				break;
+			}
+
+			if (subq_tree != NULL) {
+				*io_mb_counter += (sub_io_blocks_counter * subq_tree->page_size)/((double)(1<<20));
+				*io_blocks_counter += sub_io_blocks_counter;
+
 				insert_into_stack (subq_trees,subq_tree);
 				LOG (info,"Processed subquery returned %lu tuples. \n",subq_tree->indexed_records);
+			}else{
+				delete_stack (subq_trees);
+				return NULL;
 			}
 		}
 
@@ -376,13 +412,18 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 				while (to_be_joined->size) {
 					tree_t *const joined_tree = remove_from_stack(to_be_joined);
 
-					pthread_rwlock_wrlock (&joined_tree->tree_lock);
-					*io_blocks_counter += joined_tree->io_counter;
-					*io_mb_counter += (joined_tree->io_counter * joined_tree->page_size)/((double)(1<<20));
-					joined_tree->io_counter = 0;
-					pthread_rwlock_unlock (&joined_tree->tree_lock);
-
-					delete_rtree (joined_tree);
+					if (joined_tree != NULL) {
+						pthread_rwlock_wrlock (&joined_tree->tree_lock);
+						*io_blocks_counter += joined_tree->io_counter;
+						*io_mb_counter += (joined_tree->io_counter * joined_tree->page_size)/((double)(1<<20));
+						joined_tree->io_counter = 0;
+						pthread_rwlock_unlock (&joined_tree->tree_lock);
+						
+						delete_rtree (joined_tree);
+					}else{
+						LOG (error,"Error while finalizing join operands.\n");
+						strcat (message,"Error while finalizing join operands.");
+					}
 				}
 				delete_stack (to_be_joined);
 
@@ -721,19 +762,101 @@ tree_t* get_rtree (char const*const filepath) {
 	}
 }
 
+static
+tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
+	if (remove_from_stack (stack) == (void*)'%') {
+		uint32_t kcardinality = remove_from_stack (stack);
+		index_t key [kcardinality];
+		for (register uint32_t i=kcardinality; i>0; --i) {
+			double* tmp = remove_from_stack (stack);
+			if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+			key [i-1] = *tmp;
+		}
+
+		lifo_t *const feature_trees = new_stack ();
+		while (peek_at_stack (stack) == (void*)'%') {
+			unsigned sub_io_blocks_counter = 0;
+			tree_t *const feature_tree = process_subquery (stack,folder,message,&sub_io_blocks_counter);
+
+			if (feature_tree == NULL) {
+				while (feature_trees->size) {
+					delete_rtree (remove_from_stack(feature_trees));
+				}
+				delete_stack (feature_trees);
+
+				strcpy (message,"Unable to retrieve feature-tree for the RNN query.");
+				LOG (error,"Unable to retrieve the feature-tree for the RNN query.\n");
+				return NULL;
+			}else
+			if (feature_tree->dimensions > kcardinality) {
+				while (feature_trees->size) {
+					delete_rtree (remove_from_stack(feature_trees));
+				}
+				delete_stack (feature_trees);
+
+				LOG (error,"RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.\n");
+				strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.\n");
+				return NULL;
+			}
+
+			*io_mb_counter += (sub_io_blocks_counter * feature_tree->page_size)/((double)(1<<20));
+			*io_blocks_counter += sub_io_blocks_counter;
+		}
+
+		if (peek_at_stack (stack) != (void*)'/') {
+			strcpy (message,"Syntax error: RNN query should start with a data-tree.");
+			LOG (error,"Syntax error: RNN query should start with a data-tree.\n");
+			return NULL;
+		}
+
+		uint64_t sub_io_blocks_counter = 0;
+		tree_t *const data_tree = process_subquery (stack,folder,message,&sub_io_blocks_counter);
+
+		if (data_tree == NULL) {
+			strcpy (message,"Unable to retrieve the data-tree for the RNN query.");
+			LOG (error,"Unable to retrieve the data-tree for the RNN query.\n");
+			return NULL;
+		}else
+		if (data_tree->dimensions > kcardinality) {
+			LOG (error,"RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.\n");
+			strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.\n");
+			return NULL;
+		}
+
+		*io_mb_counter += (sub_io_blocks_counter * data_tree->page_size)/((double)(1<<20));
+		*io_blocks_counter += sub_io_blocks_counter;
+
+
+		fifo_t *const result_list = new_queue(); //multichromatic_reverse_nearest_neighbors (key,data_tree,feature_trees);
+		tree_t *const result_tree = create_temp_rtree (result_list,data_tree->page_size,data_tree->dimensions);
+
+		delete_stack (feature_trees);
+		return result_tree;
+	}else{
+		LOG (error,"Syntax error: Was expecting the start of a reverse NN subquery.");
+		strcpy (message,"Syntax error.");
+		clear_stack (stack);
+		return NULL;
+	}
+}
 
 static
 tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
-	if (peek_at_stack (stack) == (void*)'/') {
-		remove_from_stack (stack);
+	if (peek_at_stack (stack) == (void*)'/' || peek_at_stack (stack) == (void*)'%') {
+		char start_symbol = (char) remove_from_stack (stack);
 		LOG (0,"UNROLLING NEW SUBQUERY... \n");
 
 		char *const filename = remove_from_stack (stack);
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
 		strcpy (filepath,folder);
 		strcat (filepath,"/");
-		strcat (filepath,filename);
-		LOG (info,"HEAPFILE: '%s'. \n",filename);
+		if (start_symbol == '%' && *filename=='2' && filename[1]=='5') {
+			LOG (info,"HEAPFILE: '%s'. \n",filename+2);
+			strcat (filepath,filename+2);
+		}else{
+			LOG (info,"HEAPFILE: '%s'. \n",filename);
+			strcat (filepath,filename);
+		}
 		free (filename);
 
 		tree_t* tree = get_rtree (filepath);
@@ -771,10 +894,10 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					LOG (info,"LOOKUP ");
 					index_t *const lookup = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
 					uint32_t i=0;
-                    for (i=0; i<kcardinality; ++i) {
+					for (i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
-                            double* tmp = remove_from_stack (stack);
-                            if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+							double* tmp = remove_from_stack (stack);
+							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
 							lookup[tree->dimensions-i-1] = *tmp;
 						}
 					}
@@ -795,38 +918,38 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					break;
 				case FROM:
 					LOG (info,"FROM ");
-                    for (uint32_t i=0; i<kcardinality; ++i) {
+					for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
-                            double* tmp = remove_from_stack (stack);
-                            if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+							double* tmp = remove_from_stack (stack);
+							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
 							if (*tmp > from[tree->dimensions-1-i]) {
 								from[tree->dimensions-1-i] = *tmp;
 							}
 						}
-                    }
+					}
 					break;
 				case TO:
 					LOG (info,"TO ");
-                    for (uint32_t i=0; i<kcardinality; ++i) {
+					for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i < tree->dimensions) {
-                        	double* tmp = remove_from_stack (stack);
-                        	if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+							double* tmp = remove_from_stack (stack);
+							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
 							if (*tmp < to[tree->dimensions-1-i]) {
 								to[tree->dimensions-1-i] = *tmp;
 							}
 						}
-                    }
+					}
 					break;
 				case BOUND:
 					LOG (info,"BOUND ");
 					bounded_dimensionality = kcardinality;
-                    for (uint32_t i=0; i<kcardinality; ++i) {
+					for (uint32_t i=0; i<kcardinality; ++i) {
 						if (i <= tree->dimensions) {
-                        	double* tmp = remove_from_stack (stack);
-                        	if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+							double* tmp = remove_from_stack (stack);
+							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
 							bound[tree->dimensions-i] = *tmp;
 						}
-                    }
+					}
 					break;
 				case CORN:
 					is_skyline = true;
@@ -908,7 +1031,6 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 			LOG (info,"Skyline result contains %lu tuples.\n",skyline_result_list->size);
 
 			if (bounded_dimensionality) {
-
 				priority_queue_t* max_heap = new_priority_queue(&maxcompare_containers);
 
 				while (skyline_result_list->size) {
@@ -1004,4 +1126,5 @@ tree_t* create_temp_rtree (fifo_t *const partial_result, uint32_t const page_siz
         delete_queue (partial_result);
         return tree;
 }
+
 

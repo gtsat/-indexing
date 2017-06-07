@@ -62,7 +62,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 26 "QL.y" /* yacc.c:1909  */
+#line 31 "QL.y" /* yacc.c:1909  */
 
 	char* str;
 	double dval;
@@ -80,7 +80,6 @@ typedef union YYSTYPE YYSTYPE;
 extern YYSTYPE yylval;
 
 #include "defs.h"
-
 int yyparse (lifo_t *const stack, double varray[]);
 
 #endif /* !YY_YY_QL_TAB_H_INCLUDED  */
