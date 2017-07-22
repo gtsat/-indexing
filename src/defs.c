@@ -56,8 +56,8 @@ boolean box_enclosed_by_box (interval_t const small_box[],
 boolean overlapping_boxes  (interval_t const box1[],
 				interval_t const box2[],
 				uint32_t const dimensions) {
-	index_t DBG1START = box1[1].start, DBG2START = box2[1].start;
-	index_t DBG1END = box1[1].end, DBG2END = box2[1].end;
+	//index_t DBG1START = box1[1].start, DBG2START = box2[1].start;
+	//index_t DBG1END = box1[1].end, DBG2END = box2[1].end;
 	for (uint32_t j=0; j<dimensions; ++j) {
 		if (box1[j].start > box2[j].end || box1[j].end < box2[j].start) {
 			return false;

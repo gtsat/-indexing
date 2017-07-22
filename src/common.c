@@ -1014,7 +1014,7 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 			:low_level_write_of_ntree_page_to_disk (tree,page,position);
 }
 
-long flush_tree (tree_t *const tree) {
+uint64_t flush_tree (tree_t *const tree) {
 	int fd = open (tree->filename, O_WRONLY | O_CREAT, PERMS);
 	if (fd < 0) {
 		LOG (error,"Cannot open file '%s' for writing...\n",tree->filename);

@@ -57,8 +57,8 @@ void clear_swap (swap_t *const swap) {
 }
 
 static boolean greater (swap_t const*const swap, uint64_t const i, uint64_t const j) {
-	uint64_t dbgi = swap->pq[i];
-	uint64_t dbgj = swap->pq[j];
+	//uint64_t dbgi = swap->pq[i];
+	//uint64_t dbgj = swap->pq[j];
 
 	assert (swap->pq[i] <= swap->capacity);
 	assert (swap->pq[j] <= swap->capacity);
@@ -67,8 +67,8 @@ static boolean greater (swap_t const*const swap, uint64_t const i, uint64_t cons
 }
 
 static void exch (swap_t const*const swap, uint64_t const i, uint64_t const j) {
-	uint64_t dbgi = swap->pq[i];
-	uint64_t dbgj = swap->pq[j];
+	//uint64_t dbgi = swap->pq[i];
+	//uint64_t dbgj = swap->pq[j];
 
 	assert (swap->pq[i] <= swap->capacity);
 	assert (swap->pq[j] <= swap->capacity);
