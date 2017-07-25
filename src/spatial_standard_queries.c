@@ -852,7 +852,7 @@ fifo_t* distance_join (double const theta,
 						data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
 
 						memcpy (data_container->keys+offset*dimensions,
-								pages[offset]->node.leaf.keys+offsets[offset]*dimensions,
+								pages[offset]->node.leaf.keys+offsets[offset]*TREE(offset)->dimensions,
 								dimensions*sizeof(index_t));
 					}
 
@@ -1084,7 +1084,7 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 					for (uint32_t offset=0; offset<cardinality; ++offset) {
 						data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
 						memcpy (data_container->keys+offset*dimensions,
-								pages[offset]->node.leaf.keys+offsets[offset]*dimensions,
+								pages[offset]->node.leaf.keys+offsets[offset]*TREE(offset)->dimensions,
 								dimensions*sizeof(index_t));
 					}
 

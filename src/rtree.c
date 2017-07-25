@@ -826,7 +826,7 @@ static uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *c
 	parent->header.records++;
 
 	pthread_rwlock_unlock (parent_lock);
-/*
+
 	if (dump_transposed_pages) {
 		uint64_t const parent_id = PARENT_ID(new_position);
 		if (LOADED_PAGE(parent_id)!=NULL) {
@@ -844,7 +844,7 @@ static uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *c
 			exit (EXIT_FAILURE);
 		}
 	}
-*/
+
 	LOG (info,"DONE HALVING INTERNAL NODE AT POSITION %lu WITH NEW ID %lu.\n",position,new_position);
 	delete_rtree_page (overloaded_page);
 	return new_position;
@@ -1408,7 +1408,7 @@ static uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *c
 			puts ("==============================================================");
 		}
 		pthread_rwlock_unlock (parent_lock);
-/*
+
 		if (dump_transposed_pages) {
 			uint64_t const parent_id = PARENT_ID(new_position);
 			if (LOADED_PAGE(parent_id)!=NULL) {
@@ -1426,7 +1426,7 @@ static uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *c
 				exit (EXIT_FAILURE);
 			}
 		}
-*/
+
 		LOG (info,"DONE SPLITTING INTERNAL NODE AT POSITION %lu WITH NEW ID %lu.\n",position,new_position);
 		delete_rtree_page (overloaded_page);
 		return new_position;

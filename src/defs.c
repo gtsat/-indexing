@@ -210,7 +210,7 @@ boolean dominated_box (interval_t const box[],
 }
 
 double mindistance_ordered_multikey (multidata_container_t const*const multikey, uint32_t const offset) {
-	double mindist = DBL_MAX;
+	double mindist = multikey->cardinality ? DBL_MAX : 0;
 	for (uint32_t i=offset+1; i<multikey->cardinality; ++i) {
 		double tempdist = key_to_key_distance (multikey->keys+(i-1)*multikey->dimensions,
 							multikey->keys+i*multikey->dimensions,
@@ -252,7 +252,7 @@ double max_mindistance_ordered_multibox (multibox_container_t const*const multib
 }
 
 double min_maxdistance_ordered_multibox (multibox_container_t const*const multibox, uint32_t const offset) {
-	double mindist = DBL_MAX;
+	double mindist = multibox->cardinality ? DBL_MAX : 0;
 	for (uint32_t i=offset+1; i<multibox->cardinality; ++i) {
 		double tempdist = box_to_box_maxdistance (multibox->boxes+(i-1)*multibox->dimensions,
 															multibox->boxes+i*multibox->dimensions,
@@ -281,7 +281,7 @@ double avg_maxdistance_ordered_multibox (multibox_container_t const*const multib
 }
 
 double mindistance_pairwise_multikey (multidata_container_t const*const multikey, uint32_t const offset) {
-	double mindist = DBL_MAX;
+	double mindist = multikey->cardinality ? DBL_MAX : 0;
 	for (uint32_t i=offset+1; i<multikey->cardinality; ++i) {
 		for (uint32_t j=offset; j<i; ++j) {
 			double tempdist = key_to_key_distance (multikey->keys+j*multikey->dimensions,
@@ -332,7 +332,7 @@ double max_mindistance_pairwise_multibox (multibox_container_t const*const multi
 }
 
 double min_maxdistance_pairwise_multibox (multibox_container_t const*const multibox, uint32_t const offset) {
-	double mindist = DBL_MAX;
+	double mindist = multibox->cardinality ? DBL_MAX : 0;
 	for (uint32_t i=offset+1; i<multibox->cardinality; ++i) {
 		for (uint32_t j=offset; j<i; ++j) {
 			double tempdist = box_to_box_maxdistance (multibox->boxes+j*multibox->dimensions,

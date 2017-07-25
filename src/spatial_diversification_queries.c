@@ -1,5 +1,5 @@
 /**
- *  Copyright (C) 2016 George Tsatsanifos <gtsatsanifos@gmail.com>
+ *  Copyright (C) 2017 George Tsatsanifos <gtsatsanifos@gmail.com>
  *
  *  #indexing is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 					multidata_container_t *const result_container,
 					fifo_t const*const attractors,
 					fifo_t const*const repellers,
-					symbol_table_t const*const matched_attractors,
-					symbol_table_t const*const matched_repellers,
+					//symbol_table_t const*const matched_attractors,
+					//symbol_table_t const*const matched_repellers,
 					unsigned const k,
 					boolean const pull_apart_results,
 					boolean const bring_together_results,
@@ -48,7 +48,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 		return;
 	}else pthread_rwlock_unlock (&tree->tree_lock);
 
-	unsigned const dimensions = tree->dimensions;
+	uint16_t const dimensions = tree->dimensions;
 
 	priority_queue_t* candidates = new_priority_queue (&mincompare_containers);
 	priority_queue_t* browse = new_priority_queue (&maxcompare_containers);
@@ -58,8 +58,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 	box_container_t* container = (box_container_t*) malloc (sizeof(box_container_t));
 
 	container->box = tree->root_box;
-	container->id = 0;
 	container->sort_key = 0;
+	container->id = 0;
 
 	insert_into_priority_queue (browse,container);
 
@@ -77,7 +77,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 			break;
 		}
 
-		unsigned const page_id = container->id;
+		uint64_t const page_id = container->id;
 		page_t const*const page = load_page(tree,page_id);
 		assert (page != NULL);
 
@@ -94,15 +94,15 @@ static void augment_set_with_hotspots (tree_t *const tree,
 			goto reset_search_operation;
 		}else{
 			if (page->header.is_leaf) {
-				for (unsigned i=0; i<page->header.records; ++i) {
+				for (uint32_t i=0; i<page->header.records; ++i) {
 					if (!key_enclosed_by_box (page->node.leaf.KEY(i),query,dimensions)) {
 						continue;
 					}
 
 					boolean is_obscured = false;
 
-					double relevance = DBL_MAX;
-					for (unsigned j=0; j<attractors->size; ++j) {
+					double relevance = attractors->size ? DBL_MAX : 0;
+					for (uint64_t j=0; j<attractors->size; ++j) {
 						double key_distance = key_to_key_distance (
 										attractors->buffer[j],
 										page->node.leaf.KEY(i),
@@ -115,8 +115,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 					relevance *= lambda_rel;
 
 
-					double dissimilarity = DBL_MAX;
-					for (unsigned j=0; j<repellers->size; ++j) {
+					double dissimilarity = repellers->size ? DBL_MAX : 0;
+					for (uint64_t j=0; j<repellers->size; ++j) {
 						double key_distance = key_to_key_distance (
 										repellers->buffer[j],
 										page->node.leaf.KEY(i),
@@ -139,9 +139,9 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 					dissimilarity *= lambda_diss;
 
-					double clustering = DBL_MAX;
+					double clustering = result_container->cardinality ? DBL_MAX : 0;
 					if (pull_apart_results) {
-						for (unsigned j=0; j<result_container->cardinality; ++j) {
+						for (uint16_t j=0; j<result_container->cardinality; ++j) {
 							double key_distance = page->node.leaf.objects[i] != result_container->objects[j]?
 													key_to_key_distance (
 														result_container->keys+j*dimensions,
@@ -163,8 +163,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 							}
 						}
 					}else if (bring_together_results) {
-						clustering = -DBL_MAX;
-						for (unsigned j=0; j<result_container->cardinality; ++j) {
+						clustering = result_container->cardinality ? -DBL_MAX : 0;
+						for (uint16_t j=0; j<result_container->cardinality; ++j) {
 							double key_distance = page->node.leaf.objects[i] != result_container->objects[j]?
 													key_to_key_distance (
 													result_container->keys+j*dimensions,
@@ -218,15 +218,15 @@ static void augment_set_with_hotspots (tree_t *const tree,
 					}
 				}
 			}else{
-				for (unsigned i=0; i<page->header.records; ++i) {
+				for (uint32_t i=0; i<page->header.records; ++i) {
 					if (!overlapping_boxes (query,page->node.internal.BOX(i),dimensions)) {
 						continue;
 					}
 
 					boolean is_obscured = false;
 
-					double relevance = DBL_MAX;
-					for (unsigned j=0; j<attractors->size; ++j) {
+					double relevance = attractors->size ? DBL_MAX : 0;
+					for (uint64_t j=0; j<attractors->size; ++j) {
 						double box_distance = key_to_box_mindistance (
 											attractors->buffer[j],
 											page->node.internal.BOX(i),
@@ -240,8 +240,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 					relevance *= lambda_rel;
 
 
-					double dissimilarity = DBL_MAX;
-					for (unsigned j=0; j<repellers->size; ++j) {
+					double dissimilarity = repellers->size ? DBL_MAX : 0;
+					for (uint64_t j=0; j<repellers->size; ++j) {
 						double box_distance = key_to_box_maxdistance (
 											repellers->buffer[j],
 											page->node.internal.BOX(i),
@@ -264,9 +264,9 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 					dissimilarity *= lambda_diss;
 
-					double clustering = DBL_MAX;
+					double clustering = result_container->cardinality ? DBL_MAX : 0;
 					if (pull_apart_results) {
-						for (unsigned j=0; j<result_container->cardinality; ++j) {
+						for (uint16_t j=0; j<result_container->cardinality; ++j) {
 
 							double box_distance = key_to_box_maxdistance (
 												result_container->keys+j*dimensions,
@@ -289,7 +289,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 						}
 					}else if (bring_together_results) {
 						clustering = -DBL_MAX;
-						for (unsigned j=0; j<result_container->cardinality; ++j) {
+						for (uint16_t j=0; j<result_container->cardinality; ++j) {
 
 							double box_distance = key_to_box_maxdistance (
 												result_container->keys+j*dimensions,
@@ -352,18 +352,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 				candidate->key,sizeof(index_t)*dimensions);
 
 		result_container->cardinality++;
-
-
-		data_pair_t *const matched_attractor = (data_pair_t *const) malloc (sizeof(data_pair_t));
-
-		matched_attractor->key = (index_t*) malloc (tree->dimensions*sizeof(index_t));
-		memcpy (matched_attractor->key, candidate->key, tree->dimensions*sizeof(index_t));
-
-		matched_attractor->object = candidate->object;
-
-		set (matched_attractors, candidate->object, matched_attractor);
-
-
+/*
 		data_pair_t *const matched_repeller = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
 		matched_repeller->key = (index_t*) malloc (tree->dimensions*sizeof(index_t));
@@ -372,7 +361,10 @@ static void augment_set_with_hotspots (tree_t *const tree,
 		matched_repeller->object = candidate->object;
 
 		set (matched_repellers, candidate->object, matched_repeller);
-
+*/
+		printf ("(%lf) %lu \n",
+				candidate->sort_key,
+				candidate->object);
 
 		free (candidate->key);
 		free (candidate);
@@ -387,8 +379,8 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 						multidata_container_t *const result_container,
 						tree_t *const attractors,
 						tree_t *const repellers,
-						symbol_table_t *const matched_attractors,
-						symbol_table_t *const matched_repellers,
+						//symbol_table_t *const matched_attractors,
+						//symbol_table_t *const matched_repellers,
 						unsigned const k,
 						boolean const pull_apart_results,
 						boolean const bring_together_results,
@@ -404,9 +396,10 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 		return;
 	}else pthread_rwlock_unlock (&tree->tree_lock);
 
-	unsigned const combination_offset = (attractors!=NULL && attractors->indexed_records?1:0) + (repellers!=NULL && repellers->indexed_records?1:0);
-	unsigned const cardinality = 1 + combination_offset;
-	unsigned dimensions = tree->dimensions;
+	uint16_t const combination_offset = (attractors!=NULL && attractors->indexed_records?1:0)
+							+ (repellers!=NULL && repellers->indexed_records?1:0);
+	uint16_t const cardinality = 1 + combination_offset;
+	uint16_t dimensions = tree->dimensions;
 
 	if (attractors!=NULL && attractors->indexed_records && attractors->dimensions < dimensions) {
 		dimensions = attractors->dimensions;
@@ -441,8 +434,8 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 	memcpy (container->boxes+combination_offset*dimensions, tree->root_box, dimensions*sizeof(interval_t));
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-	bzero (container->page_ids,cardinality*sizeof(unsigned));
+	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+	bzero (container->page_ids,cardinality*sizeof(uint64_t));
 
 	container->cardinality = cardinality;
 	container->dimensions = dimensions;
@@ -472,23 +465,27 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 		}
 
 		boolean all_leaves = true;
-		for (unsigned i=0; i<container->cardinality; ++i) {
-			unsigned const page_id = container->page_ids[i];
+		for (uint16_t i=0; i<container->cardinality; ++i) {
+			uint64_t const page_id = container->page_ids[i];
 
 			page_t const* page = NULL;
 			pthread_rwlock_t* page_lock = NULL;
 
+			uint16_t idimensions = 0;
 			if (i>=combination_offset) {
+				idimensions = tree->dimensions;
 				page = load_page (tree,page_id);
 				pthread_rwlock_rdlock (&tree->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (tree->page_locks,page_id);
 				pthread_rwlock_unlock (&tree->tree_lock);
 			}else if (!i && attractors!=NULL && attractors->indexed_records) {
+				idimensions = attractors->dimensions;
 				page = load_page (attractors,page_id);
 				pthread_rwlock_rdlock (&attractors->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (attractors->page_locks,page_id);
 				pthread_rwlock_unlock (&attractors->tree_lock);
 			}else if (i==combination_offset-1 && repellers!=NULL && repellers->indexed_records) {
+				idimensions = repellers->dimensions;
 				page = load_page (repellers,page_id);
 				pthread_rwlock_rdlock (&repellers->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (repellers->page_locks,page_id);
@@ -535,11 +532,11 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 
 			if (!page->header.is_leaf) {
 				all_leaves = false;
-				for (register unsigned j=0; j<page->header.records; ++j) {
+				for (register uint32_t j=0; j<page->header.records; ++j) {
 					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(unsigned));
+					new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 
 					if (i>=combination_offset) {
 						new_container->page_ids[i] = page_id*tree->internal_entries+j+1;
@@ -555,7 +552,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes+i*dimensions,
-							page->node.internal.intervals+j*dimensions,
+							page->node.internal.intervals+j*idimensions,
 							dimensions*sizeof(interval_t));
 
 					new_container->cardinality = cardinality;
@@ -572,12 +569,14 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 								* box_to_box_maxdistance (new_container->boxes+(attractors!=NULL && attractors->indexed_records?dimensions:0),new_container->boxes+combination_offset*dimensions,dimensions);
 						}
 
-						if (pull_apart_results) {
-							rank_score -= lambda_clust
-								* min_maxdistance_pairwise_multibox (new_container,combination_offset*dimensions);
-						}else if (bring_together_results) {
-							rank_score += lambda_clust
-								* max_mindistance_pairwise_multibox (new_container,combination_offset*dimensions);
+						if (new_container->cardinality) {
+							if (pull_apart_results) {
+								rank_score -= lambda_clust
+										* min_maxdistance_pairwise_multibox (new_container,combination_offset*dimensions);
+							}else if (bring_together_results) {
+								rank_score += lambda_clust
+										* max_mindistance_pairwise_multibox (new_container,combination_offset*dimensions);
+							}
 						}
 
 						if (data_combinations->size < k
@@ -605,7 +604,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 			page_t const* pages [cardinality];
 			pthread_rwlock_t * page_locks [cardinality];
 
-			for (unsigned i=0; i<cardinality; ++i) {
+			for (uint16_t i=0; i<cardinality; ++i) {
 				pthread_rwlock_t* page_lock = NULL;
 				page_t const* page = NULL;
 
@@ -644,16 +643,16 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 						free (temp->boxes);
 						free (temp);
 					}
-					for (unsigned j=0; j<i; ++j) {
+					for (uint16_t j=0; j<i; ++j) {
 						pthread_rwlock_unlock (page_locks[j]);
 					}
 					goto reset_search_operation;
 				}
 			}
 
-			unsigned offsets [cardinality];
-			bzero (offsets,cardinality*sizeof(unsigned));
-			for (unsigned j=0,i=0;;++j) {
+			uint32_t offsets [cardinality];
+			bzero (offsets,cardinality*sizeof(uint32_t));
+			for (uint32_t j=0,i=0;;++j) {
 				if (offsets[i] >= pages[i]->header.records) {
 					offsets[i++] = 0;
 					if (i >= cardinality) {
@@ -661,7 +660,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 					}
 				}else{
 					boolean has_duplicates = false;
-					for (unsigned ii=0; ii<result_container->cardinality; ++ii) {
+					for (uint16_t ii=0; ii<result_container->cardinality; ++ii) {
 						if (pages[combination_offset]->node.leaf.objects[offsets[combination_offset]] == result_container->objects[ii]) {
 							has_duplicates = true;
 							break;
@@ -672,7 +671,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 						multidata_container_t* data_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
 						data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
 						data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
-						for (unsigned offset=0; offset<cardinality; ++offset) {
+						for (uint16_t offset=0; offset<cardinality; ++offset) {
 							data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
 							memcpy (data_container->keys+offset*dimensions,
 									pages[offset]->node.leaf.keys+offsets[offset]*dimensions,
@@ -694,10 +693,10 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 								data_container->keys+combination_offset*dimensions,dimensions);
 						}
 
-						if (pull_apart_results || bring_together_results) {
+						if (data_container->cardinality && (pull_apart_results || bring_together_results)) {
 							if (pull_apart_results) {
-								rank_score -= lambda_clust
-									*mindistance_pairwise_multikey (data_container,combination_offset*dimensions);
+								//rank_score -= lambda_clust
+								//	*mindistance_pairwise_multikey (data_container,combination_offset*dimensions);
 							}else if (bring_together_results) {
 								rank_score += lambda_clust
 									*maxdistance_pairwise_multikey (data_container,combination_offset*dimensions);
@@ -728,7 +727,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 				++offsets[i];
 			}
 
-			for (unsigned i=0; i<cardinality; ++i) {
+			for (uint16_t i=0; i<cardinality; ++i) {
 				pthread_rwlock_unlock (page_locks[i]);
 			}
 		}
@@ -748,7 +747,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 		multidata_container_t* data_container = remove_from_priority_queue (data_combinations);
 
 		boolean has_duplicates = false;
-		for (unsigned i=0; i<result_container->cardinality; ++i) {
+		for (uint16_t i=0; i<result_container->cardinality; ++i) {
 			if (result_container->objects [i] == data_container->objects [combination_offset]) {
 				has_duplicates = true;
 				break;
@@ -756,17 +755,23 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 		}
 
 		if (!has_duplicates) {
+			result_container->sort_key = data_container->sort_key;
+
 			result_container->objects [result_container->cardinality] = data_container->objects [combination_offset];
 
 			memcpy (result_container->keys+result_container->cardinality*dimensions,
 					data_container->keys+combination_offset*dimensions,sizeof(index_t)*dimensions);
 
-
+/*
 			if (repellers!=NULL && repellers->indexed_records) {
 				data_pair_t *const matched_repeller = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-				matched_repeller->key = (index_t*) malloc (repellers->dimensions*sizeof(index_t));
-				memcpy (matched_repeller->key,data_container->keys,sizeof(index_t)*dimensions);
+				matched_repeller->key = (index_t*) malloc (dimensions*sizeof(index_t));
+				memcpy (matched_repeller->key,data_container->keys
+						+(attractors!=NULL && attractors->indexed_records ? 1 : 0)*dimensions,
+						sizeof(index_t)*dimensions);
+
+				matched_repeller->object = data_container->objects [combination_offset - 1];
 
 				set (matched_repellers, data_container->objects [combination_offset], matched_repeller);
 			}
@@ -774,20 +779,25 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 			if (attractors!=NULL && attractors->indexed_records) {
 				data_pair_t *const matched_attractor = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-				matched_attractor->key = (index_t*) malloc (attractors->dimensions*sizeof(index_t));
+				matched_attractor->key = (index_t*) malloc (dimensions*sizeof(index_t));
 				memcpy (matched_attractor->key,data_container->keys,sizeof(index_t)*dimensions);
+
+				matched_attractor->object = *data_container->objects;
 
 				set (matched_attractors, data_container->objects [combination_offset], matched_attractor);
 			}
-
+*/
 			result_container->cardinality++;
 
 
-			printf ("(%f) %u %u %u\n",
-					result_container->sort_key,
-					result_container->objects [result_container->cardinality-1],
-					get (matched_attractors, result_container->objects [result_container->cardinality-1]),
-					get (matched_repellers, result_container->objects [result_container->cardinality-1]));
+			printf ("(%lf) %lu %lu %lu\n",
+					data_container->sort_key,
+					data_container->objects [combination_offset],
+					*data_container->objects,
+					data_container->objects [combination_offset-1]
+					);
+					//((data_pair_t*) get (matched_attractors, result_container->objects [result_container->cardinality-1]))->object,
+					//((data_pair_t*) get (matched_repellers, result_container->objects [result_container->cardinality-1]))->object);
 		}
 
 		free (data_container->objects);
@@ -811,7 +821,15 @@ static index_t compute_hotspot_score (multidata_container_t const*const result,
 	assert (!pull_apart_results || !bring_together_results);
 
 	double score = 0;
-	for (unsigned i=0; i<result->cardinality; ++i) {
+	for (uint16_t i=0; i<result->cardinality; ++i) {
+		if (get (matched_attractors, result->objects[i]) == NULL) {
+			LOG (error,"Unknown attractor for object %lu.\n", result->objects[i]);
+			abort();
+		}
+		if (get (matched_repellers, result->objects[i]) == NULL) {
+			LOG (error,"Unknown repeller for object %lu.\n", result->objects[i]);
+			abort();
+		}
 		double relevance = lambda_rel 
 				* key_to_key_distance(result->keys+i*result->dimensions,((data_pair_t*) get (matched_attractors, result->objects[i]))->key,result->dimensions);
 		double dissimilarity = lambda_diss 
@@ -844,9 +862,9 @@ static boolean augment_priority_queue_with_hotspots (tree_t const*const tree,
 	assert (!pull_apart_results || !bring_together_results);
 
 	boolean is_updated = false;
-	unsigned const cardinality = result_container->cardinality;
+	uint16_t const cardinality = result_container->cardinality;
 
-	for (unsigned i=0; i<cardinality-1; ++i) {
+	for (uint16_t i=0; i<cardinality-1; ++i) {
 		multidata_container_t* subset_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
 
 		subset_container->keys = (index_t*) malloc (cardinality*tree->dimensions*sizeof(index_t));
@@ -927,7 +945,7 @@ fifo_t* hotspots (tree_t *const tree,
 	index_t lo [tree->dimensions];
 	index_t hi [tree->dimensions];
 
-	for (unsigned j=0; j<tree->dimensions; ++j) {
+	for (uint16_t j=0; j<tree->dimensions; ++j) {
 		lo [j] = tree->root_box[j].start;
 		hi [j] = tree->root_box[j].end;
 	}
@@ -935,29 +953,6 @@ fifo_t* hotspots (tree_t *const tree,
 	return hotspots_constrained (tree,attractors,repellers,lo,hi,k,
 					pull_apart_results,bring_together_results,
 					lambda_rel,lambda_diss,lambda_diss);
-}
-
-fifo_t* hotspots_join (tree_t *const tree,
-			tree_t *const attractors,
-			tree_t *const repellers,
-			unsigned const k,
-			boolean const pull_apart_results,
-			boolean const bring_together_results,
-			double const lambda_rel,
-			double const lambda_diss,
-			double const lambda_clust) {
-
-	index_t lo [tree->dimensions];
-	index_t hi [tree->dimensions];
-
-	for (unsigned j=0; j<tree->dimensions; ++j) {
-		lo [j] = tree->root_box[j].start;
-		hi [j] = tree->root_box[j].end;
-	}
-
-	return hotspots_join_constrained (tree,attractors,repellers,lo,hi,k,
-						pull_apart_results,bring_together_results,
-						lambda_rel,lambda_diss,lambda_clust);
 }
 
 fifo_t* hotspots_constrained (tree_t *const tree,
@@ -980,16 +975,16 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 	if (k==0) return new_queue();
 
 	interval_t query [tree->dimensions];
-	for (unsigned j=0; j<tree->dimensions; ++j) {
+	for (uint16_t j=0; j<tree->dimensions; ++j) {
 		query[j].start = lo[j];
 		query[j].end = hi[j];
 	}
 
-	unsigned const dimensions = tree->dimensions;
+	uint16_t const dimensions = tree->dimensions;
 
 	/***** Initialization of necessary containers *****/
-	symbol_table_t *const matched_attractors = new_symbol_table_primitive (NULL);
-	symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
+	//symbol_table_t *const matched_attractors = new_symbol_table_primitive (NULL);
+	//symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
 
 
 	multidata_container_t* result_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
@@ -1006,8 +1001,8 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 							query,
 							result_container,
 							attractors,repellers,
-							matched_attractors,
-							matched_repellers,
+							//matched_attractors,
+							//matched_repellers,
 							1,
 							pull_apart_results,
 							bring_together_results,
@@ -1019,8 +1014,8 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 		augment_set_with_hotspots (tree,query,
 							result_container,
 							attractors,repellers,
-							matched_attractors,
-							matched_repellers,
+							//matched_attractors,
+							//matched_repellers,
 							k,
 							pull_apart_results,
 							bring_together_results,
@@ -1029,7 +1024,7 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 							lambda_clust);
 	}
 
-	/*** PHASE 2: ITERATE THROUGH THE POSSIBLE MUTATIONS OF THE RESULT-SET ***/
+	/*** PHASE 2: ITERATE THROUGH THE POSSIBLE MUTATIONS OF THE RESULT-SET ***
 	if (pull_apart_results || bring_together_results) {
 		priority_queue_t* subsets_heap = new_priority_queue (&maxcompare_multicontainers);
 
@@ -1066,12 +1061,11 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 							matched_attractors,matched_repellers,
 							pull_apart_results,bring_together_results,
 							lambda_rel,lambda_diss,lambda_clust)) {
-/**
-					free (subset_container->objects);
-					free (subset_container->keys);
-					free (subset_container);
-					break;
-**/
+
+					//free (subset_container->objects);
+					//free (subset_container->keys);
+					//free (subset_container);
+					//break;
 			}else{
 				augment_priority_queue_with_hotspots (tree,
 							subset_container,subsets_heap,
@@ -1094,13 +1088,12 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 			free (subset_container->keys);
 			free (subset_container);
 		}
-
 		delete_priority_queue (subsets_heap);
 	}
 
 	/*** Construct returned result-set ***/
 	fifo_t* result = new_queue();
-	for (unsigned i=0; i<result_container->cardinality; ++i) {
+	for (uint16_t i=0; i<result_container->cardinality; ++i) {
 		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
 
 		pair->object = result_container->objects[i];
@@ -1117,6 +1110,28 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 	return result;
 }
 
+fifo_t* hotspots_join (tree_t *const tree,
+			tree_t *const attractors,
+			tree_t *const repellers,
+			unsigned const k,
+			boolean const pull_apart_results,
+			boolean const bring_together_results,
+			double const lambda_rel,
+			double const lambda_diss,
+			double const lambda_clust) {
+
+	index_t lo [tree->dimensions];
+	index_t hi [tree->dimensions];
+
+	for (uint16_t j=0; j<tree->dimensions; ++j) {
+		lo [j] = tree->root_box[j].start;
+		hi [j] = tree->root_box[j].end;
+	}
+
+	return hotspots_join_constrained (tree,attractors,repellers,lo,hi,k,
+						pull_apart_results,bring_together_results,
+						lambda_rel,lambda_diss,lambda_clust);
+}
 
 fifo_t* hotspots_join_constrained (tree_t *const tree,
 				tree_t *const attractors,
@@ -1138,13 +1153,13 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 	if (k==0) return new_queue();
 
 	interval_t query [tree->dimensions];
-	for (unsigned j=0; j<tree->dimensions; ++j) {
+	for (uint16_t j=0; j<tree->dimensions; ++j) {
 		query[j].start = lo[j];
 		query[j].end = hi[j];
 	}
 
-	symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
-	symbol_table_t *const matched_attractors = new_symbol_table_primitive (NULL);
+	//symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
+	//symbol_table_t *const matched_attractors = new_symbol_table_primitive (NULL);
 
 	multidata_container_t* result_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
 	result_container->keys = (index_t*) malloc (k*tree->dimensions*sizeof(index_t));
@@ -1158,8 +1173,8 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 			augment_set_with_joined_hotspots (tree,query,
 							result_container,
 							attractors,repellers,
-							matched_attractors,
-							matched_repellers,
+							//matched_attractors,
+							//matched_repellers,
 							1,
 							pull_apart_results,
 							bring_together_results,
@@ -1170,8 +1185,8 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 			augment_set_with_joined_hotspots (tree,query,
 							result_container,
 							attractors,repellers,
-							matched_attractors,
-							matched_repellers,
+							//matched_attractors,
+							//matched_repellers,
 							k,
 							pull_apart_results,
 							bring_together_results,
@@ -1251,7 +1266,7 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 
 	/*** Construct returned result-set ***/
 	fifo_t* result = new_queue();
-	for (unsigned i=0; i<result_container->cardinality; ++i) {
+	for (uint16_t i=0; i<result_container->cardinality; ++i) {
 		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
 
 		pair->object = result_container->objects[i];
@@ -1261,7 +1276,7 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 		insert_at_tail_of_queue (result,pair);
 	}
 
-
+/*
 	fifo_t *const matched_attractors_entries = get_values (matched_attractors);
 	while (matched_attractors_entries->size) {
 		data_pair_t *const entry = (data_pair_t*) remove_tail_of_queue (matched_attractors_entries);
@@ -1282,7 +1297,7 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 
 	delete_queue (matched_repellers_entries);
 	delete_symbol_table (matched_repellers);
-
+*/
 
 	free (result_container->objects);
 	free (result_container->keys);
@@ -1304,7 +1319,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 	unsigned const k = 1;
 
 	unsigned dimensions = UINT_MAX;
-	for (unsigned i=0; i<trees->size; ++i) {
+	for (uint64_t i=0; i<trees->size; ++i) {
 		if (TREE(i)->dimensions < dimensions) {
 			dimensions = TREE(i)->dimensions;
 		}
@@ -1318,7 +1333,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 		dimensions = repellers->dimensions;
 	}
 
-	unsigned const combination_offset = (attractors!=NULL && attractors->indexed_records?1:0) + (repellers!=NULL && repellers->indexed_records?1:0);
+	uint16_t const combination_offset = (attractors!=NULL && attractors->indexed_records?1:0) + (repellers!=NULL && repellers->indexed_records?1:0);
 	unsigned const cardinality = trees->size + combination_offset;
 
 	priority_queue_t* data_combinations = new_priority_queue (&maxcompare_multicontainers);
@@ -1328,12 +1343,12 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
 	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
+	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
 	container->cardinality = cardinality;
 	container->dimensions = dimensions;
 	container->sort_key = 0;
 
-	bzero (container->page_ids,cardinality*sizeof(unsigned));
+	bzero (container->page_ids,cardinality*sizeof(uint64_t));
 
 	if (attractors!=NULL && attractors->indexed_records) {
 		pthread_rwlock_rdlock (&attractors->tree_lock);
@@ -1343,12 +1358,12 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 
 	if (repellers!=NULL && repellers->indexed_records) {
 		pthread_rwlock_rdlock (&repellers->tree_lock);
-		memcpy (container->boxes+(attractors->indexed_records?dimensions:0),
+		memcpy (container->boxes + (attractors!=NULL && attractors->indexed_records ? dimensions : 0),
 				repellers->root_box,dimensions*sizeof(interval_t));
 		pthread_rwlock_unlock (&repellers->tree_lock);
 	}
 
-	for (unsigned i=0; i<trees->size; ++i) {
+	for (uint64_t i=0; i<trees->size; ++i) {
 		pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 		memcpy (container->boxes+(i+combination_offset)*dimensions,TREE(i)->root_box,dimensions*sizeof(interval_t));
 		pthread_rwlock_unlock (&TREE(i)->tree_lock);
@@ -1377,23 +1392,27 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 		}
 
 		boolean all_leaves = true;
-		for (unsigned i=0; i<container->cardinality; ++i) {
-			unsigned const page_id = container->page_ids[i];
+		for (uint16_t i=0; i<container->cardinality; ++i) {
+			uint64_t const page_id = container->page_ids[i];
 
 			page_t const* page = NULL;
 			pthread_rwlock_t* page_lock = NULL;
 
+			uint16_t idimensions = 0;
 			if (i>=combination_offset) {
+				idimensions = TREE(i)->dimensions;
 				page = load_page (TREE(i-combination_offset),page_id);
 				pthread_rwlock_rdlock (&TREE(i-combination_offset)->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (TREE(i-combination_offset)->page_locks,page_id);
 				pthread_rwlock_unlock (&TREE(i-combination_offset)->tree_lock);
 			}else if (!i && attractors!=NULL && attractors->indexed_records) {
+				idimensions = attractors->dimensions;
 				page = load_page (attractors,page_id);
 				pthread_rwlock_rdlock (&attractors->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (attractors->page_locks,page_id);
 				pthread_rwlock_unlock (&attractors->tree_lock);
 			}else if (i==combination_offset-1 && repellers!=NULL && repellers->indexed_records) {
+				idimensions = repellers->dimensions;
 				page = load_page (repellers,page_id);
 				pthread_rwlock_rdlock (&repellers->tree_lock);
 				page_lock = (pthread_rwlock_t*) get (repellers->page_locks,page_id);
@@ -1414,7 +1433,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 				}
 
 				if (i>=combination_offset) {
-					for (unsigned j=0; j<i-combination_offset; ++j) {
+					for (uint16_t j=0; j<i-combination_offset; ++j) {
 						pthread_rwlock_rdlock (&TREE(j)->tree_lock);
 						pthread_rwlock_t *const previous_lock = (pthread_rwlock_t *const) get(TREE(j)->page_locks,page_id);
 						pthread_rwlock_unlock (&TREE(j)->tree_lock);
@@ -1439,13 +1458,14 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 			}
 
 			assert (page != NULL);
+
 			if (!page->header.is_leaf) {
 				all_leaves = false;
-				for (register unsigned j=0; j<page->header.records; ++j) {
+				for (register uint32_t j=0; j<page->header.records; ++j) {
 					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (unsigned*) malloc (cardinality*sizeof(unsigned));
-					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(unsigned));
+					new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 					if (i>=combination_offset) {
 						new_container->page_ids[i] = page_id*TREE(i-combination_offset)->internal_entries+j+1;
 					}else if (!i && attractors!=NULL && attractors->indexed_records) {
@@ -1460,7 +1480,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes+i*dimensions,
-							page->node.internal.intervals+j*dimensions,
+							page->node.internal.intervals+j*idimensions,
 							dimensions*sizeof(interval_t));
 
 					new_container->cardinality = cardinality;
@@ -1468,7 +1488,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 
 					if (i>=combination_offset) {
 						double rank_score = 0;
-						for (unsigned x=combination_offset; x<cardinality; ++x) {
+						for (uint16_t x=combination_offset; x<cardinality; ++x) {
 							if (attractors!=NULL && attractors->indexed_records) {
 								rank_score += lambda_rel 
 									* box_to_box_mindistance (new_container->boxes,new_container->boxes+x*dimensions,dimensions);
@@ -1516,7 +1536,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 			page_t const* pages [cardinality];
 			pthread_rwlock_t * page_locks [cardinality];
 
-			for (unsigned i=0; i<cardinality; ++i) {
+			for (uint16_t i=0; i<cardinality; ++i) {
 				pthread_rwlock_t* page_lock = NULL;
 				page_t const* page = NULL;
 
@@ -1556,16 +1576,16 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 						free (temp->boxes);
 						free (temp);
 					}
-					for (unsigned j=0; j<i; ++j) {
+					for (uint16_t j=0; j<i; ++j) {
 						pthread_rwlock_unlock (page_locks[j]);
 					}
 					goto reset_search_operation;
 				}
 			}
 
-			unsigned offsets [cardinality];
-			bzero (offsets,cardinality*sizeof(unsigned));
-			for (unsigned j=0,i=0;;++j) {
+			uint32_t offsets [cardinality];
+			bzero (offsets,cardinality*sizeof(uint32_t));
+			for (uint32_t j=0,i=0;;++j) {
 				if (offsets[i] >= pages[i]->header.records) {
 					offsets[i++] = 0;
 					if (i >= cardinality) {
@@ -1575,10 +1595,22 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					multidata_container_t* data_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
 					data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
 					data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
-					for (unsigned offset=0; offset<cardinality; ++offset) {
+					for (uint16_t offset=0; offset<cardinality; ++offset) {
 						data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
+
+						uint16_t offset_dimensions = 0;
+						if (offset >= combination_offset) {
+							offset_dimensions = TREE(offset-combination_offset)->dimensions;
+						}else if (!offset && attractors != NULL && attractors->indexed_records) {
+							offset_dimensions = attractors->dimensions;
+						}else if (offset == combination_offset - 1 && repellers != NULL && repellers->indexed_records) {
+							offset_dimensions = repellers->dimensions;
+						}else{
+							LOG(error,"Critical error in diversified join...\n");
+							abort();
+						}
 						memcpy (data_container->keys+offset*dimensions,
-								pages[offset]->node.leaf.keys+offsets[offset]*dimensions,
+								pages[offset]->node.leaf.keys+offsets[offset]*offset_dimensions, 
 								dimensions*sizeof(index_t));
 					}
 
@@ -1586,7 +1618,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					data_container->dimensions = dimensions;
 
 					double rank_score = 0;
-					for (unsigned x=combination_offset; x<cardinality; ++x) {
+					for (uint16_t x=combination_offset; x<cardinality; ++x) {
 						if (attractors!=NULL && attractors->indexed_records) {
 							rank_score += lambda_rel 
 								* key_to_key_distance(data_container->keys,data_container->keys+x*dimensions,dimensions);
@@ -1636,7 +1668,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 				++offsets[i];
 			}
 
-			for (unsigned i=0; i<cardinality; ++i) {
+			for (uint16_t i=0; i<cardinality; ++i) {
 				pthread_rwlock_unlock (page_locks[i]);
 			}
 		}
@@ -1653,7 +1685,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 	fifo_t* result = new_queue();
 
 	multidata_container_t* final = (multidata_container_t*) remove_from_priority_queue(data_combinations);
-	for (unsigned i=combination_offset; i<final->cardinality; ++i) {
+	for (uint16_t i=combination_offset; i<final->cardinality; ++i) {
 		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
 
 		pair->object = final->objects[i];
