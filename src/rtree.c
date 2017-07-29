@@ -18,7 +18,6 @@
 #include <math.h>
 #include <time.h>
 #include <fcntl.h>
-#include <endian.h>
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
@@ -31,6 +30,11 @@
 //#include "ntree.h"
 #include "swap.h"
 #include "common.h"
+#ifdef __APPLE__
+	#include <machine/endian.h>
+#else
+	#include <endian.h>
+#endif
 
 boolean verbose_splits = false;
 
@@ -65,25 +69,29 @@ void delete_rtree (tree_t *const tree) {
 
 		int fd = open (tree->filename, O_WRONLY | O_CREAT, PERMS);
 		lseek (fd,0,SEEK_SET);
-		if (write (fd,&htole16(tree->dimensions),sizeof(uint16_t)) < sizeof(uint16_t)) {
+		uint16_t le_tree_dimensions = htole16(tree->dimensions);
+		if (write (fd,&le_tree_dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
 			LOG (error,"Wrote less than %lu bytes in heapfile '%s'...\n",sizeof(uint16_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
-		if (write (fd,&htole32(tree->page_size),sizeof(uint32_t)) < sizeof(uint32_t)) {
+		uint32_t le_tree_page_size = htole32(tree->page_size);
+		if (write (fd,&le_tree_page_size,sizeof(uint32_t)) < sizeof(uint32_t)) {
 			LOG (error,"Wrote less than %lu bytes in heapfile '%s'...\n",sizeof(uint32_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
-		if (write (fd,&htole64(tree->tree_size),sizeof(uint64_t)) < sizeof(uint64_t)) {
+		uint64_t le_tree_tree_size = htole16(tree->tree_size);
+		if (write (fd,&le_tree_tree_size,sizeof(uint64_t)) < sizeof(uint64_t)) {
 			LOG (error,"Wrote less than %lu bytes in heapfile '%s'...\n",sizeof(uint64_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
-		if (write (fd,&htole64(tree->indexed_records),sizeof(uint64_t)) < sizeof(uint64_t)) {
+		uint64_t le_tree_indexed_records = htole16(tree->indexed_records);
+		if (write (fd,&le_tree_indexed_records,sizeof(uint64_t)) < sizeof(uint64_t)) {
 			LOG (error,"Wrote less than %lu bytes in heapfile '%s'...\n",sizeof(uint64_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
