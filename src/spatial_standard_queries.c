@@ -26,11 +26,14 @@
 #include "defs.h"
 
 
-object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
+object_t find_any_in_rtree (tree_t *const tree, index_t const key[], uint32_t proj_dimensions) {
+	if (tree->dimensions < proj_dimensions) {
+		proj_dimensions = tree->dimensions;
+	}
 
 	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	if (!key_enclosed_by_box(key,tree->root_box,tree->dimensions)) {
+	if (!key_enclosed_by_box(key,tree->root_box,proj_dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		LOG (warn,"Query key ( ");
@@ -75,14 +78,14 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 			}else{
 				if (page->header.is_leaf) {
 					for (register uint32_t i=0; i<page->header.records; ++i) {
-						if (equal_keys (page->node.leaf.keys+i*tree->dimensions,key,tree->dimensions)) {
+						if (equal_keys (page->node.leaf.keys+i*tree->dimensions,key,proj_dimensions)) {
 							delete_queue (browse);
 							return page->node.leaf.objects[i];
 						}
 					}
 				}else{
 					for (register uint32_t i=0; i<page->header.records; ++i) {
-						if (key_enclosed_by_box(key,page->node.internal.BOX(i),tree->dimensions)) {
+						if (key_enclosed_by_box(key,page->node.internal.BOX(i),proj_dimensions)) {
 							insert_at_tail_of_queue (browse,CHILD_ID(page_id,i));
 						}
 					}
@@ -106,11 +109,14 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[]) {
 }
 
 
-fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
+fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[], uint32_t proj_dimensions) {
+	if (tree->dimensions < proj_dimensions) {
+		proj_dimensions = tree->dimensions;
+	}
 
 	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	if (!key_enclosed_by_box(key,tree->root_box,tree->dimensions)) {
+	if (!key_enclosed_by_box(key,tree->root_box,proj_dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		LOG (warn,"Query key ( ");
@@ -155,13 +161,13 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 		}else{
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (equal_keys (page->node.leaf.keys+i*tree->dimensions,key,tree->dimensions)) {
+					if (equal_keys (page->node.leaf.keys+i*tree->dimensions,key,proj_dimensions)) {
 						insert_at_tail_of_queue (result,page->node.leaf.objects[i]);
 					}
 				}
 			}else{
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (key_enclosed_by_box(key,page->node.internal.BOX(i),tree->dimensions)) {
+					if (key_enclosed_by_box(key,page->node.internal.BOX(i),proj_dimensions)) {
 						insert_at_tail_of_queue (browse,CHILD_ID(page_id,i));
 					}
 				}
@@ -187,7 +193,11 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[]) {
 }
 
 
-fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
+fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[], uint32_t proj_dimensions) {
+	if (tree->dimensions < proj_dimensions) {
+		proj_dimensions = tree->dimensions;
+	}
+
 	interval_t query [tree->dimensions];
 	for (uint32_t j=0; j<tree->dimensions; ++j) {
 		if (lo[j]>hi[j]) {
@@ -199,7 +209,7 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 	}
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	if (!overlapping_boxes (query,tree->root_box,tree->dimensions)){
+	if (!overlapping_boxes (query,tree->root_box,proj_dimensions)){
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		LOG (warn,"Query does not overlap with indexed area...\n");
@@ -228,7 +238,7 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 		}else{
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,tree->dimensions)) {
+					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,proj_dimensions)) {
 						data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
 
 						pair->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
@@ -242,7 +252,7 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 				}
 			}else{
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (overlapping_boxes (query,page->node.internal.BOX(i),tree->dimensions)) {
+					if (overlapping_boxes (query,page->node.internal.BOX(i),proj_dimensions)) {
 						insert_at_tail_of_queue (browse,CHILD_ID(page_id,i));
 					}
 				}
@@ -262,7 +272,11 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[]) {
 fifo_t* bounded_search (tree_t *const tree,
 		index_t const lo[], index_t const hi[],
 		index_t const center[], uint32_t const k,
-		uint32_t const dimensions) {
+		uint32_t proj_dimensions) {
+
+	if (tree->dimensions < proj_dimensions) {
+		proj_dimensions = tree->dimensions;
+	}
 
 	if (k==0) return new_queue();
 	interval_t query [tree->dimensions];
@@ -319,7 +333,7 @@ fifo_t* bounded_search (tree_t *const tree,
 		}else{
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,tree->dimensions)) {
+					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,proj_dimensions)) {
 						data_container_t* data_container = (data_container_t*) malloc (sizeof(data_container_t));
 
 						data_container->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
@@ -327,7 +341,7 @@ fifo_t* bounded_search (tree_t *const tree,
 
 						data_container->object = page->node.leaf.objects[i];
 
-						data_container->sort_key = key_to_key_distance (center,page->node.leaf.KEY(i),dimensions);
+						data_container->sort_key = key_to_key_distance (center,page->node.leaf.KEY(i),proj_dimensions);
 
 						if (data->size < k) {
 							data_container->dimensions = tree->dimensions;
@@ -355,12 +369,12 @@ fifo_t* bounded_search (tree_t *const tree,
 				}
 			}else{
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (overlapping_boxes (query,page->node.internal.BOX(i),tree->dimensions)) {
+					if (overlapping_boxes (query,page->node.internal.BOX(i),proj_dimensions)) {
 						container = (box_container_t*) malloc (sizeof(box_container_t));
 
 						container->id = CHILD_ID(page_id,i);
 						container->box = page->node.internal.BOX(i);
-						container->sort_key = key_to_box_mindistance (center,page->node.internal.BOX(i),dimensions);
+						container->sort_key = key_to_box_mindistance (center,page->node.internal.BOX(i),proj_dimensions);
 
 						if (container->sort_key < threshold) {
 							insert_into_priority_queue (browse,container);

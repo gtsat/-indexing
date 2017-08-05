@@ -446,7 +446,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 						from[i] = -INDEX_T_MAX;
 						to[i] = INDEX_T_MAX;
 					}
-					insert_into_stack (partial_results,range(remaining_tree,from,to));
+					insert_into_stack (partial_results,range(remaining_tree,from,to,remaining_tree->dimensions));
 					delete_rtree (remaining_tree);
 					has_tail = true;
 				}
@@ -499,7 +499,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 			to [i] = INDEX_T_MAX;
 		}
 
-		result = range (subq_tree,from,to);
+		result = range (subq_tree,from,to,subq_tree->dimensions);
 		assert (result->size == subq_tree->indexed_records);
 
 
@@ -858,7 +858,9 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		char *const filename = remove_from_stack (stack);
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
 		strcpy (filepath,folder);
-		strcat (filepath,"/");
+		if (folder[strlen(folder)-1]!='/') {
+			strcat (filepath,"/");
+		}
 		LOG (info,"HEAPFILE: '%s'. \n",filename);
 		strcat (filepath,filename);
 		free (filename);
@@ -894,19 +896,22 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		}
 		for (uint32_t j=0; j<pcardinality; ++j) {
 			uint32_t const operation = remove_from_stack (stack);
-			uint32_t const kcardinality = remove_from_stack (stack);
+			uint32_t kcardinality = remove_from_stack(stack);
 
 			switch (operation) {
 				case LOOKUP:
 					LOG (info,"LOOKUP ");
 					index_t *const lookup = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (tree->dimensions < kcardinality) {
+						kcardinality = tree->dimensions;
+					}
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
 					uint32_t i=0;
 					for (i=0; i<kcardinality; ++i) {
-						if (i < tree->dimensions) {
-							double* tmp = remove_from_stack (stack);
-							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
-							lookup[tree->dimensions-i-1] = *tmp;
-						}
+						double* tmp = remove_from_stack (stack);
+						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						lookup[kcardinality-i-1] = *tmp;
 					}
 
 					if (i < tree->dimensions) {
@@ -925,37 +930,46 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					break;
 				case FROM:
 					LOG (info,"FROM ");
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (tree->dimensions < kcardinality) {
+						kcardinality = tree->dimensions;
+					}
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
 					for (uint32_t i=0; i<kcardinality; ++i) {
-						if (i < tree->dimensions) {
-							double* tmp = remove_from_stack (stack);
-							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
-							if (*tmp > from[tree->dimensions-1-i]) {
-								from[tree->dimensions-1-i] = *tmp;
-							}
+						double* tmp = remove_from_stack (stack);
+						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						if (*tmp > from[kcardinality-1-i]) {
+							from[kcardinality-1-i] = *tmp;
 						}
 					}
 					break;
 				case TO:
 					LOG (info,"TO ");
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (tree->dimensions < kcardinality) {
+						kcardinality = tree->dimensions;
+					}
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
 					for (uint32_t i=0; i<kcardinality; ++i) {
-						if (i < tree->dimensions) {
 							double* tmp = remove_from_stack (stack);
 							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
-							if (*tmp < to[tree->dimensions-1-i]) {
-								to[tree->dimensions-1-i] = *tmp;
+							if (*tmp < to[kcardinality-1-i]) {
+								to[kcardinality-1-i] = *tmp;
 							}
-						}
 					}
 					break;
 				case BOUND:
 					LOG (info,"BOUND ");
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (tree->dimensions+1 < kcardinality) {
+						kcardinality = tree->dimensions+1;
+					}
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
 					bounded_dimensionality = kcardinality;
 					for (uint32_t i=0; i<kcardinality; ++i) {
-						if (i <= tree->dimensions) {
-							double* tmp = remove_from_stack (stack);
-							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
-							bound[tree->dimensions-i] = *tmp;
-						}
+						double* tmp = remove_from_stack (stack);
+						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						bound[kcardinality-1-i] = *tmp;
 					}
 					break;
 				case CORN:
@@ -998,7 +1012,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 				index_t *const lookup = remove_from_stack (lookups);
 				LOG (info,"lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
 
-				fifo_t *const partial = find_all_in_rtree (tree,lookup);
+				fifo_t *const partial = find_all_in_rtree (tree,lookup,tree->dimensions);
 				LOG (info,"Adding %lu new tuples in the result...\n",partial->size);
 
 				while (partial->size) {
@@ -1084,7 +1098,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 			result_tree = create_temp_rtree (skyline_result_list,tree->page_size,tree->dimensions);
 		}else{
-			fifo_t *const range_result_list = range (tree,from,to);
+			fifo_t *const range_result_list = range (tree,from,to,tree->dimensions);
 			LOG (info,"Range query result contains %lu tuples.\n",range_result_list->size);
 
 			result_tree = create_temp_rtree (range_result_list,tree->page_size,tree->dimensions);

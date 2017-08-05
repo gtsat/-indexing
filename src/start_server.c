@@ -47,7 +47,7 @@ static char ok_response[] = "HTTP/1.0 200 OK\n"
 				"\t\"message\": \"%s\",\n"
 				"\t\"io_blocks\": %lu,\n"
 				"\t\"io_mb\": %.3lf,\n"
-				"\t\"proctime\": %lu,\n"
+				"\t\"proc_time\": %lu,\n"
 				"\t\"data\": ";
 
 static char ok_data[] = "HTTP/1.0 200 OK\n"
@@ -59,7 +59,7 @@ static char metadata[] = "\t\"status\": \"%s\",\n"
 				"\t\"message\": \"%s\",\n"
 				"\t\"io_blocks\": %lu,\n"
 				"\t\"io_mb\": %.3lf,\n"
-				"\t\"proctime\": %lu\n";
+				"\t\"proc_time\": %lu\n";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 				"Content-type: text/json\n\n"
@@ -68,7 +68,7 @@ static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 				"\t\"message\": \"Unable to process query from bad request.\",\n"
 				"\t\"io_blocks\": 0,\n"
 				"\t\"io_mb\": 0.000,\n"
-				"\t\"proctime\": 0.0,\n"
+				"\t\"proc_time\": 0.0,\n"
 				"\t\"data\": null\n"
 				"}\n";
 
@@ -79,7 +79,7 @@ static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
 				"\t\"message\": \"The requested URL '%s' was not found.\",\n"
 				"\t\"io_blocks\": 0,\n"
 				"\t\"io_mb\": 0.000,\n"
-				"\t\"proctime\": 0.0,\n"
+				"\t\"proc_time\": 0.0,\n"
 				"\t\"data\": null\n"
 				"}\n";
 
@@ -90,7 +90,7 @@ static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemente
 				"\t\"message\": \"The requested method '%s' is not implemented.\"\n"
 				"\t\"io_blocks\": 0,\n"
 				"\t\"io_mb\": 0.000,\n"
-				"\t\"proctime\": 0.0,\n"
+				"\t\"proc_time\": 0.0,\n"
 				"\t\"data\": null\n"
 				"}\n";
 
@@ -272,7 +272,7 @@ void handle_connection (void *const args) {
 		lifo_t* content_stack = NULL;
 		char* content = NULL;
 		do{
-			if ((content = strstr(buffer,"\r\n\r\n")) != NULL) {
+			if ((content = strstr(buffer,"\n\n")) != NULL || (content = strstr(buffer,"\r\n\r\n")) != NULL) {
 				char* cl_ptr = strstr (buffer,"content-length");
 				if (cl_ptr == NULL) cl_ptr = strstr (buffer,"Content-Length");
 
