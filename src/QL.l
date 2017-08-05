@@ -13,16 +13,16 @@
 %x		SUBQ
 %x		BODY
 
-DIGIT		[0-9]
-ID		[a-zA-Z0-9\._]+
+DIGIT	[0-9]
+ID		[a-zA-Z_][a-zA-Z0-9\.]*
 
 %%
-
 
 			yy_push_state(0);
 
 \/			{LOG(0,"\ncSubquery start.\n"); return '/';}
 \%			{LOG(0,"\nrSubquery start.\n"); return '%';}
+"%25"			{LOG(0,"\nrSubquery start.\n"); return '%';}
 
 
 =			{LOG(0,"Assignment.\n"); return '=';}

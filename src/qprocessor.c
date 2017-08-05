@@ -72,6 +72,14 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	fclose (fptr);
 
 	if (parser_rval) {
+		LOG (error,"Syntax error; unable to parse query: '%s'\n",command);
+		strcat (message,"Syntax error; unable to parse query.");
+		char *null_string = "null,\n";
+		if (fd) {
+			if (write (fd,null_string,sizeof(null_string)) < sizeof(null_string)) {
+				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			}
+		}
 		return NULL;
 	}
 
@@ -84,12 +92,13 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		fifo_t *const result = process_command (stack,folder,message,io_blocks_counter,io_mb_counter);
 
 		if (result == NULL) {
-			char *null_string = "null;\n";
-			if (fd > 0) {
+			char *null_string = "null,\n";
+			if (fd) {
 				if (write (fd,null_string,sizeof(null_string)) < sizeof(null_string)) {
 					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 				}
 			}
+			LOG (error,"Early return from query processor due to bad command...\n");
 			delete_stack (stack);
 			return NULL;
 		}
@@ -111,7 +120,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 				if (guard - result_string < BUFSIZ) {
 					uint64_t resultlen = strlen(buffer);
-					if (fd > 0) {
+					if (fd) {
 						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
 							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 						}
@@ -187,7 +196,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 				if (guard - result_string < BUFSIZ) {
 					uint64_t resultlen = strlen(buffer);
-					if (fd > 0) {
+					if (fd) {
 						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
 							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 						}
@@ -308,7 +317,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 */
 	if (buffer != NULL) {
 		strcpy (message,"Successful operation.");
-		if (fd > 0) {
+		if (fd) {
 			uint64_t resultlen = strlen(buffer);
 			if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
@@ -850,13 +859,8 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
 		strcpy (filepath,folder);
 		strcat (filepath,"/");
-		if (start_symbol == '%' && *filename=='2' && filename[1]=='5') {
-			LOG (info,"HEAPFILE: '%s'. \n",filename+2);
-			strcat (filepath,filename+2);
-		}else{
-			LOG (info,"HEAPFILE: '%s'. \n",filename);
-			strcat (filepath,filename);
-		}
+		LOG (info,"HEAPFILE: '%s'. \n",filename);
+		strcat (filepath,filename);
 		free (filename);
 
 		tree_t* tree = get_rtree (filepath);

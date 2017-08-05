@@ -9,18 +9,6 @@
 	#define YYERROR_VERBOSE
 
 	void yyerror (char*);
-	//void unroll (void);
-
-
-	/** the following are passed on yyparse() **/
-
-	lifo_t* stack;
-
-	double varray [BUFSIZ];
-
-	unsigned vindex;
-	unsigned key_cardinality;
-	unsigned predicates_cardinality;
 %}
 
 %expect 0
@@ -34,7 +22,8 @@
 	int ival;
 }
 
-%type <str> COMMAND 
+%type <str> QUERY
+%type <str> COMMANDS COMMAND 
 %type <str> rCOMMAND 
 %type <str> cSUBQUERY rSUBQUERY
 %type <str> SUBQUERY
@@ -54,75 +43,52 @@
 %token '='
 %left ','
 
-%start COMMANDS
+%start QUERY
 
 %%
 
-COMMANDS :
-					{
-						LOG (info,"EMPTY COMMANDS ENCOUNTERED. \n");
-					}
-	| COMMANDS ';'				{
-						LOG (info,"EMPTY COMMAND ';' ENCOUNTERED. \n");
-					}
-	| COMMANDS '/' ';'		{
-						LOG (info,"EMPTY COMMAND '/;' ENCOUNTERED. \n");
-					}
-	| COMMANDS COMMAND ';'		{
-						LOG (info,"YET ANOTHER COMMAND ADDED. \n"); 
+QUERY :
+	  COMMAND ';'	{
+						LOG (info,"SINGLE COMMAND ';' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
-						varray [vindex++] = INDEX_T_MAX;
+						varray [vindex++] = 0;
 					}
-	| COMMANDS COMMAND '/' ';'	{
-						LOG (info,"YET ANOTHER COMMAND/ ADDED. \n"); 
+	| COMMAND '/' ';' {
+						LOG (info,"SINGLE COMMAND '/;' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
-						varray [vindex++] = INDEX_T_MAX;
+						varray [vindex++] = 0;
 					}
-	| COMMANDS COMMAND DJOIN_PRED ';' {
+	| COMMANDS DJOIN_PRED ';' {
 						LOG (info,"DISTANCE JOIN. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
-						varray [vindex++] = $<dval>4;
+						varray [vindex++] = $<dval>3;
 					}
-	| COMMANDS COMMAND DJOIN_PRED '/' ';' {
+	| COMMANDS DJOIN_PRED '/' ';' {
 						LOG (info,"DISTANCE JOIN/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
-						varray [vindex++] = $<dval>4;
+						varray [vindex++] = $<dval>3;
 					}
-	| COMMANDS COMMAND CP_PRED ';'	{
+	| COMMANDS CP_PRED ';'	{
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
-						varray [vindex++] = $<ival>4;
+						varray [vindex++] = $<ival>3;
 					}
-	| COMMANDS COMMAND CP_PRED '/' ';'	{
+	| COMMANDS CP_PRED '/' ';'	{
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)ULONG_MAX);
 						insert_into_stack (stack,';');
-						varray [vindex++] = $<ival>4;
-					}
-;
-
-COMMAND :
-	  COMMAND cSUBQUERY		{
-						LOG (info,"NEW cSUBQUERY PARSED. \n");
-					}
-	| cSUBQUERY			{
-						LOG (info,"FIRST cSUBQUERY PARSED. \n");
-					}
-	| rCOMMAND rKEY			{
-						LOG (info,"REVERSE NN. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)'%');
+						varray [vindex++] = $<ival>3;
 					}
 	| error 			{
 						LOG (error,"Erroneous command... \n");
@@ -132,42 +98,47 @@ COMMAND :
 					}
 ;
 
-rCOMMAND :
-	 cSUBQUERY rSUBQUERY		{
-						LOG (info,"FIRST rSUBQUERY PARSED. \n");
-					}
-	| rCOMMAND rSUBQUERY		{
-						LOG (info,"NEW rSUBQUERY PARSED. \n");
+COMMANDS :
+		COMMAND COMMAND {LOG (info,"PAIR OF COMMANDS. \n");}
+		| COMMANDS COMMAND {LOG (info,"COMMAND ADDED IN COMMAND SEQUENCE. \n");}
+
+COMMAND :
+	  cSUBQUERY		{LOG (info,"cSUBQUERY PARSED. \n");}
+	| rCOMMAND rKEY {
+						LOG (info,"REVERSE NN. \n");
+						insert_into_stack (stack,(void*)key_cardinality);
+						insert_into_stack (stack,(void*)'%');
 					}
 ;
 
+rCOMMAND :
+	 cSUBQUERY rSUBQUERY		{LOG (info,"FIRST rSUBQUERY PARSED. \n");}
+	| rCOMMAND rSUBQUERY		{LOG (info,"NEW rSUBQUERY PARSED. \n");}
+;
+
 rSUBQUERY :
-	'%' rSUBQUERY			{
-						LOG (info,"More slashes preceding rsubquery. \n");
-					}
-	| '%' SUBQUERY			{
+	'%' rSUBQUERY		{LOG (info,"More slashes preceding rsubquery. \n");}
+	| '%' SUBQUERY	{
 						LOG (info,"Put together rsubquery. \n");
 						insert_into_stack (stack,(void*)'%');
 					}
 ;
 
 cSUBQUERY:
-	'/' cSUBQUERY			{
-						LOG (info,"More slashes preceding csubquery. \n");
-					}
-	| '/' SUBQUERY			{
+	'/' cSUBQUERY	{LOG (info,"More slashes preceding csubquery. \n");}
+	| '/' SUBQUERY	{
 						LOG (info,"Put together csubquery. \n");
 						insert_into_stack (stack,(void*)'/');
 					}
 ;
 
 SUBQUERY :
-	  ID 				{
+	  ID 			{
 						LOG (info,"Single identifier subquery. \n");
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,$<str>1);
 					}
-	| ID '?' PREDICATES 		{
+	| ID '?' PREDICATES {
 						LOG (info,"Parsed subquery. \n")
 						insert_into_stack (stack,(void*)predicates_cardinality);
 						insert_into_stack (stack,$<str>1);
@@ -191,22 +162,22 @@ PREDICATE :
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)LOOKUP);
 					}
-	| FROM '=' KEY			{
+	| FROM '=' KEY	{
 						LOG (info,"FROM. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)FROM);
 					}
-	| TO '=' KEY			{
+	| TO '=' KEY		{
 						LOG (info,"TO. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)TO);
 					}
-	| BOUND '=' KEY			{
+	| BOUND '=' KEY	{
 						LOG (info,"BOUND. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)BOUND);
 					}
-	| CORN '=' BITFIELD		{
+	| CORN '=' BITFIELD {
 						LOG (info,"SKYLINE. \n");
 						insert_into_stack (stack,$<str>3);
 						insert_into_stack (stack,1);
@@ -215,43 +186,37 @@ PREDICATE :
 ;
 
 rKEY :
-	 '%' rKEY			{}
-	| '%' KEY			{
-						LOG (info,"rKEY encountered.\n");
-					}
+	 '%' rKEY		{}
+	| '%' KEY		{LOG (info,"rKEY encountered.\n");}
 ;
 
 DJOIN_PRED :
-	 '/' DJOIN_PRED			{}
-	| '/' REAL			{
-						LOG (info,"Distance join predicate encountered.\n");
-					}
+	 '/' DJOIN_PRED	{}
+	| '/' REAL		{LOG (info,"Distance join predicate encountered.\n");}
 ;
 
 CP_PRED :
-	 '/' CP_PRED			{}
-	| '/' INTEGER			{
-						LOG (info,"Closest pairs predicate encountered.\n");
-					}
+	 '/' CP_PRED		{}
+	| '/' INTEGER	{LOG (info,"Closest pairs predicate encountered.\n");}
 ;
 
 KEY : 
-	  KEY ',' REAL			{
+	  KEY ',' REAL	{
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = $<dval>3;
 						key_cardinality++;
 					}
-	| KEY ',' INTEGER		{
+	| KEY ',' INTEGER {
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = $<ival>3;
 						key_cardinality++;
 					}
-	| REAL				{
+	| REAL			{
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = $<dval>1;
 						key_cardinality = 1;
 					}
-	| INTEGER			{
+	| INTEGER		{
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = $<ival>1;
 						key_cardinality = 1;

@@ -38,74 +38,61 @@
 uint32_t PORT;
 char const* HOST;
 char const* FOLDER;
-
-
-uint32_t DIMENSIONS;
-uint32_t PAGESIZE;
-
-char const* DATASET;
-char const* HEAPFILE;
-
-uint64_t IO_COUNTER;
-
-boolean INDEX_BOXES;
-
 const boolean write_through = true;
 
-
 static char ok_response[] = "HTTP/1.0 200 OK\n"
-					"Content-type: text/json\n\n"
-					"{\n\t\"status\": \"%s\",\n"
-					"\t\"query\": \"%s\"\n"
-					"\t\"message\": \"%s\",\n"
-					"\t\"io_blocks\": %lu,\n"
-					"\t\"io_mb\": %.3lf,\n"
-					"\t\"proctime\": %lu,\n"
-					"\t\"data\": ";
+				"Content-type: text/json\n\n"
+				"{\n\t\"status\": \"%s\",\n"
+				"\t\"query\": \"%s\",\n"
+				"\t\"message\": \"%s\",\n"
+				"\t\"io_blocks\": %lu,\n"
+				"\t\"io_mb\": %.3lf,\n"
+				"\t\"proctime\": %lu,\n"
+				"\t\"data\": ";
 
 static char ok_data[] = "HTTP/1.0 200 OK\n"
-					"Content-type: text/json\n\n"
-					"{\n\t\"data\": ";
+				"Content-type: text/json\n\n"
+				"{\n\t\"data\": ";
 
 static char metadata[] = "\t\"status\": \"%s\",\n"
-					"\t\"query\": \"%s\"\n"
-					"\t\"message\": \"%s\",\n"
-					"\t\"io_blocks\": %lu,\n"
-					"\t\"io_mb\": %.3lf,\n"
-					"\t\"proctime\": %lu,\n";
+				"\t\"query\": \"%s\",\n"
+				"\t\"message\": \"%s\",\n"
+				"\t\"io_blocks\": %lu,\n"
+				"\t\"io_mb\": %.3lf,\n"
+				"\t\"proctime\": %lu\n";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
-					"Content-type: text/json\n\n"
-					"{\n\t\"status\": \"ERROR\"\n,"
-					"\t\"query\": \"%s\"\n"
-					"\t\"message\": \"Unable to process query from bad request.\"\n"
-					"\t\"io_blocks\": 0,\n"
-					"\t\"io_mb\": 0.000,\n"
-					"\t\"proctime\": 0.0,\n"
-					"\t\"data\": null,\n"
-					"}\n";
+				"Content-type: text/json\n\n"
+				"{\n\t\"status\": \"ERROR\"\n,"
+				"\t\"query\": \"%s\",\n"
+				"\t\"message\": \"Unable to process query from bad request.\",\n"
+				"\t\"io_blocks\": 0,\n"
+				"\t\"io_mb\": 0.000,\n"
+				"\t\"proctime\": 0.0,\n"
+				"\t\"data\": null\n"
+				"}\n";
 
 static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
-					"Content-type: text/json\n\n"
-					"{\n\t\"status\":\"ERROR\"\n,"
-					"\t\"query\": \"%s\"\n"
-					"\t\"message\": \"The requested URL '%s' was not found.\"\n"
-					"\t\"io_blocks\": 0,\n"
-					"\t\"io_mb\": 0.000,\n"
-					"\t\"proctime\": 0.0,\n"
-					"\t\"data\": null,\n"
-					"}\n";
+				"Content-type: text/json\n\n"
+				"{\n\t\"status\":\"ERROR\"\n,"
+				"\t\"query\": \"%s\",\n"
+				"\t\"message\": \"The requested URL '%s' was not found.\",\n"
+				"\t\"io_blocks\": 0,\n"
+				"\t\"io_mb\": 0.000,\n"
+				"\t\"proctime\": 0.0,\n"
+				"\t\"data\": null\n"
+				"}\n";
 
 static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemented\n"
-					"Content-type: text/json\n\n"
-					"{\n\t\"status\":\"ERROR\"\n,"
-					"\t\"query\": \"%s\"\n"
-					"\t\"message\": \"The requested method '%s' is not implemented.\"\n"
-					"\t\"io_blocks\": 0,\n"
-					"\t\"io_mb\": 0.000,\n"
-					"\t\"proctime\": 0.0,\n"
-					"\t\"data\": null,\n"
-					"}\n";
+				"Content-type: text/json\n\n"
+				"{\n\t\"status\":\"ERROR\"\n,"
+				"\t\"query\": \"%s\"\n"
+				"\t\"message\": \"The requested method '%s' is not implemented.\"\n"
+				"\t\"io_blocks\": 0,\n"
+				"\t\"io_mb\": 0.000,\n"
+				"\t\"proctime\": 0.0,\n"
+				"\t\"data\": null\n"
+				"}\n";
 
 static
 void print_notice (void) {
@@ -202,7 +189,7 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 					data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,fd);
 				}
 			}else{
-				data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,-1);
+				data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,0);
 			}
 		}
 		clock_t end = clock();
