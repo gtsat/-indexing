@@ -889,6 +889,9 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		uint32_t bounded_dimensionality = 0;
 
 		uint32_t const pcardinality = remove_from_stack (stack);
+		if (!pcardinality) {
+			return tree;
+		}
 		for (uint32_t j=0; j<pcardinality; ++j) {
 			uint32_t const operation = remove_from_stack (stack);
 			uint32_t const kcardinality = remove_from_stack (stack);
