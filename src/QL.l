@@ -13,8 +13,8 @@
 %x		SUBQ
 %x		BODY
 
-DIGIT	[0-9]
-ID		[a-zA-Z_][a-zA-Z0-9\.]*
+DIGIT 		[0-9]
+ID		[_a-zA-Z][_a-zA-Z0-9\.]*
 
 %%
 
