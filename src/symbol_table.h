@@ -20,6 +20,7 @@ fifo_t* get_entries (symbol_table_t const*const);
 fifo_t* key_range (symbol_table_t const*const, key__t const, key__t const);
 
 key__t max_key (symbol_table_t const*const);
+value_t remove_max (symbol_table_t *const rbtree);
 
 void map_keys (symbol_table_t const*const, key__t(*)(key__t const,va_list),...);
 
