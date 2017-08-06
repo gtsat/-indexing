@@ -47,6 +47,7 @@ symbol_table_t* new_symbol_table (value_t const value, int (*compare) (key__t co
 	}
 }
 
+
 key__t max_key (symbol_table_t const*const rbtree) {
 	if (rbtree->root==NULL) {
 		LOG (error,"Cannot return max-value key because the symbol-table is empty.\n");
@@ -56,6 +57,29 @@ key__t max_key (symbol_table_t const*const rbtree) {
 	for (;ptr->right!=NULL;ptr=ptr->right);
 	return ptr->key;
 }
+
+value_t remove_max (symbol_table_t *const rbtree) {
+	value_t rval = NULL;
+	if (rbtree->root == NULL) {
+		LOG (error,"Cannot return max-value key because the symbol-table is empty.\n");
+	}else if (rbtree->root->right == NULL) {
+		rval = rbtree->root->value;
+		tree_node_t *left_subtree = rbtree->root->left;
+		free (rbtree->root);
+		assert (rbtree->size == rbtree->root->size);
+		assert (rbtree->size == (left_subtree!=NULL?left_subtree->size:0));
+		rbtree->root = left_subtree;
+		rbtree->size = left_subtree->size;
+	}else{
+		tree_node_t* ptr = rbtree->root;
+		for (;ptr->right->right!=NULL;ptr=ptr->right)
+			;
+		rval = ptr->right->value;
+		ptr->right = ptr->right->left;
+	}
+	return rval;
+}
+
 
 value_t get (symbol_table_t const*const rbtree, key__t const key) {
 	if (rbtree->compare!=NULL) {

@@ -12,7 +12,6 @@ fifo_t* multiskyline_sort_merge (lifo_t *const trees, boolean const corner[]);
 
 fifo_t* multiskyline_diversified (lifo_t *const trees, boolean const corner[], uint32_t k);
 
-/* sort-merge */
 fifo_t* skyline_diversified (tree_t *const, boolean const[], uint32_t const k, boolean const in_disk);
 fifo_t* skyline_diversified_constrained (tree_t *const, boolean const[],
                                         index_t const[], index_t const[],

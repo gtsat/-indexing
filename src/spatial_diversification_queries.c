@@ -88,6 +88,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 		assert (page_lock != NULL);
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
+			free (container);
 			while (browse->size) {
 				free (remove_from_priority_queue (browse));
 			}
@@ -200,7 +201,6 @@ static void augment_set_with_hotspots (tree_t *const tree,
 						else if (bring_together_results) candidate->sort_key -= clustering;
 
 						insert_into_priority_queue (candidates,candidate);
-
 					}else if (!is_obscured) {
 						index_t tmp_score = dissimilarity - relevance;
 						if (pull_apart_results) tmp_score += clustering;
