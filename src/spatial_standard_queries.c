@@ -419,9 +419,20 @@ fifo_t* nearest (tree_t *const tree, index_t const query[], uint32_t const k) {
 
 fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 						tree_t *const data_tree,
-						lifo_t *const feature_trees) {
-	lifo_t* cells[feature_trees->size];
+						lifo_t *const feature_trees,
+						uint32_t proj_dimensions) {
 
+	if (data_tree->dimensions < proj_dimensions) {
+		proj_dimensions = data_tree->dimensions;
+	}
+	for (uint32_t itree=0; itree<feature_trees->size; ++itree) {
+		tree_t *const tree = (tree_t *const) feature_trees->buffer[itree];
+		if (tree->dimensions < proj_dimensions) {
+			proj_dimensions = tree->dimensions;
+		}
+	}
+
+	lifo_t* cells[feature_trees->size];
 	priority_queue_t* browse = new_priority_queue (&mincompare_containers);
 
 	for (uint32_t itree=0; itree<feature_trees->size; ++itree) {
@@ -471,7 +482,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 						memcpy (data_container->key,page->node.leaf.KEY(i),tree->dimensions*sizeof(index_t));
 
 						data_container->object = page->node.leaf.objects[i];
-						data_container->sort_key = key_to_key_distance (query,data_container->key,tree->dimensions);
+						data_container->sort_key = key_to_key_distance (query,data_container->key,proj_dimensions);
 
 						boolean is_obscured_data_item = false;
 						for (uint32_t c=0;c<=itree;++c) {
@@ -479,7 +490,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 								data_container_t* adjacent_cell_center = (data_container_t*) cells[c]->buffer[j];
 								if (data_container->sort_key
 									>= key_to_key_distance
-									(data_container->key,adjacent_cell_center->key,tree->dimensions)) {
+									(data_container->key,adjacent_cell_center->key,proj_dimensions)) {
 
 									is_obscured_data_item = true;
 									goto data_double_break;
@@ -501,7 +512,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 						container = (box_container_t*) malloc (sizeof(box_container_t));
 
 						container->id = CHILD_ID(page_id,i);
-						container->sort_key = key_to_box_mindistance (query,page->node.internal.BOX(i),tree->dimensions);
+						container->sort_key = key_to_box_mindistance (query,page->node.internal.BOX(i),proj_dimensions);
 
 						boolean is_obscured_box = false;
 						for (uint32_t c=0;c<=itree;++c) {
@@ -509,7 +520,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 								data_container_t* adjacent_cell_center = (data_container_t*) cells[c]->buffer[j];
 								if (container->sort_key
 									>= key_to_box_maxdistance
-									(adjacent_cell_center->key,page->node.internal.BOX(i),tree->dimensions)) {
+									(adjacent_cell_center->key,page->node.internal.BOX(i),proj_dimensions)) {
 
 									is_obscured_box = true;
 									goto browse_double_break;
@@ -562,14 +573,14 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 
 					data_container->object = page->node.leaf.objects[i];
 
-					index_t sort_key = key_to_key_distance (query,data_container->key,tree->dimensions);
+					index_t sort_key = key_to_key_distance (query,data_container->key,proj_dimensions);
 
 					boolean is_obscured_data_item = false;
 					for (uint32_t c=0;c<feature_trees->size;++c) {
 						for (uint32_t j=0; j<cells[c]->size; ++j) {
 							data_container_t* adjacent_cell_center = (data_container_t*) cells[c]->buffer[j];
 							if (sort_key > key_to_key_distance
-									(data_container->key,adjacent_cell_center->key,tree->dimensions)) {
+									(data_container->key,adjacent_cell_center->key,proj_dimensions)) {
 
 								is_obscured_data_item = true;
 								goto result_data_double_break;
@@ -589,13 +600,13 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 			}else{
 				uint32_t i = page->header.records-1;
 				do{
-					index_t box_distance = key_to_box_mindistance (query,page->node.internal.BOX(i),tree->dimensions);
+					index_t box_distance = key_to_box_mindistance (query,page->node.internal.BOX(i),proj_dimensions);
 
 					boolean is_obscured_box = false;
 					for (uint32_t c=0;c<feature_trees->size;++c) {
 						for (uint32_t j=0; j<cells[c]->size; ++j) {
 							data_container_t* other_center = (data_container_t*) cells[c]->buffer[j];
-							if (box_distance > key_to_box_maxdistance (other_center->key,page->node.internal.BOX(i),tree->dimensions)) {
+							if (box_distance > key_to_box_maxdistance (other_center->key,page->node.internal.BOX(i),proj_dimensions)) {
 								is_obscured_box = true;
 								goto result_browse_double_break;
 							}

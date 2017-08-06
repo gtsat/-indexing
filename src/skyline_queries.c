@@ -49,22 +49,26 @@ static boolean validate_skyline (fifo_t const*const queue, boolean const corner[
  * orient the skyline by any corner of the key-space using the input bitfield.
  */
 
-fifo_t* skyline (tree_t *const tree, boolean const corner[]) {
+fifo_t* skyline (tree_t *const tree, boolean const corner[], uint32_t proj_dimensions) {
 	index_t lo [tree->dimensions];
 	index_t hi [tree->dimensions];
 	for (uint32_t j=0; j<tree->dimensions; ++j) {
 		lo [j] = tree->root_box[j].start;
 		hi [j] = tree->root_box[j].end;
 	}
-	return skyline_constrained (tree,corner,lo,hi);
+	return skyline_constrained (tree,corner,lo,hi,proj_dimensions);
 }
 
 
 fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
-							 index_t const lo[], index_t const hi[]) {
+							 index_t const lo[], index_t const hi[],
+							 uint32_t proj_dimensions) {
+	if (tree->dimensions < proj_dimensions) {
+		proj_dimensions = tree->dimensions;
+	}
 
-	interval_t query [tree->dimensions];
-	for (uint32_t j=0; j<tree->dimensions; ++j) {
+	interval_t query [proj_dimensions];
+	for (uint32_t j=0; j<proj_dimensions; ++j) {
 		if (lo[j]>hi[j]) {
 			LOG (error,"Erroneous range query specified...\n");
 			return NULL;
@@ -75,7 +79,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
 
-	if (!overlapping_boxes (query,tree->root_box,tree->dimensions)){
+	if (!overlapping_boxes (query,tree->root_box,proj_dimensions)){
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		LOG (warn,"Query does not overlap with indexed area...\n");
@@ -83,11 +87,11 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	}else pthread_rwlock_unlock (&tree->tree_lock);
 
 	load_page (tree,0);
-	index_t reference_point [tree->dimensions];
+	index_t reference_point [proj_dimensions];
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
 
-	for (uint32_t j=0;j<tree->dimensions;++j) {
+	for (uint32_t j=0; j<proj_dimensions; ++j) {
 		if (corner[j]) reference_point[j] = query[j].end;
 		else reference_point[j] = query[j].start;
 	}
@@ -130,7 +134,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 		}else{
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (!key_enclosed_by_box (page->node.leaf.KEY(i),query,tree->dimensions)) {
+					if (!key_enclosed_by_box (page->node.leaf.KEY(i),query,proj_dimensions)) {
 						continue;
 					}
 
@@ -138,7 +142,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 
 					leaf_entry->key = page->node.leaf.keys+i*tree->dimensions;
 					leaf_entry->object = page->node.leaf.objects[i];
-					leaf_entry->sort_key = key_to_key_distance (reference_point,leaf_entry->key,tree->dimensions);
+					leaf_entry->sort_key = key_to_key_distance (reference_point,leaf_entry->key,proj_dimensions);
 
 					insert_into_priority_queue (candidates,leaf_entry);
 				}
@@ -149,7 +153,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	                boolean is_dominated = false;
 	                for (register uint64_t j=0; j<skyline->size;) {
 	                        data_pair_t *const pair = (data_pair_t *const) skyline->buffer[j];
-	                        if (dominated_key (pair->key,leaf_entry->key,corner,tree->dimensions)) {
+	                        if (dominated_key (pair->key,leaf_entry->key,corner,proj_dimensions)) {
 	                                if (j < skyline->size-1) {
 	                                	skyline->buffer[j] = skyline->buffer[skyline->size-1];
 	                                }
@@ -157,7 +161,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 
 	                                free (pair->key);
 	                                free (pair);
-	                        }else if (dominated_key (leaf_entry->key,pair->key,corner,tree->dimensions)) {
+	                        }else if (dominated_key (leaf_entry->key,pair->key,corner,proj_dimensions)) {
 	                                is_dominated = true;
 	                                break;
 	                        }else{
@@ -178,7 +182,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 				}
 			}else{
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					if (!overlapping_boxes (query,page->node.internal.BOX(i),tree->dimensions)) {
+					if (!overlapping_boxes (query,page->node.internal.BOX(i),proj_dimensions)) {
 						continue;
 					}
 
@@ -186,7 +190,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 					for (register uint64_t j=0; j<skyline->size; ++j) {
 						if (dominated_box (page->node.internal.BOX(i),
 											((data_pair_t const*const)skyline->buffer[j])->key,
-											corner,tree->dimensions)) {
+											corner,proj_dimensions)) {
 							is_dominated = true;
 							break;
 						}
@@ -198,7 +202,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 						container->box = page->node.internal.BOX(i);
 						container->id = CHILD_ID(page_id,i);
 						container->sort_key = key_to_box_mindistance
-												(reference_point,container->box,tree->dimensions);
+												(reference_point,container->box,proj_dimensions);
 
 						insert_into_priority_queue (browse,container);
 					}
@@ -210,7 +214,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	}
 
 	fifo_t *const result = transform_into_queue (skyline);
-	assert (validate_skyline(result,corner,tree->dimensions));
+	assert (validate_skyline(result,corner,proj_dimensions));
 
 	delete_priority_queue (candidates);
 	delete_priority_queue (browse);

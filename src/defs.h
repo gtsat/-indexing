@@ -100,7 +100,7 @@ typedef struct {
 typedef enum {false=0,true} boolean;
 
 
-static const uint64_t initial_capacity = 51;
+static const uint64_t initial_capacity = 5;
 
 /**** BASIC DEFINITIONS END ****/
 

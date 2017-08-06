@@ -890,6 +890,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		boolean is_skyline = false;
 		uint32_t bounded_dimensionality = 0;
 
+		uint32_t projection = 0;
 		uint32_t const pcardinality = remove_from_stack (stack);
 		if (!pcardinality) {
 			return tree;
@@ -977,8 +978,10 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					char *const bitfield = remove_from_stack (stack);
 					LOG (info,"SKYLINE - BITFIELD '%s'",bitfield);
 
-					uint32_t length = strlen (bitfield);
-					for (uint32_t i=0; i<length; ++i) {
+					kcardinality = strlen (bitfield);
+					projection = kcardinality;
+					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					for (uint32_t i=0; i<kcardinality; ++i) {
 						if (bitfield[i]=='O' || bitfield[i]=='o') {
 							corner[i] = false;
 						}else if (bitfield[i]=='I' || bitfield[i]=='i') {
@@ -1046,9 +1049,8 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 			LOG (info,"Bounded search result contains %lu tuples.\n",bounded_result_list->size);
 
 			result_tree = create_temp_rtree (bounded_result_list,tree->page_size,tree->dimensions);
-		}else
-		if (is_skyline) {
-			fifo_t *const skyline_result_list = skyline_constrained (tree,corner,from,to);
+		}else if (is_skyline) {
+			fifo_t *const skyline_result_list = skyline_constrained (tree,corner,from,to,projection);
 			LOG (info,"Skyline result contains %lu tuples.\n",skyline_result_list->size);
 
 			if (bounded_dimensionality) {

@@ -31,6 +31,6 @@ fifo_t* farthest_tuples_pairwise (uint32_t const k, boolean const use_avg, tree_
 
 fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg, boolean const pairwise, lifo_t *const trees);
 
-fifo_t* multichromatic_reverse_nearest_neighbors (index_t const[], tree_t *const data_tree, lifo_t *const feature_trees);
+fifo_t* multichromatic_reverse_nearest_neighbors (index_t const[], tree_t *const data_tree, lifo_t *const feature_trees, uint32_t proj_dimensions);
 
 #endif /* _SPATIAL_STANDARD_QUERIES_H_ */
