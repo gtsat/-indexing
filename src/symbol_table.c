@@ -47,7 +47,6 @@ symbol_table_t* new_symbol_table (value_t const value, int (*compare) (key__t co
 	}
 }
 
-
 key__t max_key (symbol_table_t const*const rbtree) {
 	if (rbtree->root==NULL) {
 		LOG (error,"Cannot return max-value key because the symbol-table is empty.\n");
@@ -537,13 +536,18 @@ tree_node_t* remove_key_recursive (symbol_table_t *const rbtree,
 value_t unset (symbol_table_t *const rbtree, key__t const key) {
 	value_t value = rbtree->default_value;
 	if (rbtree->root != NULL) {
-		boolean has_root_afterwards = rbtree->size > 1 ? true : false;
-		rbtree->root = remove_key_recursive (rbtree,rbtree->root,key);
-		assert (!has_root_afterwards || rbtree->root != NULL);
+		value = get ((symbol_table_t const*const)rbtree,key);
+		if (value != rbtree->default_value) {
+			rbtree->root = remove_key_recursive (rbtree,rbtree->root,key);
+			LOG (0,"Successfully removed from the symbol-table value %lu indexed by key %lu.\n",value,key);
+		}else{
+			LOG (warn,"No entry indexed by key %lu was found in the symbol-table to be removed...\n",key);
+		}
 	}
 	rbtree->size = (rbtree->root!=NULL?rbtree->root->size:0);
 	return value;
 }
+
 
 value_t remove_max (symbol_table_t *const rbtree) {
 	value_t rval = NULL;

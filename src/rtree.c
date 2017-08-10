@@ -222,6 +222,8 @@ tree_t* load_rtree (char const filename[]) {
 		exit (EXIT_FAILURE);
 	}
 
+	tree->filename = strdup (filename);
+
 	int fd = open (filename,O_RDONLY,0);
 	lseek (fd,0,SEEK_SET);
 	if (fd < 0) {
@@ -284,8 +286,6 @@ tree_t* load_rtree (char const filename[]) {
 		tree->root_box[j].start = INDEX_T_MAX;
 		tree->root_box[j].end = -INDEX_T_MAX;
 	}
-
-	tree->filename = strdup (filename);
 
 	tree->heapfile_index = new_symbol_table_primitive (NULL);
 	tree->page_locks = new_symbol_table_primitive (NULL);

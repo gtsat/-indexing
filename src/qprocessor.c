@@ -29,7 +29,7 @@
 #include"rtree.h"
 #include"defs.h"
 
-#define MEMORY_BOUND 1<<30
+#define MEMORY_BOUND 1<<15
 
 extern FILE* yyin;
 extern FILE* yyout;
@@ -51,8 +51,12 @@ static int strcompare (key__t x, key__t y) {
 
 char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, int fd) {
 	get_rtree (NULL);
-	unlink ("/tmp/cached_command.txt");
-	FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
+	char command_filepath [64];
+	sprintf (command_filepath,"/tmp/cached_command.%lu.txt",time(NULL));
+	FILE* fptr = fopen (command_filepath,"w+");
+	//unlink ("/tmp/cached_command.");
+	//FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
+
 	//char command[] = "/NY.rtree?key=41.127369,-73.529746;";
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5;";
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5&corn=II;";
@@ -428,7 +432,9 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 						joined_tree->io_counter = 0;
 						pthread_rwlock_unlock (&joined_tree->tree_lock);
 						
-						delete_rtree (joined_tree);
+						if (get_rtree(joined_tree->filename)==NULL) {
+							delete_rtree (joined_tree);
+						}
 					}else{
 						LOG (error,"Error while finalizing join operands.\n");
 						strcat (message,"Error while finalizing join operands.");
@@ -447,7 +453,10 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 						to[i] = INDEX_T_MAX;
 					}
 					insert_into_stack (partial_results,range(remaining_tree,from,to,remaining_tree->dimensions));
-					delete_rtree (remaining_tree);
+
+					if (get_rtree(remaining_tree->filename)==NULL) {
+						delete_rtree (remaining_tree);
+					}
 					has_tail = true;
 				}
 			}while (subq_trees->size);
@@ -504,7 +513,10 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 
 		while (subq_trees->size) {
-			delete_rtree (remove_from_stack(subq_trees));
+			tree_t *const to_be_removed = remove_from_stack(subq_trees);
+			if (get_rtree(to_be_removed->filename)==NULL) {
+				delete_rtree(to_be_removed);
+			}
 		}
 		delete_stack (subq_trees);
 
@@ -789,7 +801,10 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 
 			if (feature_tree == NULL) {
 				while (feature_trees->size) {
-					delete_rtree (remove_from_stack(feature_trees));
+					tree_t *const to_be_removed = remove_from_stack(feature_trees);
+					if (get_rtree(to_be_removed->filename)==NULL) {
+						delete_rtree (to_be_removed);
+					}
 				}
 				delete_stack (feature_trees);
 
@@ -799,7 +814,10 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 			}else
 			if (feature_tree->dimensions > kcardinality) {
 				while (feature_trees->size) {
-					delete_rtree (remove_from_stack(feature_trees));
+					tree_t *const to_be_removed = remove_from_stack(feature_trees);
+					if (get_rtree(to_be_removed->filename)==NULL) {
+						delete_rtree (to_be_removed);
+					}
 				}
 				delete_stack (feature_trees);
 
@@ -1109,7 +1127,9 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 		delete_stack (lookups);
 		if (delete_rtree_flag) {
-			delete_rtree (tree);
+			if (get_rtree(tree->filename)==NULL) {
+				delete_rtree (tree);
+			}
 		}else{
 			pthread_rwlock_wrlock (&tree->tree_lock);
 			*io_counter = tree->io_counter;
