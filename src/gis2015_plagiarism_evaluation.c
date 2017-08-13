@@ -431,9 +431,11 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 static
 index_t* new_random_point (interval_t const domain[], uint16_t dimensions) {
 	index_t *const new_point = (index_t *const) malloc (sizeof(index_t)*dimensions);
-	for (uint16_t i; i<dimensions; ++i) {
+	for (uint16_t i=0; i<dimensions; ++i) {
 		new_point[i] = drand48() * (domain[i].end - domain[i].start) + domain[i].start;
+		fprintf (stderr," %lf",new_point[i]);
 	}
+	fprintf (stderr,"\n");
 	return new_point;
 }
 
@@ -517,7 +519,14 @@ int main (int argc, char* argv[]) {
 	LOG (warn,"And this is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
 	LOG (warn,"Donno, maybe someone forgot to add a line or two in his source code...\n\n");
 
-	LOG (10,"HOMEGROWN_STATS = [%lu %lu %lf %lf %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,competitor->sort_key,homegrown->sort_key)
+	LOG (10,"[%lu %lu %lf %lf %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,competitor->sort_key,homegrown->sort_key);
+
+	free (competitor->key);
+	free (competitor);
+
+	free (homegrown->key);
+	free (homegrown);
+
 
 	/**
 	 * Unallocating resources
