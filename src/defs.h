@@ -100,7 +100,7 @@ typedef struct {
 typedef enum {false=0,true} boolean;
 
 
-static const uint64_t initial_capacity = 5;
+static const uint64_t initial_capacity = 3;
 
 /**** BASIC DEFINITIONS END ****/
 
@@ -440,12 +440,15 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 /*** LOGGING DEFINITIONS BEGIN ***/
 
-enum message_t {info=1,warn,error};
+enum message_t {debug=1,info,warn,error,fatal};
 
-#define logging info
+#define logging warn
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\
+				case debug:\
+					fprintf(stderr," ** DEBUG - "message);\
+					break;\
 				case info:\
 					fprintf(stderr," ** INFO - "message);\
 					break;\
@@ -454,6 +457,9 @@ enum message_t {info=1,warn,error};
 					break;\
 				case error: \
 					fprintf(stderr," ** ERROR - "message);\
+					break;\
+				case fatal: \
+					fprintf(stderr," ** FATAL - "message);\
 					break;\
 				default: \
 					fprintf(stderr," "message);\

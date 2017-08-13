@@ -792,78 +792,78 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 23 "QL.l"
-{LOG(0,"\ncSubquery start.\n"); return '/';}
+{LOG(debug,"\ncSubquery start.\n"); return '/';}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
 #line 24 "QL.l"
-{LOG(0,"\nrSubquery start.\n"); return '%';}
+{LOG(debug,"\nrSubquery start.\n"); return '%';}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
 #line 25 "QL.l"
-{LOG(0,"\nrSubquery start.\n"); return '%';}
+{LOG(debug,"\nrSubquery start.\n"); return '%';}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
 #line 28 "QL.l"
-{LOG(0,"Assignment.\n"); return '=';}
+{LOG(debug,"Assignment.\n"); return '=';}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
 #line 29 "QL.l"
-{LOG(0,"Concatenation of predicates.\n"); return '&';}
+{LOG(debug,"Concatenation of predicates.\n"); return '&';}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 30 "QL.l"
-{LOG(0,"Predicates.\n"); return '?';}
+{LOG(debug,"Predicates.\n"); return '?';}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 32 "QL.l"
-{LOG(0,"Keyword KEY"); return LOOKUP;}
+{LOG(debug,"Keyword KEY"); return LOOKUP;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 33 "QL.l"
-{LOG(0,"Keyword FROM."); return FROM;}
+{LOG(debug,"Keyword FROM."); return FROM;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
 #line 34 "QL.l"
-{LOG(0,"Keyword TO."); return TO;}
+{LOG(debug,"Keyword TO."); return TO;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
 #line 35 "QL.l"
-{LOG(0,"Keyword CORNER."); return CORN;}
+{LOG(debug,"Keyword CORNER."); return CORN;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 #line 36 "QL.l"
-{LOG(0,"Keyword BOUND."); return BOUND;}
+{LOG(debug,"Keyword BOUND."); return BOUND;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 38 "QL.l"
-{LOG(0,"Symbol sequence delimiter.\n"); return ',';}
+{LOG(debug,"Symbol sequence delimiter.\n"); return ',';}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
 #line 39 "QL.l"
-{LOG(0,"Start of key-sequence operator.\n");}
+{LOG(debug,"Start of key-sequence operator.\n");}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
 #line 40 "QL.l"
-{LOG(0,"End of key-sequence operator.\n");}
+{LOG(debug,"End of key-sequence operator.\n");}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
 #line 41 "QL.l"
 {
-				LOG(0,"A bitfield: %s \n", yytext); 
+				LOG(debug,"A bitfield: %s \n", yytext);
 				yylval.str = strdup (yytext);
 				return BITFIELD;
 			}
@@ -872,7 +872,7 @@ case 16:
 YY_RULE_SETUP
 #line 46 "QL.l"
 {
-				LOG(0,"An integer: %s (%d)\n", yytext, atoi(yytext)); 
+				LOG(debug,"An integer: %s (%d)\n", yytext, atoi(yytext));
 				yylval.ival= atoi (yytext);
 				return INTEGER;
 			}
@@ -881,7 +881,7 @@ case 17:
 YY_RULE_SETUP
 #line 51 "QL.l"
 {
-				LOG(0,"A float: %s (%g)\n", yytext, atof(yytext)); 
+				LOG(debug,"A float: %s (%g)\n", yytext, atof(yytext));
 				yylval.dval= atof (yytext);
 				return REAL;
 			}
@@ -890,7 +890,7 @@ case 18:
 YY_RULE_SETUP
 #line 56 "QL.l"
 {
-				LOG(0,"An identifier: %s\n", yytext); 
+				LOG(debug,"An identifier: %s\n", yytext);
 				yylval.str = strdup (yytext);
 				return ID; /* heapfile name */
 			}
@@ -898,7 +898,7 @@ YY_RULE_SETUP
 case 19:
 YY_RULE_SETUP
 #line 62 "QL.l"
-{LOG(0,"Termination.\n"); return ';';}
+{LOG(debug,"Termination.\n"); return ';';}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
@@ -908,7 +908,7 @@ YY_RULE_SETUP
 case 21:
 YY_RULE_SETUP
 #line 64 "QL.l"
-{LOG(0,"Unrecognized character: %s\n", yytext);}
+{LOG(debug,"Unrecognized character: %s\n", yytext);}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP

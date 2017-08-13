@@ -352,7 +352,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		}
 
 		double threshold = *((double*)remove_from_stack (stack));
-		LOG (info,"Threshold parameter is equal to %lf. \n",threshold);
+		LOG (debug,"Threshold parameter is equal to %lf. \n",threshold);
 
 
 		/**
@@ -790,7 +790,7 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 		index_t key [kcardinality];
 		for (register uint32_t i=kcardinality; i>0; --i) {
 			double* tmp = remove_from_stack (stack);
-			if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+			if (logging <= debug) fprintf (stderr,"%lf ",*tmp);
 			key [i-1] = *tmp;
 		}
 
@@ -871,7 +871,7 @@ static
 tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
 	if (peek_at_stack (stack) == (void*)'/' || peek_at_stack (stack) == (void*)'%') {
 		char start_symbol = (char) remove_from_stack (stack);
-		LOG (0,"UNROLLING NEW SUBQUERY... \n");
+		LOG (debug,"UNROLLING NEW SUBQUERY... \n");
 
 		char *const filename = remove_from_stack (stack);
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
@@ -879,7 +879,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		if (folder[strlen(folder)-1]!='/') {
 			strcat (filepath,"/");
 		}
-		LOG (info,"HEAPFILE: '%s'. \n",filename);
+		LOG (debug,"HEAPFILE: '%s'. \n",filename);
 		strcat (filepath,filename);
 		free (filename);
 
@@ -919,17 +919,17 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 			switch (operation) {
 				case LOOKUP:
-					LOG (info,"LOOKUP ");
+					LOG (debug,"LOOKUP ");
 					index_t *const lookup = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					if (tree->dimensions < kcardinality) {
 						kcardinality = tree->dimensions;
 					}
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					uint32_t i=0;
 					for (i=0; i<kcardinality; ++i) {
 						double* tmp = remove_from_stack (stack);
-						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						if (logging <= debug) fprintf (stderr,"%lf ",*tmp);
 						lookup[kcardinality-i-1] = *tmp;
 					}
 
@@ -948,57 +948,57 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 					break;
 				case FROM:
-					LOG (info,"FROM ");
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					LOG (debug,"FROM ");
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					if (tree->dimensions < kcardinality) {
 						kcardinality = tree->dimensions;
 					}
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					for (uint32_t i=0; i<kcardinality; ++i) {
 						double* tmp = remove_from_stack (stack);
-						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						if (logging <= debug) fprintf (stderr,"%lf ",*tmp);
 						if (*tmp > from[kcardinality-1-i]) {
 							from[kcardinality-1-i] = *tmp;
 						}
 					}
 					break;
 				case TO:
-					LOG (info,"TO ");
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					LOG (debug,"TO ");
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					if (tree->dimensions < kcardinality) {
 						kcardinality = tree->dimensions;
 					}
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					for (uint32_t i=0; i<kcardinality; ++i) {
 							double* tmp = remove_from_stack (stack);
-							if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+							if (logging <= debug) fprintf (stderr,"%lf ",*tmp);
 							if (*tmp < to[kcardinality-1-i]) {
 								to[kcardinality-1-i] = *tmp;
 							}
 					}
 					break;
 				case BOUND:
-					LOG (info,"BOUND ");
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					LOG (debug,"BOUND ");
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					if (tree->dimensions+1 < kcardinality) {
 						kcardinality = tree->dimensions+1;
 					}
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					bounded_dimensionality = kcardinality;
 					for (uint32_t i=0; i<kcardinality; ++i) {
 						double* tmp = remove_from_stack (stack);
-						if (logging <= info) fprintf (stderr,"%lf ",*tmp);
+						if (logging <= debug) fprintf (stderr,"%lf ",*tmp);
 						bound[kcardinality-1-i] = *tmp;
 					}
 					break;
 				case CORN:
 					is_skyline = true;
 					char *const bitfield = remove_from_stack (stack);
-					LOG (info,"SKYLINE - BITFIELD '%s'",bitfield);
+					LOG (debug,"SKYLINE - BITFIELD '%s'",bitfield);
 
 					kcardinality = strlen (bitfield);
 					projection = kcardinality;
-					if (logging <= info) fprintf (stderr," (%u) ",kcardinality);
+					if (logging <= debug) fprintf (stderr," (%u) ",kcardinality);
 					for (uint32_t i=0; i<kcardinality; ++i) {
 						if (bitfield[i]=='O' || bitfield[i]=='o') {
 							corner[i] = false;
@@ -1015,26 +1015,26 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					LOG (error,"Unknown operation...\n");
 			}
 
-			if (logging <= info) {
+			if (logging <= debug) {
 				fprintf (stderr,"\n");
 			}
 		}
 
 
-		LOG (info,"Result computation to take place now...\n");
+		LOG (debug,"Result computation to take place now...\n");
 
 		boolean delete_rtree_flag = false;
 		tree_t* result_tree = NULL;
 		if (lookups->size) {
 			fifo_t *const lookups_result_list = new_queue();
-			LOG (info,"lookups stack-size: %lu \n",lookups->size);
+			LOG (debug,"lookups stack-size: %lu \n",lookups->size);
 
 			while (lookups->size) {
 				index_t *const lookup = remove_from_stack (lookups);
-				LOG (info,"lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
+				LOG (debug,"lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
 
 				fifo_t *const partial = find_all_in_rtree (tree,lookup,tree->dimensions);
-				LOG (info,"Adding %lu new tuples in the result...\n",partial->size);
+				LOG (debug,"Adding %lu new tuples in the result...\n",partial->size);
 
 				while (partial->size) {
 					data_pair_t *const pair = (data_pair_t*) malloc (sizeof(data_pair_t));

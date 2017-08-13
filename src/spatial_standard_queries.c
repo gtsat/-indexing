@@ -216,8 +216,8 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[], uint3
 		return new_queue();
 	}else pthread_rwlock_unlock (&tree->tree_lock);
 
-	fifo_t* result = new_queue();
-	fifo_t* browse = new_queue();
+	fifo_t *const result = new_queue();
+	fifo_t *const browse = new_queue();
 
 	reset_search_operation:
 	insert_at_tail_of_queue (browse,0);
@@ -239,11 +239,10 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[], uint3
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,proj_dimensions)) {
-						data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
+						data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-						pair->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
+						pair->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
 						memcpy (pair->key,page->node.leaf.KEY(i),sizeof(index_t)*tree->dimensions);
-
 						pair->object = page->node.leaf.objects[i];
 						pair->dimensions = tree->dimensions;
 
@@ -289,8 +288,8 @@ fifo_t* bounded_search (tree_t *const tree,
 		query[j].end = hi[j];
 	}
 
-	priority_queue_t* browse = new_priority_queue(&mincompare_containers);
-	priority_queue_t* data = new_priority_queue(&maxcompare_containers);
+	priority_queue_t *const browse = new_priority_queue(&mincompare_containers);
+	priority_queue_t *const data = new_priority_queue(&maxcompare_containers);
 
 	reset_search_operation:;
 
@@ -334,9 +333,9 @@ fifo_t* bounded_search (tree_t *const tree,
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					if (key_enclosed_by_box (page->node.leaf.KEY(i),query,proj_dimensions)) {
-						data_container_t* data_container = (data_container_t*) malloc (sizeof(data_container_t));
+						data_container_t *const data_container = (data_container_t *const) malloc (sizeof(data_container_t));
 
-						data_container->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
+						data_container->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
 						memcpy (data_container->key,page->node.leaf.KEY(i),sizeof(index_t)*tree->dimensions);
 
 						data_container->object = page->node.leaf.objects[i];
@@ -387,7 +386,7 @@ fifo_t* bounded_search (tree_t *const tree,
 		}
 	}
 
-	fifo_t* result = new_queue();
+	fifo_t *const result = new_queue();
 	while (data->size) {
 		insert_at_head_of_queue (result,remove_from_priority_queue(data));
 	}
@@ -433,7 +432,7 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 	}
 
 	lifo_t* cells[feature_trees->size];
-	priority_queue_t* browse = new_priority_queue (&mincompare_containers);
+	priority_queue_t *const browse = new_priority_queue (&mincompare_containers);
 
 	for (uint32_t itree=0; itree<feature_trees->size; ++itree) {
 		tree_t *const tree = (tree_t *const) feature_trees->buffer[itree];
@@ -447,8 +446,6 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 		container->box = tree->root_box;
 		container->sort_key = 0;
 		container->id = 0;
-
-		assert (!browse->size);
 
 		insert_into_priority_queue (browse,container);
 
@@ -476,9 +473,9 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 			}else{
 				if (page->header.is_leaf) {
 					for (register uint32_t i=0; i<page->header.records; ++i) {
-						data_container_t* data_container = (data_container_t*) malloc (sizeof(data_container_t));
+						data_container_t *const data_container = (data_container_t *const) malloc (sizeof(data_container_t));
 
-						data_container->key = (index_t*) malloc (tree->dimensions*sizeof(index_t));
+						data_container->key = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
 						memcpy (data_container->key,page->node.leaf.KEY(i),tree->dimensions*sizeof(index_t));
 
 						data_container->object = page->node.leaf.objects[i];
@@ -543,6 +540,8 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 		}
 	}
 
+	delete_priority_queue (browse);
+
 	fifo_t *const result_browse = new_queue();
 	fifo_t *const result = new_queue();
 	tree_t *const tree = data_tree;
@@ -566,9 +565,9 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 		}else{
 			if (page->header.is_leaf) {
 				for (register uint32_t i=0; i<page->header.records; ++i) {
-					data_pair_t* data_container = (data_pair_t*) malloc (sizeof(data_pair_t));
+					data_pair_t *const data_container = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-					data_container->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
+					data_container->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
 					memcpy (data_container->key,page->node.leaf.KEY(i),sizeof(index_t)*tree->dimensions);
 
 					data_container->object = page->node.leaf.objects[i];
@@ -719,14 +718,14 @@ fifo_t* distance_join (double const theta,
 		}
 	}
 
-	lifo_t* browse = new_stack();
-	priority_queue_t* data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
+	lifo_t *const browse = new_stack();
+	priority_queue_t *const data_combinations = new_priority_queue (less_than_theta?&maxcompare_multicontainers:&mincompare_multicontainers);
 
 	reset_search_operation:;
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+	container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
+	container->page_ids = (uint64_t*const) malloc (cardinality*sizeof(uint64_t));
 	container->cardinality = cardinality;
 	container->dimensions = dimensions;
 
@@ -782,13 +781,13 @@ fifo_t* distance_join (double const theta,
 
 					uint32_t j = page->header.records-1;
 					do{
-						multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
+						multibox_container_t *const new_container = (multibox_container_t *const) malloc (sizeof(multibox_container_t));
 
-						new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+						new_container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 						memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 						new_container->page_ids[i] = page_id*TREE(i)->internal_entries+j+1;
 
-						new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
+						new_container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
 						memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 						memcpy (new_container->boxes+i*dimensions,
 								page->node.internal.intervals+j*dimensions,
@@ -866,10 +865,10 @@ fifo_t* distance_join (double const theta,
 					if (i >= cardinality)
 						break;
 				}else{
-					multidata_container_t* data_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
+					multidata_container_t *const data_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
 
-					data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
-					data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+					data_container->keys = (index_t *const) malloc (cardinality*dimensions*sizeof(index_t));
+					data_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 					data_container->cardinality = cardinality;
 					data_container->dimensions = dimensions;
 
@@ -916,7 +915,7 @@ fifo_t* distance_join (double const theta,
 
 	delete_stack (browse);
 
-	fifo_t* result = new_queue();
+	fifo_t *const result = new_queue();
 	while (data_combinations->size) {
 		insert_at_tail_of_queue(result,remove_from_priority_queue(data_combinations));
 	}
@@ -945,8 +944,8 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 
 	reset_search_operation:;
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
-	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+	container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
+	container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 	bzero (container->page_ids,cardinality*sizeof(uint64_t));
 
 	container->sort_key = closest ? 0 : DBL_MAX;
@@ -1021,13 +1020,13 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 			if (!page->header.is_leaf) {
 				all_leaves = false;
 				for (register uint32_t j=0; j<page->header.records; ++j) {
-					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
+					multibox_container_t *const new_container = (multibox_container_t *const) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+					new_container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 					new_container->page_ids[i] = page_id*TREE(i)->internal_entries+j+1;
 
-					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
+					new_container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes+i*dimensions,
 							page->node.internal.intervals+j*dimensions,
@@ -1103,8 +1102,8 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 						break;
 				}else{
 					multidata_container_t *const data_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
-					data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
-					data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+					data_container->keys = (index_t *const) malloc (cardinality*dimensions*sizeof(index_t));
+					data_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 
 					for (uint32_t offset=0; offset<cardinality; ++offset) {
 						data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
@@ -1166,7 +1165,7 @@ fifo_t* x_tuples (uint32_t const k, boolean const closest, boolean const use_avg
 
 	delete_priority_queue (browse);
 
-	fifo_t* result = new_queue();
+	fifo_t *const result = new_queue();
 	while (data_combinations->size) {
 		insert_at_head_of_queue(result,remove_from_priority_queue(data_combinations));
 	}

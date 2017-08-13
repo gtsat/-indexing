@@ -24,12 +24,12 @@
 #include <sys/types.h>
 #include "symbol_table.h"
 #include "priority_queue.h"
+#include "common.h"
 #include "queue.h"
 #include "stack.h"
 #include "rtree.h"
 //#include "ntree.h"
 #include "swap.h"
-#include "common.h"
 #ifdef __APPLE__
 	#include <machine/endian.h>
 #else

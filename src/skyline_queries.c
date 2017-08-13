@@ -98,8 +98,8 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	priority_queue_t* candidates = new_priority_queue (&mincompare_containers);
-	priority_queue_t* browse = new_priority_queue (&mincompare_containers);
+	priority_queue_t *const candidates = new_priority_queue (&mincompare_containers);
+	priority_queue_t *const browse = new_priority_queue (&mincompare_containers);
 	lifo_t* skyline = new_stack ();
 
 	reset_search_operation:;
@@ -138,7 +138,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 						continue;
 					}
 
-					data_container_t *const leaf_entry = (data_container_t*) malloc (sizeof(data_container_t));
+					data_container_t *const leaf_entry = (data_container_t *const) malloc (sizeof(data_container_t));
 
 					leaf_entry->key = page->node.leaf.keys+i*tree->dimensions;
 					leaf_entry->object = page->node.leaf.objects[i];
@@ -173,7 +173,7 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	                	free (leaf_entry);
 	                }else{
 	                	data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
-	                	pair->key = (index_t *) malloc (tree->dimensions*sizeof(index_t));
+	                	pair->key = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
 	                	memcpy (pair->key,leaf_entry->key,tree->dimensions*sizeof(index_t));
 	                	pair->object = leaf_entry->object;
 

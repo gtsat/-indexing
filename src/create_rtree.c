@@ -21,11 +21,8 @@
 
 uint32_t DIMENSIONS;
 uint32_t PAGESIZE;
-
-char* DATASET;
 char* HEAPFILE;
-
-boolean INDEX_BOXES;
+char* DATASET;
 
 static
 void print_notice (void) {

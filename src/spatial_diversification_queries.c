@@ -26,7 +26,8 @@
 #include "common.h"
 
 
-static void augment_set_with_hotspots (tree_t *const tree,
+static
+void augment_set_with_hotspots (tree_t *const tree,
 					interval_t const query[],
 					multidata_container_t *const result_container,
 					fifo_t const*const attractors,
@@ -50,8 +51,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 	uint16_t const dimensions = tree->dimensions;
 
-	priority_queue_t* candidates = new_priority_queue (&mincompare_containers);
-	priority_queue_t* browse = new_priority_queue (&maxcompare_containers);
+	priority_queue_t *const candidates = new_priority_queue (&mincompare_containers);
+	priority_queue_t *const browse = new_priority_queue (&maxcompare_containers);
 
 	reset_search_operation:;
 
@@ -190,9 +191,9 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 
 					if (candidates->size < k) {
-						data_container_t* candidate = (data_container_t*) malloc (sizeof(data_container_t));
+						data_container_t *const candidate = (data_container_t *const) malloc (sizeof(data_container_t));
 
-						candidate->key = (index_t*) malloc (dimensions*sizeof(index_t));
+						candidate->key = (index_t *const) malloc (dimensions*sizeof(index_t));
 						memcpy (candidate->key,page->node.leaf.KEY(i),dimensions*sizeof(index_t));
 
 						candidate->object = page->node.leaf.objects[i];
@@ -202,12 +203,12 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 						insert_into_priority_queue (candidates,candidate);
 					}else if (!is_obscured) {
-						index_t tmp_score = dissimilarity - relevance;
+						double tmp_score = dissimilarity - relevance;
 						if (pull_apart_results) tmp_score += clustering;
 						else if (bring_together_results) tmp_score -= clustering;
 
 						if (tmp_score > ((data_container_t*)peek_priority_queue(candidates))->sort_key) {
-							data_container_t* candidate = remove_from_priority_queue (candidates);
+							data_container_t *const candidate = remove_from_priority_queue (candidates);
 
 							memcpy (candidate->key,page->node.leaf.KEY(i),dimensions*sizeof(index_t));
 							candidate->object = page->node.leaf.objects[i];
@@ -314,14 +315,14 @@ static void augment_set_with_hotspots (tree_t *const tree,
 
 
 					if (!is_obscured) {
-						index_t tmp_score = dissimilarity - relevance;
+						double tmp_score = dissimilarity - relevance;
 						if (pull_apart_results) tmp_score += clustering;
 						else if (bring_together_results) tmp_score -= clustering;
 
 						if (candidates->size < k
 						|| tmp_score > ((data_container_t*)peek_priority_queue(candidates))->sort_key) {
 
-							box_container_t* new_container = (box_container_t*) malloc (sizeof(box_container_t));
+							box_container_t *const new_container = (box_container_t *const) malloc (sizeof(box_container_t));
 							new_container->id = CHILD_ID(page_id,i);
 							new_container->sort_key = tmp_score;
 
@@ -355,7 +356,7 @@ static void augment_set_with_hotspots (tree_t *const tree,
 /*
 		data_pair_t *const matched_repeller = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-		matched_repeller->key = (index_t*) malloc (tree->dimensions*sizeof(index_t));
+		matched_repeller->key = (index_t *const) malloc (tree->dimensions*sizeof(index_t));
 		memcpy (matched_repeller->key, candidate->key, tree->dimensions*sizeof(index_t));
 
 		matched_repeller->object = candidate->object;
@@ -374,7 +375,8 @@ static void augment_set_with_hotspots (tree_t *const tree,
 }
 
 
-static void augment_set_with_joined_hotspots (tree_t *const tree,
+static
+void augment_set_with_joined_hotspots (tree_t *const tree,
 						interval_t const query[],
 						multidata_container_t *const result_container,
 						tree_t *const attractors,
@@ -409,14 +411,13 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 		dimensions = repellers->dimensions;
 	}
 
-	priority_queue_t* data_combinations = new_priority_queue (&maxcompare_containers);
-	priority_queue_t* browse = new_priority_queue (&mincompare_containers);
+	priority_queue_t *const data_combinations = new_priority_queue (&maxcompare_containers);
+	priority_queue_t *const browse = new_priority_queue (&mincompare_containers);
 
 	reset_search_operation:;
 
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
-
-	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
+	container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
 
 	if (attractors!=NULL && attractors->indexed_records) {
 		pthread_rwlock_rdlock (&attractors->tree_lock);
@@ -434,7 +435,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 	memcpy (container->boxes+combination_offset*dimensions, tree->root_box, dimensions*sizeof(interval_t));
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+	container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 	bzero (container->page_ids,cardinality*sizeof(uint64_t));
 
 	container->cardinality = cardinality;
@@ -533,9 +534,9 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 			if (!page->header.is_leaf) {
 				all_leaves = false;
 				for (register uint32_t j=0; j<page->header.records; ++j) {
-					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
+					multibox_container_t *const new_container = (multibox_container_t *const) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+					new_container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 
 					if (i>=combination_offset) {
@@ -549,7 +550,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 						abort();
 					}
 
-					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
+					new_container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes+i*dimensions,
 							page->node.internal.intervals+j*idimensions,
@@ -668,9 +669,9 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 					}
 
 					if (!has_duplicates) {
-						multidata_container_t* data_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
-						data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
-						data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+						multidata_container_t *const data_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
+						data_container->keys = (index_t *const) malloc (cardinality*dimensions*sizeof(index_t));
+						data_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 						for (uint16_t offset=0; offset<cardinality; ++offset) {
 							data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
 							memcpy (data_container->keys+offset*dimensions,
@@ -744,7 +745,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 	assert (data_combinations->size <= k);
 
 	while (data_combinations->size) {
-		multidata_container_t* data_container = remove_from_priority_queue (data_combinations);
+		multidata_container_t *const data_container = remove_from_priority_queue (data_combinations);
 
 		boolean has_duplicates = false;
 		for (uint16_t i=0; i<result_container->cardinality; ++i) {
@@ -766,7 +767,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 			if (repellers!=NULL && repellers->indexed_records) {
 				data_pair_t *const matched_repeller = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-				matched_repeller->key = (index_t*) malloc (dimensions*sizeof(index_t));
+				matched_repeller->key = (index_t *const) malloc (dimensions*sizeof(index_t));
 				memcpy (matched_repeller->key,data_container->keys
 						+(attractors!=NULL && attractors->indexed_records ? 1 : 0)*dimensions,
 						sizeof(index_t)*dimensions);
@@ -779,7 +780,7 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 			if (attractors!=NULL && attractors->indexed_records) {
 				data_pair_t *const matched_attractor = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
-				matched_attractor->key = (index_t*) malloc (dimensions*sizeof(index_t));
+				matched_attractor->key = (index_t *const) malloc (dimensions*sizeof(index_t));
 				memcpy (matched_attractor->key,data_container->keys,sizeof(index_t)*dimensions);
 
 				matched_attractor->object = *data_container->objects;
@@ -809,7 +810,8 @@ static void augment_set_with_joined_hotspots (tree_t *const tree,
 }
 
 
-static index_t compute_hotspot_score (multidata_container_t const*const result,
+static
+index_t compute_hotspot_score (multidata_container_t const*const result,
 					symbol_table_t const*const matched_attractors,
 					symbol_table_t const*const matched_repellers,
 					boolean const pull_apart_results,
@@ -847,7 +849,8 @@ static index_t compute_hotspot_score (multidata_container_t const*const result,
 }
 
 
-static boolean augment_priority_queue_with_hotspots (tree_t const*const tree,
+static
+boolean augment_priority_queue_with_hotspots (tree_t const*const tree,
 							multidata_container_t *const result_container,
 							priority_queue_t *const subsets_heap,
 							unsigned const max_size,
@@ -865,10 +868,10 @@ static boolean augment_priority_queue_with_hotspots (tree_t const*const tree,
 	uint16_t const cardinality = result_container->cardinality;
 
 	for (uint16_t i=0; i<cardinality-1; ++i) {
-		multidata_container_t* subset_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
+		multidata_container_t *const subset_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
 
-		subset_container->keys = (index_t*) malloc (cardinality*tree->dimensions*sizeof(index_t));
-		subset_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+		subset_container->keys = (index_t *const) malloc (cardinality*tree->dimensions*sizeof(index_t));
+		subset_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 
 		memcpy (subset_container->keys,result_container->keys,(cardinality-1)*tree->dimensions*sizeof(index_t));
 		memcpy (subset_container->objects,result_container->objects,(cardinality-1)*sizeof(object_t));
@@ -898,10 +901,10 @@ static boolean augment_priority_queue_with_hotspots (tree_t const*const tree,
 		}
 	}
 	{
-		multidata_container_t* subset_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
+		multidata_container_t *const subset_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
 
-		subset_container->keys = (index_t*) malloc (cardinality*tree->dimensions*sizeof(index_t));
-		subset_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+		subset_container->keys = (index_t *const) malloc (cardinality*tree->dimensions*sizeof(index_t));
+		subset_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 
 		memcpy (subset_container->keys,result_container->keys,(cardinality-1)*tree->dimensions*sizeof(index_t));
 		memcpy (subset_container->objects,result_container->objects,(cardinality-1)*sizeof(object_t));
@@ -987,10 +990,10 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 	//symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
 
 
-	multidata_container_t* result_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
+	multidata_container_t *const result_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
 
-	result_container->keys = (index_t*) malloc (k*dimensions*sizeof(index_t));
-	result_container->objects = (object_t*) malloc (k*sizeof(object_t));
+	result_container->keys = (index_t *const) malloc (k*dimensions*sizeof(index_t));
+	result_container->objects = (object_t *const) malloc (k*sizeof(object_t));
 	result_container->dimensions = dimensions;
 	result_container->cardinality = 0;
 
@@ -1026,7 +1029,7 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 
 	/*** PHASE 2: ITERATE THROUGH THE POSSIBLE MUTATIONS OF THE RESULT-SET ***
 	if (pull_apart_results || bring_together_results) {
-		priority_queue_t* subsets_heap = new_priority_queue (&maxcompare_multicontainers);
+		priority_queue_t *const subsets_heap = new_priority_queue (&maxcompare_multicontainers);
 
 		augment_priority_queue_with_hotspots (tree,
 							result_container,subsets_heap,
@@ -1092,12 +1095,12 @@ fifo_t* hotspots_constrained (tree_t *const tree,
 	}
 
 	/*** Construct returned result-set ***/
-	fifo_t* result = new_queue();
+	fifo_t *const result = new_queue();
 	for (uint16_t i=0; i<result_container->cardinality; ++i) {
-		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
+		data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
 		pair->object = result_container->objects[i];
-		pair->key = (index_t*) malloc (sizeof(index_t)*dimensions);
+		pair->key = (index_t *const) malloc (sizeof(index_t)*dimensions);
 		memcpy (pair->key,result_container->keys+i*dimensions,sizeof(index_t)*dimensions);
 
 		insert_at_tail_of_queue (result,pair);
@@ -1161,9 +1164,9 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 	//symbol_table_t *const matched_repellers = new_symbol_table_primitive (NULL);
 	//symbol_table_t *const matched_attractors = new_symbol_table_primitive (NULL);
 
-	multidata_container_t* result_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
-	result_container->keys = (index_t*) malloc (k*tree->dimensions*sizeof(index_t));
-	result_container->objects = (object_t*) malloc (k*sizeof(object_t));
+	multidata_container_t *const result_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
+	result_container->keys = (index_t *const) malloc (k*tree->dimensions*sizeof(index_t));
+	result_container->objects = (object_t *const) malloc (k*sizeof(object_t));
 	result_container->dimensions = tree->dimensions;
 	result_container->cardinality = 0;
 
@@ -1198,7 +1201,7 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 
 	/*** PHASE 2: ITERATE THROUGH THE POSSIBLE MUTATIONS OF THE RESULT-SET ***
 	if (pull_apart_results || bring_together_results) {
-		priority_queue_t* subsets_heap = new_priority_queue (&maxcompare_multicontainers);
+		priority_queue_t *const subsets_heap = new_priority_queue (&maxcompare_multicontainers);
 
 		augment_priority_queue_with_hotspots (tree,
 							result_container,
@@ -1265,17 +1268,16 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 */
 
 	/*** Construct returned result-set ***/
-	fifo_t* result = new_queue();
+	fifo_t *const result = new_queue();
 	for (uint16_t i=0; i<result_container->cardinality; ++i) {
-		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
+		data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
 		pair->object = result_container->objects[i];
-		pair->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
+		pair->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
 		memcpy (pair->key,result_container->keys+i*tree->dimensions,sizeof(index_t)*tree->dimensions);
 
 		insert_at_tail_of_queue (result,pair);
 	}
-
 /*
 	fifo_t *const matched_attractors_entries = get_values (matched_attractors);
 	while (matched_attractors_entries->size) {
@@ -1298,7 +1300,6 @@ fifo_t* hotspots_join_constrained (tree_t *const tree,
 	delete_queue (matched_repellers_entries);
 	delete_symbol_table (matched_repellers);
 */
-
 	free (result_container->objects);
 	free (result_container->keys);
 	free (result_container);
@@ -1336,14 +1337,14 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 	uint16_t const combination_offset = (attractors!=NULL && attractors->indexed_records?1:0) + (repellers!=NULL && repellers->indexed_records?1:0);
 	unsigned const cardinality = trees->size + combination_offset;
 
-	priority_queue_t* data_combinations = new_priority_queue (&maxcompare_multicontainers);
-	priority_queue_t* browse = new_priority_queue (&mincompare_multicontainers);
+	priority_queue_t *const data_combinations = new_priority_queue (&maxcompare_multicontainers);
+	priority_queue_t *const browse = new_priority_queue (&mincompare_multicontainers);
 
 	reset_search_operation:;
 	multibox_container_t* container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
 
-	container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
-	container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+	container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
+	container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 	container->cardinality = cardinality;
 	container->dimensions = dimensions;
 	container->sort_key = 0;
@@ -1374,7 +1375,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 	while (browse->size) {
 		container = remove_from_priority_queue (browse);
 
-		if (data_combinations->size == k && container->sort_key >=
+		if (data_combinations->size >= k && container->sort_key >=
 			((multidata_container_t*)peek_priority_queue(data_combinations))->sort_key) {
 
 			free (container->page_ids);
@@ -1462,9 +1463,9 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 			if (!page->header.is_leaf) {
 				all_leaves = false;
 				for (register uint32_t j=0; j<page->header.records; ++j) {
-					multibox_container_t* new_container = (multibox_container_t*) malloc (sizeof(multibox_container_t));
+					multibox_container_t *const new_container = (multibox_container_t *const) malloc (sizeof(multibox_container_t));
 
-					new_container->page_ids = (uint64_t*) malloc (cardinality*sizeof(uint64_t));
+					new_container->page_ids = (uint64_t *const) malloc (cardinality*sizeof(uint64_t));
 					memcpy (new_container->page_ids,container->page_ids,cardinality*sizeof(uint64_t));
 					if (i>=combination_offset) {
 						new_container->page_ids[i] = page_id*TREE(i-combination_offset)->internal_entries+j+1;
@@ -1477,7 +1478,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 						abort();
 					}
 
-					new_container->boxes = (interval_t*) malloc (cardinality*dimensions*sizeof(interval_t));
+					new_container->boxes = (interval_t *const) malloc (cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes,container->boxes,cardinality*dimensions*sizeof(interval_t));
 					memcpy (new_container->boxes+i*dimensions,
 							page->node.internal.intervals+j*idimensions,
@@ -1592,9 +1593,9 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 						break;
 					}
 				}else{
-					multidata_container_t* data_container = (multidata_container_t*) malloc (sizeof(multidata_container_t));
-					data_container->keys = (index_t*) malloc (cardinality*dimensions*sizeof(index_t));
-					data_container->objects = (object_t*) malloc (cardinality*sizeof(object_t));
+					multidata_container_t *const data_container = (multidata_container_t *const) malloc (sizeof(multidata_container_t));
+					data_container->keys = (index_t *const) malloc (cardinality*dimensions*sizeof(index_t));
+					data_container->objects = (object_t *const) malloc (cardinality*sizeof(object_t));
 					for (uint16_t offset=0; offset<cardinality; ++offset) {
 						data_container->objects[offset] = pages[offset]->node.leaf.objects[offsets[offset]];
 
@@ -1646,7 +1647,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					if (data_combinations->size < k) {
 						insert_into_priority_queue (data_combinations,data_container);
 					}else if (rank_score < ((multidata_container_t*)peek_priority_queue(data_combinations))->sort_key) {
-						multidata_container_t* temp = remove_from_priority_queue(data_combinations);
+						multidata_container_t *const temp = remove_from_priority_queue(data_combinations);
 
 						free (temp->objects);
 						free (temp->keys);
@@ -1684,12 +1685,12 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 
 	fifo_t* result = new_queue();
 
-	multidata_container_t* final = (multidata_container_t*) remove_from_priority_queue(data_combinations);
+	multidata_container_t *const final = (multidata_container_t *const) remove_from_priority_queue(data_combinations);
 	for (uint16_t i=combination_offset; i<final->cardinality; ++i) {
-		data_pair_t* pair = (data_pair_t*) malloc (sizeof(data_pair_t));
+		data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
 
 		pair->object = final->objects[i];
-		pair->key = (index_t*) malloc (sizeof(index_t));
+		pair->key = (index_t *const) malloc (sizeof(index_t));
 		memcpy (pair->key,final->keys+i*dimensions,dimensions*sizeof(index_t));
 
 		insert_at_head_of_queue(result,pair);
