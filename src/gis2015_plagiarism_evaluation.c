@@ -486,6 +486,8 @@ int main (int argc, char* argv[]) {
 	clock_t diffC = clock() - startC;
 	unsigned msecC = diffC * 1000 / CLOCKS_PER_SEC;
 	LOG (warn,"COMPETITOR (minimal implementation using the pseudo-code from the paper) retrieved object %lu, achieving score %lf, in %lu msec.\n",competitor->object,competitor->sort_key,msecC);
+	uint64_t ioC = tree->io_counter;
+	tree->io_counter = 0;
 
 
 	/**
@@ -495,6 +497,9 @@ int main (int argc, char* argv[]) {
 	fifo_t *const result = hotspots (tree,attractors,repellers,1,false,false,lambda_rel,lambda_diss,0);
 	clock_t diffH = clock() - startH;
 	unsigned msecH = diffH * 1000 / CLOCKS_PER_SEC;
+	uint64_t ioH = tree->io_counter;
+	tree->io_counter = 0;
+
 	LOG (warn,"HOMEGROWN retrieved a list %u hotspots (not averaged distances) using the deluxe, everything included implementation in %lu msec.\n",result->size,msecH);
 	while (result->size) {
 		data_pair_t* data = remove_tail_of_queue (result);
@@ -515,11 +520,14 @@ int main (int argc, char* argv[]) {
 				lambda_rel,lambda_diss);
 	clock_t diffM = clock() - startM;
 	unsigned msecM = diffM * 1000 / CLOCKS_PER_SEC;
+	uint64_t ioM = tree->io_counter;
+	tree->io_counter = 0;
+
 	LOG (warn,"HOMEGROWN retrieved a solution (not averaged distances) using the minimal implementation in %lu msec.\n",msecM);
 	LOG (warn,"And this is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
 	LOG (warn,"Donno, maybe someone forgot to add a line or two in his source code...\n\n");
 
-	LOG (10,"[%lu %lu %lf %lf %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,competitor->sort_key,homegrown->sort_key);
+	LOG (10,"[%lu %lu %lf %lf %lu %lu %lu %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,ioC,ioH,ioM,competitor->sort_key,homegrown->sort_key);
 
 	free (competitor->key);
 	free (competitor);
