@@ -318,19 +318,19 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 		tree->tree_size = 0;
 	}else{
 		if (read (fd,&tree->dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
-			LOG (error,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
+			LOG (fatal,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->page_size,sizeof(uint32_t)) < sizeof(uint32_t)) {
-			LOG (error,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
+			LOG (fatal,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->tree_size,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (error,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+			LOG (fatal,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->indexed_records,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (error,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+			LOG (fatal,"[%s] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 			abort();
 		}
 

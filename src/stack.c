@@ -79,7 +79,7 @@ lifo_t* new_stack (void) {
 void* peek_at_stack (lifo_t const*const stack) {
 	if (!stack->size) {
 		LOG (error,"Stack underflow...\n");
-		abort();
+		return NULL;
 	}
 	return stack->buffer [stack->size-1];
 }
@@ -87,7 +87,7 @@ void* peek_at_stack (lifo_t const*const stack) {
 void* remove_from_stack (lifo_t *const stack) {
 	if (!stack->size) {
 		LOG (error,"Stack underflow...\n");
-		abort();
+		return NULL;
 	}
 	void *const element = stack->buffer [--stack->size];
 	if (stack->capacity>>2 >= initial_capacity && stack->size == stack->capacity>>2) {
@@ -102,7 +102,7 @@ void* remove_from_stack (lifo_t *const stack) {
 
 void insert_into_stack (lifo_t *const stack, void *const element) {
 	if (stack->size > stack->capacity) {
-		LOG (error,"Stack buffer overrun detected... Program will terminate.\n");
+		LOG (fatal,"Stack buffer overrun detected... Program will terminate.\n");
 		abort();
 	}else if (stack->size == stack->capacity) {
 		void** new_buffer = adjust_buffer (stack->buffer,stack->capacity,stack->capacity<<1);
@@ -158,7 +158,6 @@ void insert_into_position (lifo_t *const stack, uint64_t const pos, void *const 
 		stack->size++;
 	}else{
 		LOG (error,"Cannot add an element in a list of %lu elements at position %lu...\n",stack->size,pos);
-		abort ();
 	}
 }
 
@@ -177,7 +176,6 @@ uint64_t find_position_in_sorted (lifo_t *const stack, void *const element, int 
 	for (m=(stack->size>>1); m<hi; m=(lo+hi)>>1) {
 		if (cmp (stack->buffer[lo],stack->buffer[hi-1]) > 0) {
 			LOG (error,"List elements do not appear in order...\n");
-			abort();
 			break;
 		}else{
 			int balance = cmp (element,stack->buffer[m]);

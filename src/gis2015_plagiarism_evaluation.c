@@ -444,8 +444,8 @@ void print_usage (char const*const program) {
 }
 
 int main (int argc, char* argv[]) {
-	print_usage(*argv);
 	if (argc < 6) {
+		print_usage(*argv);
 		return EXIT_FAILURE;
 	}
 	tree_t *const tree = load_rtree (argv[1]);
@@ -508,15 +508,16 @@ int main (int argc, char* argv[]) {
 	 * and yet, another!
 	 */
 	clock_t startM = clock();
-	augment_set_with_hotspots_minimal (tree,
+	data_container_t *const homegrown = augment_set_with_hotspots_minimal (tree,
 				attractors,repellers,
 				lambda_rel,lambda_diss);
 	clock_t diffM = clock() - startM;
 	unsigned msecM = diffM * 1000 / CLOCKS_PER_SEC;
 	LOG (warn,"HOMEGROWN retrieved a solution (not averaged distances) using the minimal implementation in %lu msec.\n",msecM);
-	LOG (warn,"And his is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
+	LOG (warn,"And this is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
 	LOG (warn,"Donno, maybe someone forgot to add a line or two in his source code...\n\n");
 
+	LOG (10,"HOMEGROWN_STATS = [%lu %lu %lf %lf %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,competitor->sort_key,homegrown->sort_key)
 
 	/**
 	 * Unallocating resources

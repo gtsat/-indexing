@@ -240,7 +240,7 @@ void unroll (void) {
 
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"WAS EXPECTING THE START OF A NEW COMMAND... \n");
-			abort ();
+			return;
 		}
 
 		if (remove_from_stack (stack) == NULL) {
@@ -257,7 +257,7 @@ void unroll (void) {
 subquery:
 		if (remove_from_stack (stack) != (void*)'/') {
 			LOG (error,"WAS EXPECTING THE START OF A NEW SUBQUERY... \n");
-			abort ();
+			return;
 		}
 
 		LOG (info,"UNROLLING NEW SUBQUERY... \n");

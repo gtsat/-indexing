@@ -133,7 +133,7 @@ static void decrease_key (swap_t const*const swap, uint64_t const i, double cons
 static uint64_t del_min (swap_t *const swap) {
 	if (swap->size==0) {
 		LOG (error,"Swap underflow error...\n");
-		abort(); //exit (EXIT_FAILURE);
+		return -ULONG_MAX;
 	}
 
 	uint64_t min = swap->pq[1];

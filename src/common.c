@@ -421,7 +421,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
 		if (buffer == NULL) {
-			LOG (error,"[%s] Unable to buffer page %lu from the external memory...\n",tree->filename,position);
+			LOG (fatal,"[%s] Unable to buffer page %lu from the external memory...\n",tree->filename,position);
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {

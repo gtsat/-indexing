@@ -492,7 +492,7 @@ void augment_set_with_joined_hotspots (tree_t *const tree,
 				page_lock = (pthread_rwlock_t*) get (repellers->page_locks,page_id);
 				pthread_rwlock_unlock (&repellers->tree_lock);
 			}else{
-				LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+				LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 				abort();
 			}
 
@@ -523,7 +523,7 @@ void augment_set_with_joined_hotspots (tree_t *const tree,
 					pthread_rwlock_unlock (&repellers->tree_lock);
 					pthread_rwlock_unlock (previous_lock);
 				}else{
-					LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+					LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 					abort();
 				}
 				goto reset_search_operation;
@@ -546,7 +546,7 @@ void augment_set_with_joined_hotspots (tree_t *const tree,
 					}else if (i==combination_offset-1 && repellers!=NULL && repellers->indexed_records) {
 						new_container->page_ids[i] = page_id*repellers->internal_entries+j+1;
 					}else{
-						LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+						LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 						abort();
 					}
 
@@ -625,7 +625,7 @@ void augment_set_with_joined_hotspots (tree_t *const tree,
 					page_lock = (pthread_rwlock_t*) get (repellers->page_locks,container->page_ids[1]);
 					pthread_rwlock_unlock (&repellers->tree_lock);
 				}else{
-					LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+					LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 					abort();
 				}
 
@@ -1419,7 +1419,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 				page_lock = (pthread_rwlock_t*) get (repellers->page_locks,page_id);
 				pthread_rwlock_unlock (&repellers->tree_lock);
 			}else{
-				LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+				LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 				abort();
 			}
 
@@ -1451,7 +1451,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					pthread_rwlock_unlock (&repellers->tree_lock);
 					pthread_rwlock_unlock (previous_lock);
 				}else{
-					LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+					LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 					abort();
 				}
 
@@ -1474,7 +1474,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					}else if (i==combination_offset-1 && repellers!=NULL && repellers->indexed_records) {
 						new_container->page_ids[i] = page_id*repellers->internal_entries+j+1;
 					}else{
-						LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+						LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 						abort();
 					}
 
@@ -1557,7 +1557,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 					page_lock = (pthread_rwlock_t*) get (repellers->page_locks,container->page_ids[1]);
 					pthread_rwlock_unlock (&repellers->tree_lock);
 				}else{
-					LOG(error,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
+					LOG(fatal,"%u %lu %lu\n",i,attractors->indexed_records,repellers->indexed_records);
 					abort();
 				}
 
@@ -1607,7 +1607,7 @@ fifo_t* diversified_join (lifo_t *const trees, tree_t *const attractors, tree_t 
 						}else if (offset == combination_offset - 1 && repellers != NULL && repellers->indexed_records) {
 							offset_dimensions = repellers->dimensions;
 						}else{
-							LOG(error,"Critical error in diversified join...\n");
+							LOG(fatal,"Critical error in diversified join...\n");
 							abort();
 						}
 						memcpy (data_container->keys+offset*dimensions,

@@ -73,7 +73,7 @@ fifo_t* new_queue (void) {
 void* peek_tail_of_queue (fifo_t const*const queue) {
 	if (!queue->size) {
 		LOG (error,"Queue underflow...\n");
-		abort();
+		return NULL;
 	}
 	return queue->buffer [queue->tail-1];
 }
@@ -81,7 +81,7 @@ void* peek_tail_of_queue (fifo_t const*const queue) {
 void* peek_head_of_queue (fifo_t const*const queue) {
 	if (!queue->size) {
 		LOG (error,"Queue underflow...\n");
-		abort();
+		return NULL;
 	}
 	return queue->buffer [queue->head];
 }
@@ -89,7 +89,7 @@ void* peek_head_of_queue (fifo_t const*const queue) {
 void* remove_head_of_queue (fifo_t *const queue) {
 	if (!queue->size) {
 		LOG (error,"Queue underflow...\n");
-		abort();
+		return NULL;
 	}
 
 	void *const element = queue->buffer [queue->head];
@@ -122,7 +122,7 @@ void* remove_head_of_queue (fifo_t *const queue) {
 void* remove_tail_of_queue (fifo_t *const queue) {
 	if (!queue->size) {
 		LOG (error,"Queue underflow...\n");
-		abort();
+		return NULL;
 	}
 
 	--queue->size;
@@ -176,7 +176,7 @@ void expand_queue (fifo_t *const queue) {
 
 void insert_at_tail_of_queue (fifo_t *const queue, void *const element) {
 	if (queue->size > queue->capacity) {
-		LOG (error,"Queue buffer overrun detected... Program will terminate.\n");
+		LOG (fatal,"Queue buffer overrun detected... Program will terminate.\n");
 		abort();
 	}
 
@@ -208,7 +208,7 @@ void insert_at_tail_of_queue (fifo_t *const queue, void *const element) {
 
 void insert_at_head_of_queue (fifo_t *const queue, void *const element) {
 	if (queue->size > queue->capacity) {
-		LOG (error,"Queue buffer overrun detected... Program will terminate.\n");
+		LOG (fatal,"Queue buffer overrun detected... Program will terminate.\n");
 		abort();
 	}
 

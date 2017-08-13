@@ -118,7 +118,7 @@ static uint64_t swim (priority_queue_t *const priority_queue, uint64_t position)
 
 void insert_into_priority_queue (priority_queue_t *const priority_queue, void *const element) {
 	if (priority_queue->size >= priority_queue->capacity) {
-		LOG (error,"Heap buffer overrun detected... Program will terminate.\n");
+		LOG (fatal,"Heap buffer overrun detected... Program will terminate.\n");
 		abort();
 	}
 	priority_queue->buffer[++priority_queue->size] = element;
@@ -140,7 +140,7 @@ void insert_into_priority_queue (priority_queue_t *const priority_queue, void *c
 void* peek_priority_queue (priority_queue_t const*const priority_queue) {
 	if (!priority_queue->size) {
 		LOG (error,"Priority queue underflow...\n");
-		abort();
+		return NULL;
 	}
 	return priority_queue->buffer[1];
 }
@@ -148,7 +148,7 @@ void* peek_priority_queue (priority_queue_t const*const priority_queue) {
 void* remove_from_priority_queue (priority_queue_t *const priority_queue) {
 	if (!priority_queue->size) {
 		LOG (error,"Priority queue underflow...\n");
-		abort();
+		return NULL;
 	}
 
 	void *const min = priority_queue->buffer[1];

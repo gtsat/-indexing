@@ -24,7 +24,7 @@ void** adjust_buffer (void** buffer, uint64_t const old_size, uint64_t const new
 	if (new_size > old_size) {
 		void** new_buffer = (void**) calloc (new_size,new_size*sizeof(void*));
 		if (new_buffer == NULL) {
-			LOG (error,"Unable to dynamically allocate additional memory...!\n");
+			LOG (fatal,"Unable to dynamically allocate additional memory...!\n");
 			abort ();
 			return buffer;
 		}

@@ -85,7 +85,7 @@ void inorder_traversal_recursive (tree_node_t const*const tree_node,
 		if (get_entries) {
 			symbol_table_entry_t* entry = (symbol_table_entry_t*) malloc (sizeof(symbol_table_entry_t));
 			if (entry == NULL) {
-				LOG (error,"Unable to reserve enough additional memory to "
+				LOG (fatal,"Unable to reserve enough additional memory to "
 							"congregate the entries of the symbol-table.\n");
 				abort();
 			}
