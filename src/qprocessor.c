@@ -54,8 +54,6 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	char command_filepath [64];
 	sprintf (command_filepath,"/tmp/cached_command.%lu.txt",time(NULL));
 	FILE* fptr = fopen (command_filepath,"w+");
-	//unlink ("/tmp/cached_command.");
-	//FILE* fptr = fopen ("/tmp/cached_command.txt","w+");
 
 	//char command[] = "/NY.rtree?key=41.127369,-73.529746;";
 	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5;";

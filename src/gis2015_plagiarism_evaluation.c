@@ -16,7 +16,7 @@ boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dime
 							fifo_t const*const attractors, fifo_t const*const repellers,
 							double const lambda_rel, double const lambda_diss) {
 
-	for (uint16_t i=0; i<(1<<(dimensions-1)); ++i) {
+	for (uint16_t i=0; i<(1<<dimensions); ++i) {
 		index_t point [dimensions];
 		for (uint16_t j=0; j<dimensions; ++j) {
 			point[j] = (i%(j+1)>>j) ? mbb[j].end : mbb[j].start ;
@@ -442,11 +442,11 @@ index_t* new_random_point (interval_t const domain[], uint16_t dimensions) {
 
 static
 void print_usage (char const*const program) {
-	printf (" ** Usage:\n\t %s [heapfile] [number of random attractors] [number of random repelers] [relevance tradeoff] [dissimilarity tradeoff]\n\n", program);
+	printf (" ** Usage:\n\t %s [heapfile] [number of random attractors] [number of random repelers] [relevance tradeoff] [dissimilarity tradeoff] [executions]\n\n", program);
 }
 
 int main (int argc, char* argv[]) {
-	if (argc < 6) {
+	if (argc < 7) {
 		print_usage(*argv);
 		return EXIT_FAILURE;
 	}
@@ -458,94 +458,117 @@ int main (int argc, char* argv[]) {
 	double lambda_rel = atof(argv[4]);
 	double lambda_diss = atof(argv[5]);
 
+	unsigned executions = atol(argv[6]);
+
 	fifo_t* attractors = new_queue();
 	fifo_t* repellers = new_queue();
 
 	srand48(time(NULL));
 
-	for (register uint64_t i=0; i<attractors_cardinality; ++i) {
-		index_t *const attractor = new_random_point (tree->root_box,tree->dimensions);
-		insert_at_tail_of_queue (attractors,attractor);
+	double sum_ioC=0, sum_ioH=0, sum_ioM=0;
+	double sum_timeC=0, sum_timeH=0, sum_timeM=0;
+	double sum_scoreC=0, sum_scoreH=0, sum_scoreM=0;
+
+	for (unsigned x=0; x<executions; ++x) {
+
+		for (register uint64_t i=0; i<attractors_cardinality; ++i) {
+			index_t *const attractor = new_random_point (tree->root_box,tree->dimensions);
+			insert_at_tail_of_queue (attractors,attractor);
+		}
+
+		LOG (warn,"Attractors-set now consists of %lu points.\n",attractors->size);
+
+		for (register uint64_t i=0; i<repellers_cardinality; ++i) {
+			index_t *const repeller = new_random_point (tree->root_box,tree->dimensions);
+			insert_at_tail_of_queue (repellers,repeller);
+		}
+
+		LOG (warn,"Repellers-set now consists of %lu points.\n",repellers->size);
+
+
+		/**
+		 * One way...
+		 */
+		clock_t startC = clock();
+		data_container_t* competitor = most_diversified_tuple (tree,attractors,repellers,lambda_rel,lambda_diss);
+		clock_t diffC = clock() - startC;
+		uint64_t msecC = diffC * 1000 / CLOCKS_PER_SEC;
+		LOG (warn,"COMPETITOR (minimal implementation using the pseudo-code from the paper) retrieved object %lu, achieving score %lf, in %lu msec.\n",competitor->object,competitor->sort_key,msecC);
+		uint64_t ioC = tree->io_counter;
+		sum_scoreC += competitor->sort_key;
+		sum_timeC += msecC;
+		sum_ioC += ioC;
+		tree->io_counter = 0;
+
+
+		/**
+		 * or another
+		 */
+		clock_t startH = clock();
+		fifo_t *const result = hotspots (tree,attractors,repellers,1,false,false,lambda_rel,lambda_diss,0);
+		clock_t diffH = clock() - startH;
+		uint64_t msecH = diffH * 1000 / CLOCKS_PER_SEC;
+		uint64_t ioH = tree->io_counter;
+		sum_timeH += msecH;
+		sum_ioH += ioH;
+		tree->io_counter = 0;
+
+		LOG (warn,"HOMEGROWN built a list of %u hotspots (not averaged distances) using the deluxe, everything included implementation in %lu msec.\n",result->size,msecH);
+		while (result->size) {
+			data_pair_t* data = remove_tail_of_queue (result);
+			LOG (warn,"(%f,%f): %u \n",data->key[0],data->key[1],data->object);
+
+			free (data->key);
+			free (data);
+		}
+		delete_queue (result);
+
+
+		/**
+		 * and yet, another!
+		 */
+		clock_t startM = clock();
+		data_container_t *const homegrown = augment_set_with_hotspots_minimal(tree,attractors,repellers,lambda_rel,lambda_diss);
+		clock_t diffM = clock() - startM;
+		uint64_t msecM = diffM * 1000 / CLOCKS_PER_SEC;
+		uint64_t ioM = tree->io_counter;
+		sum_scoreM += homegrown->sort_key;
+		sum_timeM += msecM;
+		sum_ioM += ioM;
+		tree->io_counter = 0;
+
+		LOG (warn,"HOMEGROWN retrieved a solution (not averaged distances) using the minimal implementation in %lu msec.\n",msecM);
+
+		/**
+		 * Unallocating resources
+		 */
+		while (attractors->size) {
+			free (remove_tail_of_queue (attractors));
+		}
+
+		while (repellers->size) {
+			free (remove_tail_of_queue (repellers));
+		}
+
+		free (competitor->key);
+		free (competitor);
+
+		free (homegrown->key);
+		free (homegrown);
 	}
 
-	LOG (warn,"Attractors-set now consists of %lu points.\n",attractors->size);
-
-	for (register uint64_t i=0; i<repellers_cardinality; ++i) {
-		index_t *const repeller = new_random_point (tree->root_box,tree->dimensions);
-		insert_at_tail_of_queue (repellers,repeller);
-	}
-
-	LOG (warn,"Repellers-set now consists of %lu points.\n",repellers->size);
-
-
-	/**
-	 * One way...
-	 */
-	clock_t startC = clock();
-	data_container_t* competitor = most_diversified_tuple (tree,attractors,repellers,lambda_rel,lambda_diss);
-	clock_t diffC = clock() - startC;
-	unsigned msecC = diffC * 1000 / CLOCKS_PER_SEC;
-	LOG (warn,"COMPETITOR (minimal implementation using the pseudo-code from the paper) retrieved object %lu, achieving score %lf, in %lu msec.\n",competitor->object,competitor->sort_key,msecC);
-	uint64_t ioC = tree->io_counter;
-	tree->io_counter = 0;
-
-
-	/**
-	 * or another
-	 */
-	clock_t startH = clock();
-	fifo_t *const result = hotspots (tree,attractors,repellers,1,false,false,lambda_rel,lambda_diss,0);
-	clock_t diffH = clock() - startH;
-	unsigned msecH = diffH * 1000 / CLOCKS_PER_SEC;
-	uint64_t ioH = tree->io_counter;
-	tree->io_counter = 0;
-
-	LOG (warn,"HOMEGROWN retrieved a list %u hotspots (not averaged distances) using the deluxe, everything included implementation in %lu msec.\n",result->size,msecH);
-	while (result->size) {
-		data_pair_t* data = remove_tail_of_queue (result);
-		LOG (warn,"(%f,%f): %u \n",data->key[0],data->key[1],data->object);
-
-		free (data->key);
-		free (data);
-	}
-	delete_queue (result);
-
-
-	/**
-	 * and yet, another!
-	 */
-	clock_t startM = clock();
-	data_container_t *const homegrown = augment_set_with_hotspots_minimal (tree,
-				attractors,repellers,
-				lambda_rel,lambda_diss);
-	clock_t diffM = clock() - startM;
-	unsigned msecM = diffM * 1000 / CLOCKS_PER_SEC;
-	uint64_t ioM = tree->io_counter;
-	tree->io_counter = 0;
-
-	LOG (warn,"HOMEGROWN retrieved a solution (not averaged distances) using the minimal implementation in %lu msec.\n",msecM);
 	LOG (warn,"And this is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
 	LOG (warn,"Donno, maybe someone forgot to add a line or two in his source code...\n\n");
 
-	LOG (10,"[%lu %lu %lf %lf %lu %lu %lu %lu %lu %lu %lf %lf]\n\n",attractors->size,repellers->size,lambda_rel,lambda_diss,msecC,msecH,msecM,ioC,ioH,ioM,competitor->sort_key,homegrown->sort_key);
-
-	free (competitor->key);
-	free (competitor);
-
-	free (homegrown->key);
-	free (homegrown);
-
-
-	/**
-	 * Unallocating resources
-	 */
-	while (attractors->size) {
-		free (remove_tail_of_queue (attractors));
-	}
-
-	while (attractors->size) {
-		free (remove_tail_of_queue (repellers));
-	}
+	sum_ioC/=executions; sum_ioH/=executions; sum_ioM/=executions;
+	sum_timeC/=executions; sum_timeH/=executions; sum_timeM/=executions;
+	sum_scoreC/=executions; sum_scoreH/=executions; sum_scoreM/=executions;
+	LOG (10,"[%lu %lu %lu %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf]\n\n",
+			tree->page_size,attractors_cardinality,repellers_cardinality,
+			lambda_rel,lambda_diss,
+			sum_timeC,sum_timeH,sum_timeM,
+			sum_ioC,sum_ioH,sum_ioM,
+			sum_scoreC,sum_scoreM);
 
 	delete_queue (attractors);
 	delete_queue (repellers);

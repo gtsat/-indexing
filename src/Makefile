@@ -1,7 +1,7 @@
 CC      =        gcc
 
-#CFLAGS	=        -std=gnu11 -DNDEBUG -O2 -fPIC -mglibc -mtune=generic -mno-red-zone
-CFLAGS  =        -std=gnu11 -g3 -O0 -fPIC -mglibc -mtune=generic -mno-red-zone
+CFLAGS	=        -std=gnu11 -DNDEBUG -O2 -fPIC -mglibc -mtune=generic -mno-red-zone
+#CFLAGS  =        -std=gnu11 -g3 -O0 -fPIC -mglibc -mtune=generic -mno-red-zone
 
 OBJECTS =        qprocessor.o QL.tab.o lex.yy.o \
 		 spatial_standard_queries.o skyline_queries.o rtree.o \
