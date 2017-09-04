@@ -384,7 +384,7 @@ void server_run (struct in_addr const local_address, uint16_t const port, char c
 			pthread_attr_setstacksize (&attr,THREAD_STACK_SIZE);
 			pthread_attr_setdetachstate (&attr,PTHREAD_CREATE_DETACHED);
 			if (pthread_create (&thread,&attr,&handle_connection,args)) {
-				LOG (error,"Unable to create new thread...\n");
+				LOG (fatal,"Unable to create new thread...\n");
 				exit (EXIT_FAILURE);
 			}
 			pthread_attr_destroy (&attr);

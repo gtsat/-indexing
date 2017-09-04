@@ -22,7 +22,7 @@
 symbol_table_t* new_symbol_table_primitive (value_t const value) {
 	symbol_table_t* rbtree = (symbol_table_t*) malloc (sizeof(symbol_table_t));
 	if (rbtree == NULL)  {
-		LOG (error,"Unable allocate memory to create symbol-table...\n");
+		LOG (fatal,"Unable allocate memory to create symbol-table...\n");
 		exit (EXIT_FAILURE);
 	}else{
 		rbtree->default_value = value;
@@ -36,7 +36,7 @@ symbol_table_t* new_symbol_table_primitive (value_t const value) {
 symbol_table_t* new_symbol_table (value_t const value, int (*compare) (key__t const, key__t const)) {
 	symbol_table_t* rbtree = (symbol_table_t*) malloc (sizeof(symbol_table_t));
 	if (rbtree == NULL)  {
-		LOG (error,"Unable allocate memory to create symbol-table...\n");
+		LOG (fatal,"Unable allocate memory to create symbol-table...\n");
 		exit (EXIT_FAILURE);
 	}else{
 		rbtree->default_value = value;
@@ -398,7 +398,7 @@ tree_node_t* insert_node_recursive (symbol_table_t const*const rbtree,
 	if (tree_node == NULL) {
 		tree_node_t* new_node = (tree_node_t*) malloc (sizeof(tree_node_t));
 		if (new_node == NULL) {
-			LOG (error,"Unable allocate additional memory to expand symbol-table...\n");
+			LOG (fatal,"Unable allocate additional memory to expand symbol-table...\n");
 			exit (EXIT_FAILURE);
 		}
 		new_node->left = NULL;

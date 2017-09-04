@@ -43,7 +43,7 @@ void clear_queue (fifo_t *const queue) {
 		queue->capacity = initial_capacity;
 		queue->buffer = malloc (initial_capacity*sizeof(void*));
 		if (queue->buffer == NULL) {
-			LOG (error,"Queue cannot reserve memory for buffer...\n");
+			LOG (fatal,"Queue cannot reserve memory for buffer...\n");
 			exit (EXIT_FAILURE);
 		}
 	}
@@ -55,12 +55,12 @@ void clear_queue (fifo_t *const queue) {
 fifo_t* new_queue (void) {
 	fifo_t *const queue = (fifo_t *const) malloc (sizeof(fifo_t));
 	if (queue == NULL) {
-		LOG (error,"Cannot allocate memory for new queue...\n");
+		LOG (fatal,"Cannot allocate memory for new queue...\n");
 		exit (EXIT_FAILURE);
 	}
 	queue->buffer = (void**) malloc (initial_capacity*sizeof(void*));
 	if (queue->buffer == NULL) {
-		LOG (error,"Queue cannot reserve memory for buffer...\n");
+		LOG (fatal,"Queue cannot reserve memory for buffer...\n");
 		exit (EXIT_FAILURE);
 	}
 	queue->capacity = initial_capacity;

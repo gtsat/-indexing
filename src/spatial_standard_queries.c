@@ -31,7 +31,6 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[], uint32_t pr
 		proj_dimensions = tree->dimensions;
 	}
 
-	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	if (!key_enclosed_by_box(key,tree->root_box,proj_dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);
@@ -114,7 +113,6 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[], uint32_t pro
 		proj_dimensions = tree->dimensions;
 	}
 
-	load_page(tree,0);
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	if (!key_enclosed_by_box(key,tree->root_box,proj_dimensions)) {
 		pthread_rwlock_unlock (&tree->tree_lock);

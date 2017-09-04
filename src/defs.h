@@ -100,7 +100,7 @@ typedef struct {
 typedef enum {false=0,true} boolean;
 
 
-static const uint64_t initial_capacity = 3;
+static const uint64_t initial_capacity = 5;
 
 /**** BASIC DEFINITIONS END ****/
 
@@ -110,10 +110,10 @@ static const uint64_t initial_capacity = 3;
 #define fairness_threshold 	.5
 
 typedef uint32_t 	object_t;
-typedef float	 	index_t;
+typedef float		index_t;
 
 #define OBJECT_T_MAX 	UINT_MAX
-#define INDEX_T_MAX 	FLT_MAX
+#define INDEX_T_MAX 		FLT_MAX
 
 
 typedef struct {
@@ -273,17 +273,17 @@ typedef struct {
 #define CHILD_ID(id,offset)	((id)*tree->internal_entries+(offset)+1)
 
 #define SET_PAGE(x,y)		set(tree->heapfile_index,(x),(y))
-#define UNSET_PAGE(x)		(page_t*)unset(tree->heapfile_index,(x))
-#define LOADED_PAGE(x)		(page_t*)get(tree->heapfile_index,(x))
+#define UNSET_PAGE(x)		((page_t*)unset(tree->heapfile_index,(x)))
+#define LOADED_PAGE(x)		((page_t*)get(tree->heapfile_index,(x)))
 
 #define SET_LOCK(x,y)		set(tree->page_locks,(x),(y))
-#define UNSET_LOCK(x)		(pthread_rwlock_t *const)unset(tree->page_locks,(x))
-#define LOADED_LOCK(x)		(pthread_rwlock_t *const)get(tree->page_locks,(x))
+#define UNSET_LOCK(x)		((pthread_rwlock_t *const)unset(tree->page_locks,(x)))
+#define LOADED_LOCK(x)		((pthread_rwlock_t *const)get(tree->page_locks,(x)))
 
 #define KEY(i)			keys+(i)*tree->dimensions
 #define KEYS(i,j)		keys[(i)*tree->dimensions+(j)]
 #define BOX(i)			intervals+(i)*tree->dimensions
-#define INTERVALS(i,j)		intervals[(i)*tree->dimensions+(j)]
+#define INTERVALS(i,j)	intervals[(i)*tree->dimensions+(j)]
 
 #define MBB(id)			(id)?load_page(tree,PARENT_ID(id))->node.internal.BOX(CHILD_OFFSET(id)):tree->root_box
 

@@ -28,7 +28,7 @@ fifo_t* get_priority_queue_entries (priority_queue_t *const priority_queue) {
 	if (priority_queue->size > queue->capacity) {
 		queue->buffer = (void**) malloc ((priority_queue->size+1)*sizeof(void*));
 		if (queue->buffer == NULL) {
-			LOG (error,"Cannot allocate memory for new priority queue...\n");
+			LOG (fatal,"Cannot allocate memory for new priority queue...\n");
 			delete_priority_queue (priority_queue);
 			delete_queue (queue);
 			exit (EXIT_FAILURE);
@@ -64,13 +64,13 @@ priority_queue_t* new_priority_queue (int (*cmp) (void const*const,void const*co
 	priority_queue_t *const priority_queue = (priority_queue_t *const) malloc (sizeof(priority_queue_t));
 
 	if (priority_queue == NULL) {
-		LOG (error,"Cannot allocate memory for new priority queue...\n");
+		LOG (fatal,"Cannot allocate memory for new priority queue...\n");
 		exit (EXIT_FAILURE);
 	}
 
 	priority_queue->buffer = (void**) malloc ((1+initial_capacity)*sizeof(void*));
 	if (priority_queue->buffer == NULL) {
-		LOG (error,"Priority queue cannot allocate memory to initialize priority queue...\n");
+		LOG (fatal,"Priority queue cannot allocate memory to initialize priority queue...\n");
 		exit (EXIT_FAILURE);
 	}
 

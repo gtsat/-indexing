@@ -5,9 +5,9 @@ X=5;
 b=1024;
 
 r=5;
-R=500;
+R=200;
 rm -vf gis2015.r${r}R${R}b${b}.log ; 
-for N in 50 100 500 1000; 
+for N in 100 200 400 800; 
 do 
 	A=$N;
 	echo " %% number of attractors: $A"
@@ -15,17 +15,17 @@ do
 done
 
 
-A=500;
+A=200;
 rm -vf gis2015.r${r}A${A}b${b}.log ; 
-for N in 50 100 500 1000; 
+for N in 100 200 400 800; 
 do 
 	R=$N;
 	echo " %% number of repellers: $R"
 	time ../../src/gis2015 ../../../heapfiles/USA.b${b}.rtree $A $R $r `expr 10 - $r` $X 2>> gis2015.r${r}A${A}b${b}.log ; 
 done
 
-A=500;
-R=500;
+A=200;
+R=200;
 rm -vf gis2015.A${A}R${R}b${b}.log ; 
 for((r=0;r<=10;r+=1));
 do 

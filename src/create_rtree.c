@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "common.h"
 #include "rtree.h"
 #include "unistd.h"
 #include "getopt.h"
@@ -103,16 +104,11 @@ int main (int argc, char* argv[]) {
 
 	if (DIMENSIONS && PAGESIZE && DATASET && HEAPFILE) {
 		unlink (HEAPFILE);
-		tree_t* tree = new_rtree (HEAPFILE,PAGESIZE,DIMENSIONS);
+		tree_t *const tree = new_rtree (HEAPFILE,PAGESIZE,DIMENSIONS);
 		insert_records_from_textfile (tree,DATASET);
-		//flush_dirty_pages (tree);
+		//flush_tree (tree);
 		//delete_records_from_textfile (tree,DATASET);
-		/*
-		insert_arcs_from_edgelist (tree,HEAPFILE);
-		//delete_arcs_from_edgelist (tree,DATASET);
-		*/
 		delete_rtree (tree);
-
 		return EXIT_SUCCESS;
 	}else{
 		print_usage (argv[0]);

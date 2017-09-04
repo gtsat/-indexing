@@ -128,7 +128,7 @@ void augment_set_with_hotspots (tree_t *const tree,
 							if (!pull_apart_results
 								&& !bring_together_results
 								&& candidates->size >= k
-								&& dissimilarity - relevance
+								&& lambda_diss*dissimilarity - relevance
 								<= ((data_container_t*)peek_priority_queue(candidates))->sort_key) {
 
 								is_obscured = true;
@@ -252,7 +252,7 @@ void augment_set_with_hotspots (tree_t *const tree,
 							if (!pull_apart_results
 								&& !bring_together_results
 								&& candidates->size >= k
-								&& dissimilarity - relevance
+								&& lambda_diss*dissimilarity - relevance
 								<= ((data_container_t*)peek_priority_queue(candidates))->sort_key) {
 
 								is_obscured = true;

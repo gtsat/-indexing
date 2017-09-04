@@ -53,7 +53,7 @@ void clear_stack (lifo_t *const stack) {
 		stack->capacity = initial_capacity;
 		stack->buffer = (void**) calloc (initial_capacity,initial_capacity*sizeof(void*));
 		if (stack->buffer == NULL) {
-			LOG (error,"Stack cannot reserve memory for buffer...\n");
+			LOG (fatal,"Stack cannot reserve memory for buffer...\n");
 			exit (EXIT_FAILURE);
 		}
 	}
@@ -63,12 +63,12 @@ void clear_stack (lifo_t *const stack) {
 lifo_t* new_stack (void) {
 	lifo_t *const stack = (lifo_t *const) malloc (sizeof(lifo_t));
 	if (stack == NULL) {
-		LOG (error,"Cannot allocate memory for new stack...\n");
+		LOG (fatal,"Cannot allocate memory for new stack...\n");
 		exit (EXIT_FAILURE);
 	}
 	stack->buffer = (void**) calloc (initial_capacity,initial_capacity*sizeof(void*));
 	if (stack->buffer == NULL) {
-		LOG (error,"Stack cannot reserve memory for buffer...\n");
+		LOG (fatal,"Stack cannot reserve memory for buffer...\n");
 		exit (EXIT_FAILURE);
 	}
 	stack->capacity = initial_capacity;

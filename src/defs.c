@@ -108,7 +108,7 @@ double key_to_box_mindistance (index_t const key[],
 		if (key[i] < box[i].start)
 			distance += (box[i].start-key[i])*(box[i].start-key[i]);
 		else if (key[i] > box[i].end)
-			distance += pow(key[i]-box[i].end,2);
+			distance += (key[i]-box[i].end)*(key[i]-box[i].end);
 	}
 	return sqrt(distance);
 }
@@ -119,13 +119,17 @@ double key_to_box_maxdistance (index_t const key[],
 	double distance = 0;
 	for (uint32_t i=0; i<dimensions; ++i) {
 		if (key[i] < box[i].start)
-			distance += pow(box[i].end-key[i],2);
+			distance += (box[i].end-key[i])*(box[i].end-key[i]);
 		else if (key[i] > box[i].end)
-			distance += pow(key[i]-box[i].start,2);
+			distance += (key[i]-box[i].start)*(key[i]-box[i].start);
 		else{
-			double temp1 = pow(key[i]-box[i].start,2);
-			double temp2 = pow(box[i].end-key[i],2);
-			distance += MAX (temp1,temp2);
+			double temp1 = (key[i]-box[i].start)*(key[i]-box[i].start);
+			double temp2 = (box[i].end-key[i])*(box[i].end-key[i]);
+			if (temp1 > temp2) {
+				distance += temp1;
+			}else{
+				distance += temp2;
+			}
 		}
 	}
 	return sqrt(distance);
@@ -137,9 +141,9 @@ double box_to_box_mindistance (interval_t const box1[],
 	double distance = 0;
 	for (uint32_t j=0; j<dimensions; ++j) {
 		if (box1[j].end < box2[j].start)
-			distance += pow(box2[j].start-box1[j].end,2);
+			distance += (box2[j].start-box1[j].end)*(box2[j].start-box1[j].end);
 		else if (box2[j].end < box1[j].start)
-			distance += pow(box1[j].start-box2[j].end,2);
+			distance += (box1[j].start-box2[j].end)*(box1[j].start-box2[j].end);
 	}
 	return sqrt(distance);
 }
@@ -150,13 +154,17 @@ double box_to_box_maxdistance (interval_t const box1[],
 	double distance = 0;
 	for (uint32_t j=0; j<dimensions; ++j) {
 		if (box1[j].end < box2[j].start)
-			distance += pow(box2[j].end-box1[j].start,2);
+			distance += (box2[j].end-box1[j].start)*(box2[j].end-box1[j].start);
 		else if (box2[j].end < box1[j].start)
-			distance += pow(box1[j].end-box2[j].start,2);
+			distance += (box1[j].end-box2[j].start)*(box1[j].end-box2[j].start);
 		else{
-			double temp1 = pow(box2[j].end-box1[j].start,2);
-			double temp2 = pow(box1[j].end-box2[j].start,2);
-			distance += MAX (temp1,temp2);
+			double temp1 = (box2[j].end-box1[j].start)*(box2[j].end-box1[j].start);
+			double temp2 = (box1[j].end-box2[j].start)*(box1[j].end-box2[j].start);
+			if (temp1 > temp2) {
+				distance += temp1;
+			}else{
+				distance += temp2;
+			}
 		}
 	}
 	return sqrt(distance);

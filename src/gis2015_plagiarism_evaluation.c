@@ -47,11 +47,11 @@ boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dime
 		}
 		dissimilarity *= lambda_diss;
 
-		if (dissimilarity - relevance < threshold) {
-			return false;
+		if (dissimilarity - relevance > threshold) {
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 static
@@ -63,8 +63,7 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 		) {
 
 	double tau = -DBL_MAX;
-	fifo_t* leaves = new_queue();
-	fifo_t* queue = new_queue();
+	lifo_t* stack = new_stack();
 
 	data_container_t *const optimal = (data_container_t *const) malloc (sizeof(data_container_t));
 	optimal->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
@@ -88,72 +87,63 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 		assert (page_lock != NULL);
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
-			while (queue->size) {
-				free (remove_tail_of_queue (queue));
+			while (stack->size) {
+				free (remove_from_stack (stack));
 			}
 			goto reset_search_operation;
 		}else{
 			if (page->header.is_leaf) {
 				for (uint32_t i=0; i<page->header.records; ++i) {
+					boolean is_obscured = false;
 					double relevance = attractors->size ? DBL_MAX : 0;
 					for (uint64_t j=0; j<attractors->size; ++j) {
 						double key_distance = key_to_key_distance (
-									attractors->buffer[j],
-									page->node.leaf.KEY(i),
-									tree->dimensions);
+										attractors->buffer[j],
+										page->node.leaf.KEY(i),
+										tree->dimensions);
 						if (key_distance < relevance) {
 							relevance = key_distance;
 						}
 					}
+
 					relevance *= lambda_rel;
+
 
 					double dissimilarity = repellers->size ? DBL_MAX : 0;
 					for (uint64_t j=0; j<repellers->size; ++j) {
 						double key_distance = key_to_key_distance (
-									repellers->buffer[j],
-									page->node.leaf.KEY(i),
-									tree->dimensions);
+										repellers->buffer[j],
+										page->node.leaf.KEY(i),
+										tree->dimensions);
 
 						if (key_distance < dissimilarity) {
-							dissimilarity = key_distance;
-						}
-					}
-					dissimilarity *= lambda_diss;
-
-					double tuple_score = dissimilarity - relevance;
-					if (tuple_score > optimal->sort_key) {
-						optimal->sort_key = tuple_score;
-						optimal->object = page->node.leaf.objects[i];
-						memcpy (optimal->key,page->node.leaf.KEY(i),tree->dimensions*sizeof(index_t));
-					}
-				}
-
-
-				if (queue->size) {
-					fifo_t *const next_queue = new_queue();
-					data_container_t* next_container = NULL;
-					for (uint64_t i=0; i<queue->size; ++i) {
-						box_container_t *const icontainer = (box_container_t*)queue->buffer[i];
-						if (container != icontainer) {
-							insert_at_tail_of_queue (next_queue,icontainer);
-
-							if (next_container == NULL || icontainer->sort_key > next_container->sort_key) {
-								next_container = icontainer;
+							if (lambda_diss*dissimilarity - relevance <= optimal->sort_key) {
+								is_obscured = true;
+								break;
+							}else{
+								dissimilarity = key_distance;
 							}
 						}
 					}
 
-					delete_queue (queue);
-					queue = next_queue;
+					dissimilarity *= lambda_diss;
 
-					free (container);
-					container = next_container;
-				}else{
-					pthread_rwlock_unlock (page_lock);
-					goto double_break;
+					double tuple_score = dissimilarity - relevance;
+					if (!is_obscured && tuple_score > optimal->sort_key) {
+						optimal->sort_key = tuple_score;
+						optimal->object = page->node.leaf.objects[i];
+						memcpy (optimal->key,page->node.leaf.KEY(i),tree->dimensions*sizeof(index_t));
+					}
+
+					if (tuple_score > tau) {
+						tau = tuple_score;
+						flag = true;
+					}
 				}
 			}else{
 				for (uint32_t i=0; i<page->header.records; ++i) {
+					boolean is_obscured = false;
+
 					double relevance_lo = attractors->size ? DBL_MAX : 0;
 					double relevance_hi = attractors->size ? DBL_MAX : 0;
 
@@ -210,61 +200,70 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 					new_container->box = page->node.internal.BOX(i);
 					new_container->id = CHILD_ID(page_id,i);
 					new_container->sort_key = upper_bound;
-					insert_at_tail_of_queue (queue,new_container);
+					insert_into_stack (stack,new_container);
 
 					if (lower_bound > tau) {
 						tau = lower_bound;
 						flag = true;
 					}
-				}
 
-				data_container_t* next_container = NULL;
-				fifo_t *const next_queue = new_queue();
-				if (flag) {
-					flag = false;
-					for (uint64_t i=0; i<queue->size; ++i) {
-						box_container_t *const icontainer = (box_container_t*)queue->buffer[i];
-						if (container == icontainer) {
-							continue;
-						}else if (icontainer->sort_key > tau) {
-							insert_at_tail_of_queue (next_queue,icontainer);
-						}else if (lambda_rel == lambda_diss
-								&& mbb_qualifies_by_criterion2(icontainer->box,tree->dimensions,tau,attractors,repellers,lambda_rel,lambda_diss)) {
-							insert_at_tail_of_queue (next_queue,icontainer);
-						}else{
-							free (icontainer);
-						}
+				}
+			}
+
+			data_container_t* next_container = NULL;
+			lifo_t *const next_stack = new_stack();
+			if (flag) {
+				flag = false;
+				for (uint64_t i=0; i<stack->size; ++i) {
+					box_container_t *const icontainer = (box_container_t *const)stack->buffer[i];
+					if (container == icontainer) {
+						continue;
+					}else if (icontainer->sort_key > tau) {
+						insert_into_stack (next_stack,icontainer);
+					}else if (lambda_rel == lambda_diss
+						&& mbb_qualifies_by_criterion2(icontainer->box,tree->dimensions,tau,attractors,repellers,lambda_rel,lambda_diss)) {
+						insert_into_stack (next_stack,icontainer);
+					}else{
+						free (icontainer);
+						continue;
+					}
+					if (next_container == NULL || icontainer->sort_key > next_container->sort_key) {
+						next_container = icontainer;
+					}
+				}
+			}else if (stack->size) {
+				for (uint64_t i=0; i<stack->size; ++i) {
+					box_container_t *const icontainer = (box_container_t*)stack->buffer[i];
+					if (container != icontainer) {
+						insert_into_stack (next_stack,icontainer);
+
 						if (next_container == NULL || icontainer->sort_key > next_container->sort_key) {
 							next_container = icontainer;
 						}
 					}
-				}else if (queue->size) {
-					for (uint64_t i=0; i<queue->size; ++i) {
-						box_container_t *const icontainer = (box_container_t*)queue->buffer[i];
-						if (container != icontainer) {
-							insert_at_tail_of_queue (next_queue,icontainer);
-
-							if (next_container == NULL || icontainer->sort_key > next_container->sort_key) {
-								next_container = icontainer;
-							}
-						}
-					}
 				}
-
-				delete_queue (queue);
-				queue = next_queue;
-
+			}else{
+				pthread_rwlock_unlock (page_lock);
 				free (container);
-				container = next_container;
+				break;
 			}
+
+			delete_stack (stack);
+			stack = next_stack;
+
+			free (container);
+			container = next_container;
+
 			pthread_rwlock_unlock (page_lock);
 		}
 	}
-	double_break:
-	while (queue->size) {
-		free (remove_tail_of_queue(queue));
+
+	while (stack->size) {
+		free (remove_from_stack(stack));
 	}
-	delete_queue (queue);
+	delete_stack (stack);
+
+	printf ("COMPETITOR: (%10f,%10f) %u : %lf\n",*optimal->key,optimal->key[1],optimal->object,optimal->sort_key);
 	return optimal;
 }
 
@@ -275,8 +274,6 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 					fifo_t const*const repellers,
 					double const lambda_rel,
 					double const lambda_diss) {
-
-	uint16_t const dimensions = tree->dimensions;
 
 	data_container_t *const optimal = (data_container_t *const) malloc (sizeof(data_container_t));
 	optimal->key = (index_t *const) malloc (sizeof(index_t)*tree->dimensions);
@@ -333,7 +330,7 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 						double key_distance = key_to_key_distance (
 										attractors->buffer[j],
 										page->node.leaf.KEY(i),
-										dimensions);
+										tree->dimensions);
 						if (key_distance < relevance) {
 							relevance = key_distance;
 						}
@@ -347,10 +344,10 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 						double key_distance = key_to_key_distance (
 										repellers->buffer[j],
 										page->node.leaf.KEY(i),
-										dimensions);
+										tree->dimensions);
 
 						if (key_distance < dissimilarity) {
-							if (dissimilarity - relevance <= optimal->sort_key) {
+							if (lambda_diss*dissimilarity - relevance <= optimal->sort_key) {
 								is_obscured = true;
 								break;
 							}else{
@@ -364,7 +361,7 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 
 					double tuple_score = dissimilarity - relevance;
 					if (tuple_score > optimal->sort_key) {
-						memcpy (optimal->key,page->node.leaf.KEY(i),dimensions*sizeof(index_t));
+						memcpy (optimal->key,page->node.leaf.KEY(i),tree->dimensions*sizeof(index_t));
 						optimal->object = page->node.leaf.objects[i];
 						optimal->sort_key = tuple_score;
 					}
@@ -378,7 +375,7 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 						double box_distance = key_to_box_mindistance (
 											attractors->buffer[j],
 											page->node.internal.BOX(i),
-											dimensions);
+											tree->dimensions);
 
 						if (box_distance < relevance) {
 							relevance = box_distance;
@@ -393,10 +390,10 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 						double box_distance = key_to_box_maxdistance (
 											repellers->buffer[j],
 											page->node.internal.BOX(i),
-											dimensions);
+											tree->dimensions);
 
 						if (box_distance < dissimilarity) {
-							if (dissimilarity - relevance <= optimal->sort_key) {
+							if (lambda_diss*dissimilarity - relevance <= optimal->sort_key) {
 								is_obscured = true;
 								break;
 							}else{
@@ -424,6 +421,8 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 		}
 	}
 	delete_priority_queue (browse);
+
+	printf ("HOMEGROWN: (%10f,%10f) %u : %lf\n",*optimal->key,optimal->key[1],optimal->object,optimal->sort_key);
 	return optimal;
 }
 
@@ -452,16 +451,13 @@ int main (int argc, char* argv[]) {
 	}
 	tree_t *const tree = load_rtree (argv[1]);
 
-	uint64_t attractors_cardinality = atol(argv[2]);
-	uint64_t repellers_cardinality = atol(argv[3]);
+	uint64_t const attractors_cardinality = atol(argv[2]);
+	uint64_t const repellers_cardinality = atol(argv[3]);
 
-	double lambda_rel = atof(argv[4]);
-	double lambda_diss = atof(argv[5]);
+	double const lambda_rel = atof(argv[4]);
+	double const lambda_diss = atof(argv[5]);
 
-	unsigned executions = atol(argv[6]);
-
-	fifo_t* attractors = new_queue();
-	fifo_t* repellers = new_queue();
+	unsigned const executions = atol(argv[6]);
 
 	srand48(time(NULL));
 
@@ -470,6 +466,8 @@ int main (int argc, char* argv[]) {
 	double sum_scoreC=0, sum_scoreH=0, sum_scoreM=0;
 
 	for (unsigned x=0; x<executions; ++x) {
+		fifo_t *const attractors = new_queue();
+		fifo_t *const repellers = new_queue();
 
 		for (register uint64_t i=0; i<attractors_cardinality; ++i) {
 			index_t *const attractor = new_random_point (tree->root_box,tree->dimensions);
@@ -490,7 +488,7 @@ int main (int argc, char* argv[]) {
 		 * One way...
 		 */
 		clock_t startC = clock();
-		data_container_t* competitor = most_diversified_tuple (tree,attractors,repellers,lambda_rel,lambda_diss);
+		data_container_t *const competitor = most_diversified_tuple (tree,attractors,repellers,lambda_rel,lambda_diss);
 		clock_t diffC = clock() - startC;
 		uint64_t msecC = diffC * 1000 / CLOCKS_PER_SEC;
 		LOG (warn,"COMPETITOR (minimal implementation using the pseudo-code from the paper) retrieved object %lu, achieving score %lf, in %lu msec.\n",competitor->object,competitor->sort_key,msecC);
@@ -555,6 +553,9 @@ int main (int argc, char* argv[]) {
 
 		free (homegrown->key);
 		free (homegrown);
+
+		delete_queue (attractors);
+		delete_queue (repellers);
 	}
 
 	LOG (warn,"And this is what in HOMEGROWN we call bull-shit; but not in GIS 2015, they loved that kind of shit!\n");
@@ -570,8 +571,6 @@ int main (int argc, char* argv[]) {
 			sum_ioC,sum_ioH,sum_ioM,
 			sum_scoreC,sum_scoreM);
 
-	delete_queue (attractors);
-	delete_queue (repellers);
 	delete_rtree (tree);
 
 	return EXIT_SUCCESS;
