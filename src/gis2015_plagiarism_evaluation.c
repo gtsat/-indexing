@@ -9,7 +9,12 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-
+/**
+ * This criterion proposed by Sacharidis and Delligianakis 
+ * is useless in practice for any reasonable number of 
+ * attractors/repellers. The presented evaluation does not 
+ * use it, as it would not be feasible.
+ */ 
 static
 boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dimensions,
 							double const threshold,
@@ -19,36 +24,33 @@ boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dime
 	for (uint16_t i=0; i<(1<<dimensions); ++i) {
 		index_t point [dimensions];
 		for (uint16_t j=0; j<dimensions; ++j) {
-			point[j] = (i%(j+1)>>j) ? mbb[j].end : mbb[j].start ;
+			point[j] = ((i>>j)%2) ? mbb[j].end : mbb[j].start ;
 		}
 
 		double relevance = attractors->size ? DBL_MAX : 0;
-		for (uint64_t j=0; j<attractors->size; ++j) {
-			double key_distance = key_to_key_distance (
-							attractors->buffer[j],
-							point,
-							dimensions);
+		for (register uint64_t j=0; j<attractors->size; ++j) {
+			double key_distance = key_enclosed_by_box (attractors->buffer[j],point,dimensions) ? 0 : 
+						key_to_key_distance (attractors->buffer[j],point,dimensions);
 			if (key_distance < relevance) {
 				relevance = key_distance;
+				if (relevance == 0) {
+					break;
+				}
 			}
 		}
 		relevance *= lambda_rel;
 
 		double dissimilarity = repellers->size ? DBL_MAX : 0;
-		for (uint64_t j=0; j<repellers->size; ++j) {
-			double key_distance = key_to_key_distance (
-							repellers->buffer[j],
-							point,
-							dimensions);
+		for (register uint64_t j=0; j<repellers->size; ++j) {
+			double key_distance = key_enclosed_by_box (repellers->buffer[j],point,dimensions) ? 0 : 
+						key_to_key_distance (repellers->buffer[j],point,dimensions);
 
 			if (key_distance < dissimilarity) {
-				dissimilarity = key_distance;
+				dissimilarity = lambda_diss * key_distance;
+				if (dissimilarity - relevance >= threshold) {
+					return true;
+				}
 			}
-		}
-		dissimilarity *= lambda_diss;
-
-		if (dissimilarity - relevance > threshold) {
-			return true;
 		}
 	}
 	return false;
@@ -71,7 +73,8 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 	reset_search_operation:;
 	box_container_t* container = (box_container_t*) malloc (sizeof(box_container_t));
-	container->box = tree->root_box;
+	container->box = (box_container_t*) malloc (tree->dimensions*sizeof(interval_t));
+	memcpy (container->box,tree->root_box,tree->dimensions*sizeof(interval_t));
 	container->sort_key = 0;
 	container->id = 0;
 
@@ -88,15 +91,17 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
 			while (stack->size) {
-				free (remove_from_stack (stack));
+				box_container_t *const tmp = remove_from_stack(stack);
+				free (tmp->box);
+				free (tmp);
 			}
 			goto reset_search_operation;
 		}else{
 			if (page->header.is_leaf) {
-				for (uint32_t i=0; i<page->header.records; ++i) {
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					boolean is_obscured = false;
 					double relevance = attractors->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<attractors->size; ++j) {
+					for (register uint64_t j=0; j<attractors->size; ++j) {
 						double key_distance = key_to_key_distance (
 										attractors->buffer[j],
 										page->node.leaf.KEY(i),
@@ -110,7 +115,7 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 
 					double dissimilarity = repellers->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<repellers->size; ++j) {
+					for (register uint64_t j=0; j<repellers->size; ++j) {
 						double key_distance = key_to_key_distance (
 										repellers->buffer[j],
 										page->node.leaf.KEY(i),
@@ -141,13 +146,13 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 					}
 				}
 			}else{
-				for (uint32_t i=0; i<page->header.records; ++i) {
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					boolean is_obscured = false;
 
 					double relevance_lo = attractors->size ? DBL_MAX : 0;
 					double relevance_hi = attractors->size ? DBL_MAX : 0;
 
-					for (uint64_t j=0; j<attractors->size; ++j) {
+					for (register uint64_t j=0; j<attractors->size; ++j) {
 						double box_mindistance = key_to_box_mindistance (
 											attractors->buffer[j],
 											page->node.internal.BOX(i),
@@ -171,7 +176,7 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 					double dissimilarity_lo = repellers->size ? DBL_MAX : 0;
 					double dissimilarity_hi = repellers->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<repellers->size; ++j) {
+					for (register uint64_t j=0; j<repellers->size; ++j) {
 						double box_mindistance = key_to_box_mindistance (
 											repellers->buffer[j],
 											page->node.internal.BOX(i),
@@ -197,7 +202,8 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 					double upper_bound = dissimilarity_hi - relevance_lo;
 
 					box_container_t *const new_container = (box_container_t *const) malloc (sizeof(box_container_t));
-					new_container->box = page->node.internal.BOX(i);
+					new_container->box = (interval_t*) malloc (tree->dimensions*sizeof(interval_t));
+					memcpy (new_container->box,page->node.internal.BOX(i),tree->dimensions*sizeof(interval_t));;
 					new_container->id = CHILD_ID(page_id,i);
 					new_container->sort_key = upper_bound;
 					insert_into_stack (stack,new_container);
@@ -206,7 +212,6 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 						tau = lower_bound;
 						flag = true;
 					}
-
 				}
 			}
 
@@ -214,25 +219,36 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 			lifo_t *const next_stack = new_stack();
 			if (flag) {
 				flag = false;
-				for (uint64_t i=0; i<stack->size; ++i) {
+				for (register uint64_t i=0; i<stack->size; ++i) {
 					box_container_t *const icontainer = (box_container_t *const)stack->buffer[i];
 					if (container == icontainer) {
 						continue;
-					}else if (icontainer->sort_key > tau) {
-						insert_into_stack (next_stack,icontainer);
-					}else if (lambda_rel == lambda_diss
-						&& mbb_qualifies_by_criterion2(icontainer->box,tree->dimensions,tau,attractors,repellers,lambda_rel,lambda_diss)) {
-						insert_into_stack (next_stack,icontainer);
-					}else{
-						free (icontainer);
-						continue;
 					}
+
+					if (lambda_rel != lambda_diss) {
+						if (icontainer->sort_key > tau) {
+							insert_into_stack (next_stack,icontainer);
+						}else{
+							free (icontainer->box);
+							free (icontainer);
+							continue;
+						}
+					}else{
+						if (mbb_qualifies_by_criterion2(icontainer->box,tree->dimensions,tau,attractors,repellers,lambda_rel,lambda_diss)) {
+							insert_into_stack (next_stack,icontainer);
+						}else{
+							free (icontainer->box);
+							free (icontainer);
+							continue;
+						}
+					}
+
 					if (next_container == NULL || icontainer->sort_key > next_container->sort_key) {
 						next_container = icontainer;
 					}
 				}
 			}else if (stack->size) {
-				for (uint64_t i=0; i<stack->size; ++i) {
+				for (register uint64_t i=0; i<stack->size; ++i) {
 					box_container_t *const icontainer = (box_container_t*)stack->buffer[i];
 					if (container != icontainer) {
 						insert_into_stack (next_stack,icontainer);
@@ -244,6 +260,7 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 				}
 			}else{
 				pthread_rwlock_unlock (page_lock);
+				free (container->box);
 				free (container);
 				break;
 			}
@@ -251,6 +268,7 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 			delete_stack (stack);
 			stack = next_stack;
 
+			free (container->box);
 			free (container);
 			container = next_container;
 
@@ -259,7 +277,9 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 	}
 
 	while (stack->size) {
-		free (remove_from_stack(stack));
+		box_container_t *const tmp = remove_from_stack(stack);
+		free (tmp->box);
+		free (tmp);
 	}
 	delete_stack (stack);
 
@@ -322,11 +342,11 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 			goto reset_search_operation;
 		}else{
 			if (page->header.is_leaf) {
-				for (uint32_t i=0; i<page->header.records; ++i) {
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					boolean is_obscured = false;
 
 					double relevance = attractors->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<attractors->size; ++j) {
+					for (register uint64_t j=0; j<attractors->size; ++j) {
 						double key_distance = key_to_key_distance (
 										attractors->buffer[j],
 										page->node.leaf.KEY(i),
@@ -340,7 +360,7 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 
 
 					double dissimilarity = repellers->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<repellers->size; ++j) {
+					for (register uint64_t j=0; j<repellers->size; ++j) {
 						double key_distance = key_to_key_distance (
 										repellers->buffer[j],
 										page->node.leaf.KEY(i),
@@ -367,11 +387,11 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 					}
 				}
 			}else{
-				for (uint32_t i=0; i<page->header.records; ++i) {
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					boolean is_obscured = false;
 
 					double relevance = attractors->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<attractors->size; ++j) {
+					for (register uint64_t j=0; j<attractors->size; ++j) {
 						double box_distance = key_to_box_mindistance (
 											attractors->buffer[j],
 											page->node.internal.BOX(i),
@@ -386,7 +406,7 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 
 
 					double dissimilarity = repellers->size ? DBL_MAX : 0;
-					for (uint64_t j=0; j<repellers->size; ++j) {
+					for (register uint64_t j=0; j<repellers->size; ++j) {
 						double box_distance = key_to_box_maxdistance (
 											repellers->buffer[j],
 											page->node.internal.BOX(i),
@@ -536,6 +556,7 @@ int main (int argc, char* argv[]) {
 		tree->io_counter = 0;
 
 		LOG (warn,"HOMEGROWN retrieved a solution (not averaged distances) using the minimal implementation in %lu msec.\n",msecM);
+
 
 		/**
 		 * Unallocating resources
