@@ -111,6 +111,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 										dimensions);
 						if (key_distance < relevance) {
 							relevance = key_distance;
+							if (relevance == 0) {
+								break;
+							}
 						}
 					}
 
@@ -135,6 +138,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 								break;
 							}else{
 								dissimilarity = key_distance;
+								if (dissimilarity == 0) {
+									break;
+								}
 							}
 						}
 					}
@@ -161,6 +167,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 									break;
 								}else{
 									clustering = key_distance;
+									if (clustering == 0) {
+										break;
+									}
 								}
 							}
 						}
@@ -235,6 +244,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 
 						if (box_distance < relevance) {
 							relevance = box_distance;
+							if (relevance == 0) {
+								break;
+							}
 						}
 					}
 
@@ -259,6 +271,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 								break;
 							}else{
 								dissimilarity = box_distance;
+								if (dissimilarity == 0) {
+									break;
+								}
 							}
 						}
 					}
@@ -285,6 +300,9 @@ void augment_set_with_hotspots (tree_t *const tree,
 									break;
 								}else{
 									clustering = box_distance;
+									if (clustering == 0) {
+										break;
+									}
 								}
 							}
 						}

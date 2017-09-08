@@ -10,11 +10,13 @@
 #include <pthread.h>
 
 /**
- * This criterion proposed by Sacharidis and Delligianakis 
- * is useless in practice for any reasonable number of 
- * attractors/repellers. The presented evaluation does not 
- * use it, as it would not be feasible.
- */ 
+ * I do not believe that this criterion proposed by Sacharidis and Delligianakis really stands for all scenarios.
+ * They provide no proof in their paper, and in my own publication I show cases where the specified locus does not
+ * resemble a hyperbola, or a conic section for this matter. Also their deceitful and fraudulent evaluation is a
+ * stain on their positions and science. As is embezzling 5000 EUR from TUC for "entertainment" purposes under
+ * false pretences (HDMS 2012). We shall try to make an additional evaluation that leverages it.
+ */
+
 static
 boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dimensions,
 							double const threshold,
@@ -29,8 +31,10 @@ boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dime
 
 		double relevance = attractors->size ? DBL_MAX : 0;
 		for (register uint64_t j=0; j<attractors->size; ++j) {
-			double key_distance = key_enclosed_by_box (attractors->buffer[j],point,dimensions) ? 0 : 
-						key_to_key_distance (attractors->buffer[j],point,dimensions);
+			if (key_enclosed_by_box (attractors->buffer[j],mbb,dimensions)) {
+				return true;
+			}
+			double key_distance = key_to_key_distance (attractors->buffer[j],point,dimensions);
 			if (key_distance < relevance) {
 				relevance = key_distance;
 				if (relevance == 0) {
@@ -42,15 +46,18 @@ boolean mbb_qualifies_by_criterion2 (interval_t const mbb[], uint16_t const dime
 
 		double dissimilarity = repellers->size ? DBL_MAX : 0;
 		for (register uint64_t j=0; j<repellers->size; ++j) {
-			double key_distance = key_enclosed_by_box (repellers->buffer[j],point,dimensions) ? 0 : 
-						key_to_key_distance (repellers->buffer[j],point,dimensions);
-
+			double key_distance = key_to_key_distance (repellers->buffer[j],point,dimensions);
 			if (key_distance < dissimilarity) {
-				dissimilarity = lambda_diss * key_distance;
-				if (dissimilarity - relevance >= threshold) {
-					return true;
+				dissimilarity =  key_distance;
+				if (dissimilarity == 0) {
+					break;
 				}
 			}
+		}
+
+		dissimilarity *= lambda_diss;
+		if (dissimilarity - relevance >= threshold) {
+			return true;
 		}
 	}
 	return false;
@@ -108,11 +115,12 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 										tree->dimensions);
 						if (key_distance < relevance) {
 							relevance = key_distance;
+							if (relevance == 0) {
+								break;
+							}
 						}
 					}
-
 					relevance *= lambda_rel;
-
 
 					double dissimilarity = repellers->size ? DBL_MAX : 0;
 					for (register uint64_t j=0; j<repellers->size; ++j) {
@@ -127,10 +135,12 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 								break;
 							}else{
 								dissimilarity = key_distance;
+								if (dissimilarity == 0) {
+									break;
+								}
 							}
 						}
 					}
-
 					dissimilarity *= lambda_diss;
 
 					double tuple_score = dissimilarity - relevance;
@@ -169,6 +179,9 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 						if (box_maxdistance < relevance_hi) {
 							relevance_hi = box_maxdistance;
+							if (relevance_hi == 0) {
+								break;
+							}
 						}
 					}
 					relevance_lo *= lambda_rel;
@@ -193,6 +206,9 @@ data_container_t* most_diversified_tuple (tree_t *const tree,
 
 						if (box_maxdistance < dissimilarity_hi) {
 							dissimilarity_hi = box_maxdistance;
+							if (dissimilarity_hi == 0) {
+								break;
+							}
 						}
 					}
 					dissimilarity_lo *= lambda_diss;
@@ -353,6 +369,9 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 										tree->dimensions);
 						if (key_distance < relevance) {
 							relevance = key_distance;
+							if (relevance == 0) {
+								break;
+							}
 						}
 					}
 
@@ -372,6 +391,9 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 								break;
 							}else{
 								dissimilarity = key_distance;
+								if (dissimilarity == 0) {
+									break;
+								}
 							}
 						}
 					}
@@ -399,6 +421,9 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 
 						if (box_distance < relevance) {
 							relevance = box_distance;
+							if (relevance == 0) {
+								break;
+							}
 						}
 					}
 
@@ -418,6 +443,9 @@ data_container_t* augment_set_with_hotspots_minimal (tree_t *const tree,
 								break;
 							}else{
 								dissimilarity = box_distance;
+								if (dissimilarity == 0) {
+									break;
+								}
 							}
 						}
 					}
