@@ -1,4 +1,3 @@
-
 %{
 	#include<math.h>
 	#include<string.h>
@@ -6,6 +5,7 @@
 	#include"defs.h"
 %}
 
+%option prefix="QL_"
 %option noyywrap
 %option stack
 %array 
@@ -36,26 +36,24 @@ corn			{LOG(debug,"Keyword CORNER."); return CORN;}
 bound			{LOG(debug,"Keyword BOUND."); return BOUND;}
 
 ,			{LOG(debug,"Symbol sequence delimiter.\n"); return ',';}
-\(			{LOG(debug,"Start of key-sequence operator.\n");}
-\)			{LOG(debug,"End of key-sequence operator.\n");}
 [OoIi]+			{
-				LOG(debug,"A bitfield: %s \n", yytext); 
-				yylval.str = strdup (yytext);
+				LOG(debug,"A bitfield: %s\n", yytext); 
+				QL_lval.str = strdup (yytext);
 				return BITFIELD;
 			}
 \-?{DIGIT}+		{
-				LOG(debug,"An integer: %s (%d)\n", yytext, atoi(yytext)); 
-				yylval.ival= atoi (yytext);
+				LOG(debug,"An integer: %s\n", yytext); 
+				QL_lval.ival= atoi (yytext);
 				return INTEGER;
 			}
 \-?{DIGIT}*"."{DIGIT}*	{
-				LOG(debug,"A float: %s (%g)\n", yytext, atof(yytext)); 
-				yylval.dval= atof (yytext);
+				LOG(debug,"A float: %s\n", yytext); 
+				QL_lval.dval= atof (yytext);
 				return REAL;
 			}
 {ID}			{
 				LOG(debug,"An identifier: %s\n", yytext); 
-				yylval.str = strdup (yytext);
+				QL_lval.str = strdup (yytext);
 				return ID; /* heapfile name */
 			}
 

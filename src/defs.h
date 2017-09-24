@@ -99,6 +99,7 @@ typedef struct {
 
 typedef enum {false=0,true} boolean;
 
+typedef enum {PUT,DELETE} request_t;
 
 static const uint64_t initial_capacity = 5;
 

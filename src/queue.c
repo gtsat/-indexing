@@ -25,7 +25,7 @@ void* get_queue_element (fifo_t const*const queue, uint64_t const k) {
 	}else if (queue->head+k < queue->capacity) {
 		return queue->buffer[queue->head+k];
 	}else{
-		return queue->buffer[k-queue->capacity+queue->head];
+		return queue->buffer[k+queue->head-queue->capacity];
 	}
 }
 
@@ -239,3 +239,97 @@ void insert_at_head_of_queue (fifo_t *const queue, void *const element) {
 		queue->size++;
 	}
 }
+
+void insert_queue_element (fifo_t *const queue, uint64_t const pos, void *const element) {
+	if (queue->size == queue->capacity) {
+		insert_at_tail_of_queue (queue,0);
+		queue->size--;
+		if (queue->tail) {
+			queue->tail--;
+		}else{
+			queue->tail = queue->capacity-1;
+		}
+	}
+
+	if (pos <= queue->size) {
+		uint64_t const new_pos = queue->head + pos >= queue->capacity ?
+						pos + queue->head - queue->capacity
+						: queue->head + pos;
+
+		if (new_pos < queue->tail) {
+			memmove (queue->buffer+queue->head+new_pos+1,
+				queue->buffer+queue->head+new_pos,
+				(queue->tail-new_pos)*sizeof(void*));
+		}
+
+		queue->buffer [queue->head+new_pos] = element;
+
+		queue->size++;
+		queue->tail++;
+		if (queue->tail >= queue->capacity) {
+			queue->tail = 0;
+		}
+	}else{
+		LOG (error,"Cannot add an element in a list of %u elements at position %u...\n",queue->size,pos);
+	}
+}
+
+void* remove_queue_element (fifo_t *const queue, uint64_t const pos) {
+	void* rval = NULL;
+	if (pos < queue->size) {
+		uint64_t const new_pos = queue->head + pos >= queue->capacity ?
+						pos + queue->head - queue->capacity
+						: queue->head + pos;
+
+		rval = queue->buffer [new_pos];
+
+		if (new_pos < queue->tail) {
+			memmove (queue->buffer+queue->head+new_pos,
+				 queue->buffer+queue->head+new_pos+1,
+				 (queue->tail-new_pos)*sizeof(void*));
+		}
+
+		queue->size--;
+		if (queue->tail) {
+			queue->tail--;
+		}else{
+			queue->tail = queue->capacity-1;
+		}
+	}else{
+		LOG (error,"Cannot remove an element in a list of %u elements from position %u...\n",queue->size,pos);
+	}
+	return rval;
+}
+
+
+uint64_t find_position_in_sorted_queue (fifo_t *const queue, void *const element, int (*cmp)(void *const,void *const)) {
+	if (queue->tail == queue->head) {
+		assert (!queue->size);
+		LOG (error,"Unable to find element in an empty list.\n");
+		return 0;
+	}
+
+	uint64_t lo = 0;
+	uint64_t hi = queue->size;
+	uint64_t m = queue->size>>1;
+	for (;m<hi;) {
+		if (cmp (get_queue_element(queue,hi-1),get_queue_element(queue,lo)) < 0) {
+			LOG (error,"Queue elements do not appear in order...\n");
+			abort();
+			break;
+		}else{
+			int balance = cmp (element,get_queue_element(queue,m));
+			if (!balance) {
+				return m;
+			}else if (balance<0) {
+				hi = m;
+			}else{
+				lo = m+1;
+			}
+			m = (lo+hi)>>1;
+		}
+	}
+	return m;
+}
+
+

@@ -1,9 +1,9 @@
 CC      =        gcc
 
-CFLAGS	=        -std=gnu11 -DNDEBUG -O2 -fPIC -mglibc -mtune=generic -mno-red-zone
-#CFLAGS  =        -std=gnu11 -g3 -O0 -fPIC -mglibc -mtune=generic -mno-red-zone
+CFLAGS  =        -std=gnu11 -g3 -O0 -fPIC -mtune=generic -mno-red-zone -pedantic -Werror-implicit-function-declaration -Wall
+#CFLAGS	=        -std=gnu11 -DNDEBUG -O2 -fPIC -mtune=generic -mno-red-zone -pedantic -Werror-implicit-function-declaration -Wall
 
-OBJECTS =        qprocessor.o QL.tab.o lex.yy.o \
+OBJECTS =        qprocessor.o QL.tab.o lex.QL_.o DELETE.tab.o lex.DELETE_.o PUT.tab.o lex.PUT_.o \
 		 spatial_standard_queries.o skyline_queries.o rtree.o \
                  symbol_table.o priority_queue.o queue.o \
                  stack.o buffer.o swap.o common.o defs.o
@@ -17,14 +17,26 @@ all               : start_server create_rtree #create_ntree
 start_server      : start_server.c $(OBJECTS)
 			$(CC) $(CFLAGS) -o "start#server" start_server.c $(OBJECTS) $(LIBS) 
 
-qprocessor.o      : qprocessor.h QL.tab.o lex.yy.o
+qprocessor.o      : qprocessor.h QL.tab.o lex.QL_.o DELETE.tab.o lex.DELETE_.o PUT.tab.o lex.PUT_.o
 			$(CC) $(CFLAGS) -c qprocessor.c -lfl 
-QL.tab.o          : QL.tab.h
+QL.tab.o          : QL.tab.h lex.QL_.o
 #QL.tab.c          : QL.y
 #			bison --defines QL.y
-lex.yy.o          : 
-#lex.yy.c          : QL.l
+lex.QL_.o          : 
+#lex.QL_.c          : QL.l
 #			flex QL.l 
+DELETE.tab.o      : DELETE.tab.h lex.DELETE_.o
+#DELETE.tab.c      : DELETE.y
+#			bison --defines DELETE.y
+lex.DELETE_.o     :
+#lex.DELETE_.c     : DELETE.l
+#			flex DELETE.l
+PUT.tab.o         : PUT.tab.h lex.PUT_.o
+#PUT.tab.c         : PUT.y
+#			bison --defines PUT.y
+lex.PUT_.o        :
+#lex.PUT_.c        : PUT.l
+#			flex PUT.l
 
 #create_ntree       : ntree.o common.o symbol_table.o priority_queue.o queue.o stack.o buffer.o swap.o defs.o 
 #			$(CC) $(CFLAGS) -o "create#ntree" create_ntree.c ntree.o common.o symbol_table.o priority_queue.o queue.o stack.o buffer.o swap.o defs.o $(LIBS) 

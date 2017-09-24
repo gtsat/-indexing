@@ -421,7 +421,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {
-			LOG (warn,"[%s] Read less than %lu bytes from page %lu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+			LOG (warn,"[%s] Read less than %u bytes from page %lu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
 		}
 
 		memcpy (&page->header,buffer,sizeof(header_t));

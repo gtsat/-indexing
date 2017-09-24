@@ -39,49 +39,42 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     ID = 258,
-     LOOKUP = 259,
-     FROM = 260,
-     TO = 261,
-     BOUND = 262,
-     CORN = 263,
-     BITFIELD = 264,
-     INTEGER = 265,
-     REAL = 266
+     _HEAPFILE_ = 258,
+     _DATA_ = 259,
+     _KEY_ = 260,
+     _OBJECT_ = 261,
+     REAL = 262,
+     ID = 263
    };
 #endif
 /* Tokens.  */
-#define ID 258
-#define LOOKUP 259
-#define FROM 260
-#define TO 261
-#define BOUND 262
-#define CORN 263
-#define BITFIELD 264
-#define INTEGER 265
-#define REAL 266
+#define _HEAPFILE_ 258
+#define _DATA_ 259
+#define _KEY_ 260
+#define _OBJECT_ 261
+#define REAL 262
+#define ID 263
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 28 "QL.y"
+#line 30 "PUT.y"
 {
 	char* str;
 	double dval;
-	int ival;
 }
 /* Line 1529 of yacc.c.  */
-#line 77 "QL.tab.h"
+#line 70 "PUT.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1
 #endif
 
-extern YYSTYPE QL_lval;
+extern YYSTYPE PUT_lval;
 
 #include "defs.h"
-int QL_parse (lifo_t *const, double[]);
+int PUT_parse (lifo_t *const, index_t[], char[]);
 

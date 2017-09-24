@@ -59,13 +59,13 @@
 #define YYLSP_NEEDED 0
 
 /* Substitute the variable and function names.  */
-#define yyparse QL_parse
-#define yylex   QL_lex
-#define yyerror QL_error
-#define yylval  QL_lval
-#define yychar  QL_char
-#define yydebug QL_debug
-#define yynerrs QL_nerrs
+#define yyparse PUT_parse
+#define yylex   PUT_lex
+#define yyerror PUT_error
+#define yylval  PUT_lval
+#define yychar  PUT_char
+#define yydebug PUT_debug
+#define yynerrs PUT_nerrs
 
 
 /* Tokens.  */
@@ -74,54 +74,48 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     ID = 258,
-     LOOKUP = 259,
-     FROM = 260,
-     TO = 261,
-     BOUND = 262,
-     CORN = 263,
-     BITFIELD = 264,
-     INTEGER = 265,
-     REAL = 266
+     _HEAPFILE_ = 258,
+     _DATA_ = 259,
+     _KEY_ = 260,
+     _OBJECT_ = 261,
+     REAL = 262,
+     ID = 263
    };
 #endif
 /* Tokens.  */
-#define ID 258
-#define LOOKUP 259
-#define FROM 260
-#define TO 261
-#define BOUND 262
-#define CORN 263
-#define BITFIELD 264
-#define INTEGER 265
-#define REAL 266
+#define _HEAPFILE_ 258
+#define _DATA_ 259
+#define _KEY_ 260
+#define _OBJECT_ 261
+#define REAL 262
+#define ID 263
 
 
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "QL.y"
+#line 1 "PUT.y"
 
 	#include<string.h>
 	#include<stdlib.h>
 	#include<stdio.h>
 	#include"queue.h"
 	#include"stack.h"
-	#include"defs.h"
+	#include "defs.h"
 
 	#define YYERROR_VERBOSE
 
 	void yyerror (char*);
+	void stack_insertion (lifo_t *const, index_t const[], unsigned const, object_t const);
 
-	int QL_lex (void);
-	int QL_parse (lifo_t *const, double[]);
+	int PUT_lex (void);
+	int PUT_parse (lifo_t *const, index_t[], char[]);
 /*
-	lifo_t* stack;
-	double varray [BUFSIZ];
+	index_t varray [BUFSIZ];
+	lifo_t *insertions = NULL;
+	char* heapfile = NULL;
 
-	unsigned vindex;
-	unsigned key_cardinality;
-	unsigned predicates_cardinality;
+	unsigned vindex = 0;
 */
 
 
@@ -145,14 +139,13 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 28 "QL.y"
+#line 30 "PUT.y"
 {
 	char* str;
 	double dval;
-	int ival;
 }
 /* Line 193 of yacc.c.  */
-#line 154 "QL.tab.c"
+#line 149 "PUT.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -165,7 +158,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 167 "QL.tab.c"
+#line 162 "PUT.tab.c"
 
 #ifdef short
 # undef short
@@ -378,22 +371,22 @@ union yyalloc
 #endif
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  11
+#define YYFINAL  7
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   66
+#define YYLAST   73
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  19
+#define YYNTOKENS  16
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  14
+#define YYNNTS  8
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  37
+#define YYNRULES  12
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  64
+#define YYNSTATES  65
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   266
+#define YYMAXUTOK   263
 
 #define YYTRANSLATE(YYX)						\
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -404,16 +397,16 @@ static const yytype_uint8 yytranslate[] =
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,    14,    18,     2,
-       2,     2,     2,     2,    17,     2,     2,    13,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,    12,
-       2,    16,     2,    15,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,    15,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,    14,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,    13,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,    11,     2,    12,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     9,     2,    10,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -427,7 +420,7 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8,     9,    10,    11
+       5,     6,     7,     8
 };
 
 #if YYDEBUG
@@ -435,37 +428,28 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint8 yyprhs[] =
 {
-       0,     0,     3,     6,    10,    14,    19,    23,    28,    30,
-      33,    36,    38,    41,    44,    47,    50,    53,    56,    59,
-      61,    65,    69,    71,    75,    79,    83,    87,    91,    94,
-      97,   100,   103,   106,   109,   113,   117,   119
+       0,     0,     3,     9,    15,    17,    25,    33,    35,    39,
+      40,    72,    76
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
 static const yytype_int8 yyrhs[] =
 {
-      20,     0,    -1,    22,    12,    -1,    22,    13,    12,    -1,
-      21,    30,    12,    -1,    21,    30,    13,    12,    -1,    21,
-      31,    12,    -1,    21,    31,    13,    12,    -1,     1,    -1,
-      22,    22,    -1,    21,    22,    -1,    25,    -1,    23,    29,
-      -1,    25,    24,    -1,    23,    24,    -1,    14,    24,    -1,
-      14,    26,    -1,    13,    25,    -1,    13,    26,    -1,     3,
-      -1,     3,    15,    27,    -1,    27,    18,    28,    -1,    28,
-      -1,     4,    16,    32,    -1,     5,    16,    32,    -1,     6,
-      16,    32,    -1,     7,    16,    32,    -1,     8,    16,     9,
-      -1,    14,    29,    -1,    14,    32,    -1,    13,    30,    -1,
-      13,    11,    -1,    13,    31,    -1,    13,    10,    -1,    32,
-      17,    11,    -1,    32,    17,    10,    -1,    11,    -1,    10,
-      -1
+      17,     0,    -1,     9,    18,    14,    19,    10,    -1,     9,
+      19,    14,    18,    10,    -1,     1,    -1,    15,     3,    15,
+      13,    15,     8,    15,    -1,    15,     4,    15,    13,    11,
+      20,    12,    -1,    21,    -1,    20,    14,    21,    -1,    -1,
+       9,    15,     5,    15,    13,    11,    23,    12,    14,    15,
+       6,    15,    13,     7,    10,    22,     9,    15,     6,    15,
+      13,     7,    14,    15,     5,    15,    13,    11,    23,    12,
+      10,    -1,    23,    14,     7,    -1,     7,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    58,    58,    65,    72,    79,    86,    93,   100,   109,
-     110,   113,   114,   122,   123,   127,   128,   135,   136,   143,
-     148,   156,   160,   167,   172,   177,   182,   187,   196,   197,
-     201,   202,   206,   207,   211,   216,   221,   226
+       0,    56,    56,    57,    58,    67,    75,    79,    80,    84,
+      84,    95,    96
 };
 #endif
 
@@ -474,11 +458,10 @@ static const yytype_uint8 yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "ID", "LOOKUP", "FROM", "TO", "BOUND",
-  "CORN", "BITFIELD", "INTEGER", "REAL", "';'", "'/'", "'%'", "'?'", "'='",
-  "','", "'&'", "$accept", "QUERY", "COMMANDS", "COMMAND", "rCOMMAND",
-  "rSUBQUERY", "cSUBQUERY", "SUBQUERY", "PREDICATES", "PREDICATE", "rKEY",
-  "DJOIN_PRED", "CP_PRED", "KEY", 0
+  "$end", "error", "$undefined", "_HEAPFILE_", "_DATA_", "_KEY_",
+  "_OBJECT_", "REAL", "ID", "'{'", "'}'", "'['", "']'", "':'", "','",
+  "'\"'", "$accept", "REQUEST", "HEAPFILE_DEF", "DATA_DEF", "DATA",
+  "DATUM", "@1", "KEY", 0
 };
 #endif
 
@@ -487,27 +470,23 @@ static const char *const yytname[] =
    token YYLEX-NUM.  */
 static const yytype_uint16 yytoknum[] =
 {
-       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,    59,    47,    37,    63,    61,    44,    38
+       0,   256,   257,   258,   259,   260,   261,   262,   263,   123,
+     125,    91,    93,    58,    44,    34
 };
 # endif
 
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    19,    20,    20,    20,    20,    20,    20,    20,    21,
-      21,    22,    22,    23,    23,    24,    24,    25,    25,    26,
-      26,    27,    27,    28,    28,    28,    28,    28,    29,    29,
-      30,    30,    31,    31,    32,    32,    32,    32
+       0,    16,    17,    17,    17,    18,    19,    20,    20,    22,
+      21,    23,    23
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     2,     3,     3,     4,     3,     4,     1,     2,
-       2,     1,     2,     2,     2,     2,     2,     2,     2,     1,
-       3,     3,     1,     3,     3,     3,     3,     3,     2,     2,
-       2,     2,     2,     2,     3,     3,     1,     1
+       0,     2,     5,     5,     1,     7,     7,     1,     3,     0,
+      31,     3,     1
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -515,41 +494,39 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       0,     8,     0,     0,     0,     0,     0,    11,    19,    17,
-      18,     1,     0,    10,     0,     0,     2,     0,     9,     0,
-      14,    12,     0,    13,     0,    33,    31,    30,    32,     4,
-       0,     6,     0,     3,    37,    36,    15,    16,    28,    29,
-       0,     0,     0,     0,     0,    20,    22,     5,     7,     0,
-       0,     0,     0,     0,     0,     0,    35,    34,    23,    24,
-      25,    26,    27,    21
+       0,     4,     0,     0,     0,     0,     0,     1,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       2,     3,     0,     0,     0,     0,     0,     7,     5,     0,
+       6,     0,     0,     8,     0,     0,     0,    12,     0,     0,
+       0,     0,    11,     0,     0,     0,     0,     0,     9,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,    10
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     3,     4,     5,     6,    36,     7,    10,    45,    46,
-      21,    14,    15,    39
+      -1,     3,     5,     6,    26,    27,    49,    38
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-#define YYPACT_NINF -19
+#define YYPACT_NINF -32
 static const yytype_int8 yypact[] =
 {
-       0,   -19,    18,     3,    -7,    24,    -6,     8,    15,   -19,
-     -19,   -19,     1,   -19,    26,    28,   -19,    16,   -19,     6,
-     -19,   -19,     4,   -19,    19,   -19,   -19,   -19,   -19,   -19,
-      36,   -19,    39,   -19,   -19,   -19,   -19,   -19,   -19,    35,
-      37,    38,    40,    41,    44,    45,   -19,   -19,   -19,    32,
-      34,    34,    34,    34,    46,    19,   -19,   -19,    35,    35,
-      35,    35,   -19,   -19
+      -1,   -32,    -9,    11,     6,    -2,     0,   -32,     1,     2,
+       3,     4,     7,     8,     9,     5,    19,    13,    10,    15,
+     -32,   -32,    16,    18,    14,    17,   -11,   -32,   -32,    23,
+     -32,    18,    20,   -32,    21,    22,    24,   -32,   -10,    25,
+      29,    26,   -32,    31,    27,    30,    33,    28,   -32,    35,
+      32,    39,    34,    37,    41,    38,    36,    48,    40,    43,
+      46,    24,    -7,    44,   -32
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -19,   -19,   -19,    42,   -19,    43,    -2,   -17,   -19,     7,
-      47,    49,    52,   -18
+     -32,   -32,    47,    49,   -32,    42,   -32,   -31
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
@@ -559,37 +536,39 @@ static const yytype_int8 yypgoto[] =
 #define YYTABLE_NINF -1
 static const yytype_uint8 yytable[] =
 {
-       9,     1,    37,    11,     8,    37,    12,     8,    19,     8,
-       9,    25,    26,     2,    12,     9,    34,    35,    22,     8,
-      19,     8,    22,    40,    41,    42,    43,    44,    33,     2,
-      24,     2,    58,    59,    60,    61,    16,    17,    29,    30,
-      31,    32,    56,    57,    34,    35,    13,    18,    47,    20,
-      23,    48,    49,    50,    51,    62,    52,    53,     0,     0,
-      54,    27,    63,    55,    28,     0,    38
+       1,    30,    39,    31,    40,    63,     4,    40,     2,     8,
+       9,     7,    10,     9,    11,    20,    12,    13,    14,    16,
+      18,    19,     8,    21,    24,    22,    23,    25,    32,    28,
+      62,    37,    29,    36,    35,    34,    42,    44,    48,    41,
+      47,    43,    45,    46,    50,    52,     0,    51,    55,    53,
+      54,    57,    56,    58,    64,    59,    60,    61,    17,    15,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,    33
 };
 
 static const yytype_int8 yycheck[] =
 {
-       2,     1,    19,     0,     3,    22,    13,     3,    14,     3,
-      12,    10,    11,    13,    13,    17,    10,    11,    14,     3,
-      14,     3,    14,     4,     5,     6,     7,     8,    12,    13,
-      15,    13,    50,    51,    52,    53,    12,    13,    12,    13,
-      12,    13,    10,    11,    10,    11,     4,     5,    12,     6,
-       7,    12,    17,    16,    16,     9,    16,    16,    -1,    -1,
-      16,    12,    55,    18,    12,    -1,    19
+       1,    12,    12,    14,    14,    12,    15,    14,     9,     3,
+       4,     0,    14,     4,    14,    10,    15,    15,    15,    15,
+      13,    13,     3,    10,     8,    15,    11,     9,     5,    15,
+      61,     7,    15,    11,    13,    15,     7,     6,    10,    14,
+       7,    15,    15,    13,     9,     6,    -1,    15,     7,    15,
+      13,    15,    14,     5,    10,    15,    13,    11,    11,    10,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    31
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
    symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,     1,    13,    20,    21,    22,    23,    25,     3,    25,
-      26,     0,    13,    22,    30,    31,    12,    13,    22,    14,
-      24,    29,    14,    24,    15,    10,    11,    30,    31,    12,
-      13,    12,    13,    12,    10,    11,    24,    26,    29,    32,
-       4,     5,     6,     7,     8,    27,    28,    12,    12,    17,
-      16,    16,    16,    16,    16,    18,    10,    11,    32,    32,
-      32,    32,     9,    28
+       0,     1,     9,    17,    15,    18,    19,     0,     3,     4,
+      14,    14,    15,    15,    15,    19,    15,    18,    13,    13,
+      10,    10,    15,    11,     8,     9,    20,    21,    15,    15,
+      12,    14,     5,    21,    15,    13,    11,     7,    23,    12,
+      14,    14,     7,    15,     6,    15,    13,     7,    10,    22,
+       9,    15,     6,    15,    13,     7,    14,    15,     5,    15,
+      13,    11,    23,    12,    10
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1105,7 +1084,8 @@ yydestruct (yymsg, yytype, yyvaluep)
 
 
 /* Prevent warnings from -Wmissing-prototypes.  */
-int yyparse (lifo_t *const, double[]);
+
+int yyparse (lifo_t *const, index_t[], char[]);
 
 
 
@@ -1124,13 +1104,9 @@ int yynerrs;
 | yyparse.  |
 `----------*/
 
-int yyparse (lifo_t *const stack, double varray[])
+int yyparse (lifo_t *const insertions, index_t varray[], char heapfile[])
 {
- 
   unsigned vindex = 0;
-  unsigned key_cardinality = 0;
-  unsigned predicates_cardinality = 0; 
-
   int yystate;
   int yyn;
   int yyresult;
@@ -1375,290 +1351,81 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 58 "QL.y"
-    {
-						LOG (info,"SINGLE COMMAND ';' ENCOUNTERED. \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,NULL);
-						insert_into_stack (stack,';');
-						varray [vindex++] = 0;
-					;}
+#line 56 "PUT.y"
+    {LOG (debug,"Parsed request.\n");;}
     break;
 
   case 3:
-#line 65 "QL.y"
-    {
-						LOG (info,"SINGLE COMMAND '/;' ENCOUNTERED. \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,NULL);
-						insert_into_stack (stack,';');
-						varray [vindex++] = 0;
-					;}
+#line 57 "PUT.y"
+    {LOG (debug,"Parsed request.\n");}
     break;
 
   case 4:
-#line 72 "QL.y"
+#line 58 "PUT.y"
     {
-						LOG (info,"DISTANCE JOIN. \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,NULL);
-						insert_into_stack (stack,';');
-						varray [vindex++] = (yyvsp[(3) - (3)].dval);
-					;}
-    break;
-
-  case 5:
-#line 79 "QL.y"
-    {
-						LOG (info,"DISTANCE JOIN/ . \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,NULL);
-						insert_into_stack (stack,';');
-						varray [vindex++] = (yyvsp[(3) - (4)].dval);
-					;}
-    break;
-
-  case 6:
-#line 86 "QL.y"
-    {
-						LOG (info,"CLOSEST PAIRS. \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)ULONG_MAX);
-						insert_into_stack (stack,';');
-						varray [vindex++] = (yyvsp[(3) - (3)].ival);
-					;}
-    break;
-
-  case 7:
-#line 93 "QL.y"
-    {
-						LOG (info,"CLOSEST PAIRS/ . \n");
-						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)ULONG_MAX);
-						insert_into_stack (stack,';');
-						varray [vindex++] = (yyvsp[(3) - (4)].ival);
-					;}
-    break;
-
-  case 8:
-#line 100 "QL.y"
-    {
-						LOG (error,"Erroneous command... \n");
+						LOG (error,"Erroneous request... \n");
 						yyclearin;
 						yyerrok;
 						YYABORT;
-					;}
+						;}
+    break;
+
+  case 5:
+#line 67 "PUT.y"
+    {
+						LOG (debug,"Heapfile definition containing identifier: $6\n");
+						strcpy(heapfile,(yyvsp[(6) - (7)].str));
+						free((yyvsp[(6) - (7)].str));
+						;}
+    break;
+
+  case 6:
+#line 75 "PUT.y"
+    {LOG (debug,"Data sequence definition.\n");;}
+    break;
+
+  case 7:
+#line 79 "PUT.y"
+    {LOG (debug,"Initiating data list.\n");;}
+    break;
+
+  case 8:
+#line 80 "PUT.y"
+    {LOG (debug,"Adding another data item in the list.\n");;}
     break;
 
   case 9:
-#line 109 "QL.y"
-    {LOG (info,"PAIR OF COMMANDS. \n");;}
+#line 84 "PUT.y"
+    {
+										LOG (debug,"Data entry encountered.\n");
+										stack_insertion (insertions,varray,vindex,(object_t)(yyvsp[(14) - (15)].dval));
+										;}
     break;
 
   case 10:
-#line 110 "QL.y"
-    {LOG (info,"COMMAND ADDED IN COMMAND SEQUENCE. \n");;}
+#line 88 "PUT.y"
+    {
+										LOG (debug,"Data entry encountered.\n");
+										stack_insertion (insertions,varray,vindex,(object_t)(yyvsp[(6) - (31)].dval));
+										;}
     break;
 
   case 11:
-#line 113 "QL.y"
-    {LOG (info,"cSUBQUERY PARSED. \n");;}
+#line 95 "PUT.y"
+    {varray [vindex++] = (yyvsp[(3) - (3)].dval);;}
     break;
 
   case 12:
-#line 114 "QL.y"
+#line 96 "PUT.y"
     {
-						LOG (info,"REVERSE NN. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)'%');
-					;}
-    break;
-
-  case 13:
-#line 122 "QL.y"
-    {LOG (info,"FIRST rSUBQUERY PARSED. \n");;}
-    break;
-
-  case 14:
-#line 123 "QL.y"
-    {LOG (info,"NEW rSUBQUERY PARSED. \n");;}
-    break;
-
-  case 15:
-#line 127 "QL.y"
-    {LOG (info,"More slashes preceding rsubquery. \n");;}
-    break;
-
-  case 16:
-#line 128 "QL.y"
-    {
-						LOG (info,"Put together rsubquery. \n");
-						insert_into_stack (stack,(void*)'%');
-					;}
-    break;
-
-  case 17:
-#line 135 "QL.y"
-    {LOG (info,"More slashes preceding csubquery. \n");;}
-    break;
-
-  case 18:
-#line 136 "QL.y"
-    {
-						LOG (info,"Put together csubquery. \n");
-						insert_into_stack (stack,(void*)'/');
-					;}
-    break;
-
-  case 19:
-#line 143 "QL.y"
-    {
-						LOG (info,"Single identifier subquery. \n");
-						insert_into_stack (stack,NULL);
-						insert_into_stack (stack,(yyvsp[(1) - (1)].str));
-					;}
-    break;
-
-  case 20:
-#line 148 "QL.y"
-    {
-						LOG (info,"Parsed subquery. \n")
-						insert_into_stack (stack,(void*)predicates_cardinality);
-						insert_into_stack (stack,(yyvsp[(1) - (3)].str));
-					;}
-    break;
-
-  case 21:
-#line 156 "QL.y"
-    {
-						LOG (info,"Yet another predicate in the collection... \n");
-						predicates_cardinality++;
-					;}
-    break;
-
-  case 22:
-#line 160 "QL.y"
-    {
-						LOG (info,"First query predicate encountered. \n");
-						predicates_cardinality = 1;
-					;}
-    break;
-
-  case 23:
-#line 167 "QL.y"
-    {
-						LOG (info,"LOOKUP. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)LOOKUP);
-					;}
-    break;
-
-  case 24:
-#line 172 "QL.y"
-    {
-						LOG (info,"FROM. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)FROM);
-					;}
-    break;
-
-  case 25:
-#line 177 "QL.y"
-    {
-						LOG (info,"TO. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)TO);
-					;}
-    break;
-
-  case 26:
-#line 182 "QL.y"
-    {
-						LOG (info,"BOUND. \n");
-						insert_into_stack (stack,(void*)key_cardinality);
-						insert_into_stack (stack,(void*)BOUND);
-					;}
-    break;
-
-  case 27:
-#line 187 "QL.y"
-    {
-						LOG (info,"SKYLINE. \n");
-						insert_into_stack (stack,(yyvsp[(3) - (3)].str));
-						insert_into_stack (stack,1);
-						insert_into_stack (stack,(void*)CORN);
-					;}
-    break;
-
-  case 28:
-#line 196 "QL.y"
-    {;}
-    break;
-
-  case 29:
-#line 197 "QL.y"
-    {LOG (info,"rKEY encountered.\n");;}
-    break;
-
-  case 30:
-#line 201 "QL.y"
-    {;}
-    break;
-
-  case 31:
-#line 202 "QL.y"
-    {LOG (info,"Distance join predicate encountered.\n");;}
-    break;
-
-  case 32:
-#line 206 "QL.y"
-    {;}
-    break;
-
-  case 33:
-#line 207 "QL.y"
-    {LOG (info,"Closest pairs predicate encountered.\n");;}
-    break;
-
-  case 34:
-#line 211 "QL.y"
-    {
-						insert_into_stack (stack,varray+vindex);
-						varray [vindex++] = (yyvsp[(3) - (3)].dval);
-						key_cardinality++;
-					;}
-    break;
-
-  case 35:
-#line 216 "QL.y"
-    {
-						insert_into_stack (stack,varray+vindex);
-						varray [vindex++] = (yyvsp[(3) - (3)].ival);
-						key_cardinality++;
-					;}
-    break;
-
-  case 36:
-#line 221 "QL.y"
-    {
-						insert_into_stack (stack,varray+vindex);
-						varray [vindex++] = (yyvsp[(1) - (1)].dval);
-						key_cardinality = 1;
-					;}
-    break;
-
-  case 37:
-#line 226 "QL.y"
-    {
-						insert_into_stack (stack,varray+vindex);
-						varray [vindex++] = (yyvsp[(1) - (1)].ival);
-						key_cardinality = 1;
-					;}
+						*varray = (yyvsp[(1) - (1)].dval);
+						vindex = 1;
+						;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1689 "QL.tab.c"
+#line 1461 "PUT.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1872,14 +1639,23 @@ yyreturn:
 }
 
 
-#line 233 "QL.y"
+#line 102 "PUT.y"
 
 
+void stack_insertion (lifo_t *const insertions, index_t const varray[], unsigned const vindex, object_t const object) {
+	data_pair_t *const new_pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
+	new_pair->key = (index_t*) malloc ((vindex)*sizeof(index_t));
+	for (unsigned i=0; i<vindex; ++i) {
+		new_pair->key[i] = varray[i];
+	}
+	new_pair->object = object;
+	new_pair->dimensions = vindex;
+	insert_into_stack (insertions,new_pair);
+}
 /***
 int main (int argc, char* argv[]) {
-	stack = new_stack();
+	insertions= new_stack();
 	yyparse();
-}
 }
 ***/
 void yyerror (char* description) {

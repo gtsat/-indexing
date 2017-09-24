@@ -1,20 +1,31 @@
-
 %{
 	#include<string.h>
 	#include<stdlib.h>
 	#include<stdio.h>
 	#include"queue.h"
 	#include"stack.h"
+	#include"defs.h"
 
 	#define YYERROR_VERBOSE
 
 	void yyerror (char*);
+
+	int QL_lex (void);
+	int QL_parse (lifo_t *const, double[]);
+/*
+	lifo_t* stack;
+	double varray [BUFSIZ];
+
+	unsigned vindex;
+	unsigned key_cardinality;
+	unsigned predicates_cardinality;
+*/
 %}
 
 %expect 0
 %token_table
 /* %pure_parser */
-
+%name-prefix="QL_"
 
 %union{
 	char* str;
@@ -38,10 +49,8 @@
 %token <double> REAL
 
 %token ';'
-%left '/' '%'
-%left '?' '&'
-%token '='
-%left ','
+%token '/' '%' '?' '='
+%right ',' '&'
 
 %start QUERY
 
@@ -223,7 +232,6 @@ KEY :
 					}
 ;
 
-
 %%
 
 /***
@@ -231,83 +239,6 @@ int main (int argc, char* argv[]) {
 	stack = new_stack();
 	yyparse();
 }
-***
-
-void unroll (void) {
-	LOG (info,"UNROLLING COMMANDS NOW... \n\n\n");
-
-	while (stack->size) {
-
-		if (remove_from_stack (stack) != (void*)';') {
-			LOG (error,"WAS EXPECTING THE START OF A NEW COMMAND... \n");
-			return;
-		}
-
-		if (remove_from_stack (stack) == NULL) {
-			LOG (info,"DISTANCE JOIN OPERATION... \n");
-		}else{
-			LOG (info,"CLOSEST PAIRS OPERATION... \n");
-		}
-
-		double threshold = *((double*)remove_from_stack (stack));
-
-		LOG (info,"Threshold parameter is equal to %lf. \n",threshold);
-
-
-subquery:
-		if (remove_from_stack (stack) != (void*)'/') {
-			LOG (error,"WAS EXPECTING THE START OF A NEW SUBQUERY... \n");
-			return;
-		}
-
-		LOG (info,"UNROLLING NEW SUBQUERY... \n");
-
-		char const*const heapfile = remove_from_stack (stack);
-		LOG (info,"HEAPFILE: '%s'. \n",heapfile);
-
-		unsigned const pcardinality = remove_from_stack (stack);
-
-		for (unsigned j=0; j<pcardinality; ++j) {
-			unsigned const operation = remove_from_stack (stack);
-			switch (operation) {
-				case LOOKUP:
-					LOG (info,"LOOKUP ");
-					break;
-				case FROM:
-					LOG (info,"FROM ");
-					break;
-				case TO:
-					LOG (info,"TO ");
-					break;
-				case CORN:
-					LOG (info,"SKYLINE ");
-					break;
-				default:
-					LOG (error,"Unknown operation...\n");
-			}
-
-			unsigned const kcardinality = remove_from_stack (stack);
-
-			if (operation == CORN) {
-				fprintf (stderr,"BITFIELD: '%s'",((char*const)remove_from_stack (stack)));
-			}else{
-				for (unsigned i=0; i<kcardinality; ++i) {
-					double* tmp = remove_from_stack (stack);
-					fprintf (stderr,"%lf ",*tmp);
-				}
-			}
-
-			fprintf (stderr,"\n");
-
-			if (stack->size && peek_at_stack(stack)==(void*)'/') {
-				goto subquery;
-			}
-		}
-	}
-
-	for (unsigned i=0; yytname[i]!=0; ++i) {
-		printf ("%s \n", yytname[i]);
-	}
 }
 ***/
 void yyerror (char* description) {

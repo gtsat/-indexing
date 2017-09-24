@@ -227,6 +227,21 @@ static int cmp_object_ids (void const*const x,void const*const y) {
 	return ((data_pair_t const*const)x)->object - ((data_pair_t const*const)y)->object;
 }
 
+/**
+ * Strictly speaking, this method is not entirely solid.
+ * The reason behind this statement is that according
+ * to the formal skyline definition, a tuple dominates
+ * on another iff it is at least as good in any number
+ * of dimensions, but strictly better in at least *one*.
+ * Therefore, by using a sort-merge operation on top of
+ * m skylines, we tacitly demand from each result-tuple
+ * to be strictly better on m dimensions (instead of 1),
+ * when compared to any of the remaining tuples of the
+ * increased dimensionality domain that do not participate
+ * in the result. We reckon that the loss is not incredible,
+ * generally. Nevertheless, this method following constitutes
+ * an efficient and extremely fast baseline, all things considered.
+ */
 fifo_t* multiskyline_sort_merge (lifo_t *const trees, boolean const corner[]) {
 	unsigned cardinality = trees->size;
 
@@ -591,14 +606,15 @@ fifo_t* multiskyline_join (lifo_t *const trees, boolean const corner[]) {
 
 
 static
-index_t compute_lower_bound (multidata_container_t const*const container, priority_queue_t const*const browse[]) {
-	index_t lower_bound_i = container->sort_key;
-	for (unsigned j=0; j<container->cardinality; ++j) {
-		if (container->keys[j] < 0) {
+double compute_lower_bound (data_container_t const*const container, priority_queue_t const*const browse[]) {
+	double lower_bound_i = container->sort_key;
+	for (unsigned j=0; j<container->dimensions; ++j) {
+		if (container->key[j] < 0) {
 			if (browse[j]->size) {
-				lower_bound_i += ((multidata_container_t const*const)peek_priority_queue(browse[j]))->sort_key;
+				double radius = ((data_container_t const*const)peek_priority_queue(browse[j]))->sort_key;
+				lower_bound_i += radius * radius;
 			}else{
-				return INDEX_T_MAX;
+				return DBL_MAX;
 			}
 		}
 	}
@@ -608,21 +624,19 @@ index_t compute_lower_bound (multidata_container_t const*const container, priori
 #define C 5
 
 static
-index_t compute_best_lower_bound (fifo_t const*const sorted_list, priority_queue_t const*const browse[]) {
-
-	index_t best_lower_bound = INDEX_T_MAX;
+double compute_best_lower_bound (fifo_t const*const sorted_list, priority_queue_t const*const browse[]) {
+	double best_lower_bound = DBL_MAX;
 	for (register uint64_t i=0; i<C && i<sorted_list->size; ++i) {
-		index_t const lower_bound_i = compute_lower_bound 
-					(((multidata_container_t const*const)sorted_list->buffer[i]),browse);
+		double const lower_bound_i = compute_lower_bound (((data_container_t const*const)sorted_list->buffer[i]),browse);
 		if (lower_bound_i < best_lower_bound) {
 			best_lower_bound = lower_bound_i;
 		}
 	}
 
 	for (register uint64_t i=C; i<sorted_list->size; ++i) {
-		multidata_container_t *const container = ((multidata_container_t const*const)sorted_list->buffer[i]);
+		data_container_t *const container = ((data_container_t const*const)sorted_list->buffer[i]);
 		if (best_lower_bound > container->sort_key) {
-			index_t const lower_bound_i = compute_lower_bound (container,browse);
+			double const lower_bound_i = compute_lower_bound (container,browse);
 			if (lower_bound_i < best_lower_bound) {
 				best_lower_bound = lower_bound_i;
 			}
@@ -634,47 +648,36 @@ index_t compute_best_lower_bound (fifo_t const*const sorted_list, priority_queue
 	return best_lower_bound;
 }
 
-/**
- * UNDER CONSTRUCTION
- *
- *
- *
+
 fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 	unsigned const cardinality = trees->size;
 
 	priority_queue_t *const leaf_entries = new_priority_queue (&mincompare_containers);
-
 	priority_queue_t* browse [cardinality];
-	index_t* reference_point [cardinality];
-	lifo_t* skyline [cardinality];
 
 	priority_queue_t *const complete_distance_objects = new_priority_queue (&mincompare_containers);
 
 	symbol_table_t *const data_pairs = new_symbol_table_primitive (NULL);
 	symbol_table_t *const dist_pairs = new_symbol_table_primitive (NULL);
-
 	fifo_t *const sorted_object_list = new_queue();
 
-	unsigned offset = 0;
+	unsigned full_dimensionality = 0;
 	unsigned dimensions_offset [cardinality];
 	for (unsigned i=0; i<cardinality; ++i) {
-		//offset += TREE(i)->dimensions;
-		dimensions_offset [i] = offset;
-		offset += TREE(i)->dimensions;
+		dimensions_offset [i] = full_dimensionality;
+		full_dimensionality += TREE(i)->dimensions;
 
 		browse [i] = new_priority_queue (&mincompare_containers);
+	}
 
-		index_t *const reference_point_i = (index_t *const) malloc (TREE(i)->dimensions*sizeof(index_t));
-
+	index_t *const reference_point = (index_t *const) malloc (full_dimensionality*sizeof(index_t));
+	for (unsigned i=0; i<cardinality; ++i) {
 		pthread_rwlock_rdlock (&TREE(i)->tree_lock);
 		for (uint16_t j=0; j<TREE(i)->dimensions; ++j) {
-			if (corner[j]) reference_point_i [j] = TREE(i)->root_box[j].end;
-			else reference_point_i [j] = TREE(i)->root_box[j].start;
+			if (corner[j]) reference_point [dimensions_offset[i]+j] = TREE(i)->root_box[j].end;
+			else reference_point [dimensions_offset[i]+j] = TREE(i)->root_box[j].start;
 		}
 		pthread_rwlock_unlock (&TREE(i)->tree_lock);
-
-		reference_point [i] = reference_point_i;
-		skyline [i] = new_stack();
 	}
 
 	reset_search_operation:
@@ -682,176 +685,193 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 		box_container_t *const container = (box_container_t *const) malloc (sizeof(box_container_t));
 
 		container->box = TREE(i)->root_box;
-		container->sort_key = INDEX_T_MAX;
+		container->sort_key = 0;
 		container->id = 0;
 
 		insert_into_priority_queue (browse[i],container);
 	}
 
 	while (true) {
-		for (unsigned i=0; i<cardinality; ++i) {
-			index_t *const reference_point_i = reference_point [i];
-			priority_queue_t *const browse_i = browse [i];
-			lifo_t *const skyline_i = skyline [i];
-
-			if (browse_i->size) {
-				box_container_t* container = remove_from_priority_queue (browse_i);
-				uint64_t const page_id = container->id;
-				free (container);
-
-				page_t const*const page = load_rtree_page(TREE(i),page_id);
-
-				pthread_rwlock_rdlock (&TREE(i)->tree_lock);
-				pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const)get(TREE(i)->page_locks,page_id);
-				pthread_rwlock_unlock (&TREE(i)->tree_lock);
-
-				assert (page_lock != NULL);
-
-				if (pthread_rwlock_tryrdlock (page_lock)) {
-					for (unsigned j=0; j<cardinality; ++j) {
-						while (browse[j]->size) {
-							free (remove_from_priority_queue (browse[j]));
-						}
-					}
-					goto reset_search_operation;
-				}else{
-					if (page->header.is_leaf) {
-						for (register uint32_t j=0; j<page->header.records; ++j) {
-							data_container_t* leaf_entry = (data_container_t*) malloc (sizeof(data_container_t));
-
-							leaf_entry->key = page->node.leaf.keys+j*TREE(i)->dimensions;
-							leaf_entry->object = page->node.leaf.objects[j];
-							leaf_entry->sort_key = key_to_key_distance(reference_point_i,leaf_entry->key,TREE(i)->dimensions);
-
-							insert_into_priority_queue (leaf_entries,leaf_entry);
-						}
-
-						while (leaf_entries->size) {
-							data_container_t *const leaf_entry = (data_container_t *const) remove_from_priority_queue (leaf_entries);
-
-							boolean is_dominated = false;
-							for (register uint64_t k=0; k<skyline_i->size; ++k) {
-								if (dominated_key (leaf_entry->key,
-											((data_pair_t*)skyline_i->buffer[k])->key,
-											corner,TREE(i)->dimensions)) {
-									is_dominated = true;
-									break;
-								}
-							}
-
-							if (!is_dominated) {
-								object_t object = leaf_entry->object;
-
-								data_pair_t* data_pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
-								data_pair->key = (index_t*) malloc (sizeof(index_t)*TREE(i)->dimensions);
-								memcpy (data_pair->key,leaf_entry->key,sizeof(index_t)*TREE(i)->dimensions);
-								data_pair->object = object;
-
-								insert_into_stack (skyline_i,data_pair);
-
-								data_container_t* partial_dists = get (dist_pairs,object);
-
-								boolean first_seen_object = false;
-								if (partial_dists == NULL) {
-									partial_dists = (data_pair_t*) malloc (sizeof(data_pair_t));
-									partial_dists->key = (index_t*) malloc (cardinality*sizeof(double));
-									for (unsigned j=0; j<cardinality; ++j) {
-										partial_dists->key[j] = -DBL_MAX;
-									}
-									partial_dists->object = object;
-									partial_dists->dimensions = cardinality;
-									set (dist_pairs,object,partial_dists);
-
-									assert (get(data_pairs,object) == NULL);
-									data_pair = (data_pair_t*) malloc (sizeof(data_pair_t));
-									data_pair->key = (index_t*) malloc (offset*sizeof(index_t));
-									data_pair->object = object;
-									set (data_pairs,object,data_pair);
-
-									first_seen_object = true;
-								}else{
-									data_pair = get (data_pairs,object);
-									assert (data_pair != NULL);
-								}
-
-								if (partial_dists->key[i] < 0) {
-									memcpy (data_pair->key+dimensions_offset[i],leaf_entry->key,TREE(i)->dimensions*sizeof(index_t));
-									partial_dists->key[i] = leaf_entry->sort_key;
-
-									boolean is_object_encountered_in_all_domains = true;
-
-									index_t summed_dists = 0;
-									for (unsigned k=0; k<cardinality; ++k) {
-										if (partial_dists->key[k] > 0) {
-											summed_dists += partial_dists->key[k];
-										}else{
-											is_object_encountered_in_all_domains = false;
-										}
-									}
-
-									partial_dists->sort_key = summed_dists;
-
-									if (is_object_encountered_in_all_domains) {
-//fprintf (stdout," ++ Retrieved object %u with distance %f.\n",partial_dists->objects,partial_dists->sort_key);
-										insert_into_priority_queue (complete_distance_objects,partial_dists);
-									}else{
-										unsigned container_position = 0;
-										if (!first_seen_object) {
-											container_position = find_position_in_sorted_queue
-											(sorted_object_list,partial_dists,&mincompare_containers);
-
-											for (data_container_t *const ptr = (multidata_container_t*) get_queue_element (sorted_object_list,container_position);
-													ptr != partial_dists && container_position < sorted_object_list->size;
-													++container_position)
-												;
-
-											assert (container_position < sorted_object_list->size);
-											remove_queue_element (sorted_object_list,container_position);
-										}
-
-										container_position = find_position_in_sorted_queue
-											(sorted_object_list,partial_dists,&mincompare_containers);
-
-										insert_queue_element(sorted_object_list,container_position,partial_dists);
-									}
-								}
-							}
-							free (leaf_entry);
-						}
-					}else{
-						for (register uint32_t j=0; j<page->header.records; ++j) {
-							boolean is_dominated = false;
-							for (register uint64_t k=0; k<skyline_i->size; ++k) {
-								if (dominated_box (page->node.internal.intervals+j*TREE(i)->dimensions,
-											((data_pair_t*)skyline_i->buffer[k])->key,
-											corner,TREE(i)->dimensions)) {
-									is_dominated = true;
-									break;
-								}
-							}
-
-							if (!is_dominated) {
-								uint64_t subsumed_page_id = page_id*TREE(i)->internal_entries+j+1;
-								box_container_t *const subcontainer = (box_container_t *const) malloc (sizeof(box_container_t));
-								if (subcontainer == NULL) {
-									LOG (fatal,"Unable to allocate additional memory in multiskyline_indisk() to expand the branch from block %u.\n",subsumed_page_id);
-									abort();
-								}
-
-								subcontainer->box = page->node.internal.intervals+j*TREE(i)->dimensions;
-								subcontainer->id = subsumed_page_id;
-								subcontainer->sort_key = key_to_box_mindistance
-											(reference_point_i,subcontainer->box,TREE(i)->dimensions);
-
-								insert_into_priority_queue (browse_i,subcontainer);
-							}
-						}
-					}
-					pthread_rwlock_unlock (page_lock);
+		unsigned i=0;
+		double min_box_distance = DBL_MAX;
+		for (unsigned j=0; j<cardinality; ++j) {
+			if (browse[j]->size) {
+				box_container_t *const container = peek_priority_queue (browse[j]);
+				if (container->sort_key < min_box_distance) {
+					min_box_distance = container->sort_key;
+					i=j;
 				}
 			}else{
 				goto double_break;
 			}
+		}
+
+		index_t *const reference_point_i = reference_point + dimensions_offset[i];
+		priority_queue_t *const browse_i = browse [i];
+
+		if (browse_i->size) {
+			box_container_t* container = remove_from_priority_queue (browse_i);
+			uint64_t const page_id = container->id;
+			free (container);
+
+			page_t const*const page = load_page(TREE(i),page_id);
+
+			pthread_rwlock_rdlock (&TREE(i)->tree_lock);
+			pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const)get(TREE(i)->page_locks,page_id);
+			pthread_rwlock_unlock (&TREE(i)->tree_lock);
+
+			assert (page_lock != NULL);
+
+			if (pthread_rwlock_tryrdlock (page_lock)) {
+				for (unsigned j=0; j<cardinality; ++j) {
+					while (browse[j]->size) {
+						free (remove_from_priority_queue (browse[j]));
+					}
+				}
+				goto reset_search_operation;
+			}else{
+				if (page->header.is_leaf) {
+					for (register uint32_t j=0; j<page->header.records; ++j) {
+						data_container_t* leaf_entry = (data_container_t*) malloc (sizeof(data_container_t));
+
+						leaf_entry->key = page->node.leaf.keys+j*TREE(i)->dimensions;
+						leaf_entry->object = page->node.leaf.objects[j];
+						double key_distance = key_to_key_distance(reference_point_i,leaf_entry->key,TREE(i)->dimensions);
+						leaf_entry->sort_key = key_distance * key_distance;
+
+						insert_into_priority_queue (leaf_entries,leaf_entry);
+					}
+
+					while (leaf_entries->size) {
+						data_container_t *const leaf_entry = (data_container_t *const) remove_from_priority_queue (leaf_entries);
+
+						boolean is_dominated = false;
+						for (register uint64_t k=1; k<=complete_distance_objects->size; ++k) {
+							if (dominated_key (leaf_entry->key,
+										((data_pair_t*)complete_distance_objects->buffer[k])->key+dimensions_offset[i],
+										corner,TREE(i)->dimensions)) {
+								is_dominated = true;
+								break;
+							}
+						}
+
+						if (!is_dominated) {
+							object_t object = leaf_entry->object;
+
+							data_container_t* data = get (data_pairs,object);
+							data_pair_t* partial_dists = get (dist_pairs,object);
+
+							boolean first_seen_object = false;
+							if (partial_dists == NULL && data == NULL) {
+								partial_dists = (data_pair_t*) malloc (sizeof(data_pair_t));
+								partial_dists->key = (index_t*) malloc (cardinality*sizeof(index_t));
+								for (unsigned j=0; j<cardinality; ++j) {
+									partial_dists->key[j] = -INDEX_T_MAX;
+								}
+								partial_dists->object = object;
+								partial_dists->dimensions = cardinality;
+								set (dist_pairs,object,partial_dists);
+
+								assert (get(data_pairs,object) == NULL);
+								data = (data_container_t*) malloc (sizeof(data_container_t));
+								data->key = (index_t*) malloc (full_dimensionality*sizeof(index_t));
+								data->object = object;
+								set (data_pairs,object,data);
+
+								first_seen_object = true;
+							}else{
+								if (partial_dists == NULL || data == NULL) {
+									LOG (fatal,"Logical error.")
+									abort();
+								}
+							}
+
+							if (partial_dists->key[i] < 0) {
+								memcpy (data->key+dimensions_offset[i],leaf_entry->key,TREE(i)->dimensions*sizeof(index_t));
+								partial_dists->key[i] = leaf_entry->sort_key;
+
+								boolean is_object_encountered_in_all_domains = true;
+
+								uint64_t container_position = 0;
+								if (!first_seen_object && sorted_object_list->size) {
+									container_position = find_position_in_sorted_queue(sorted_object_list,data,&mincompare_containers);
+
+									for (data_container_t *ptr = get_queue_element (sorted_object_list,container_position);
+											ptr != data && container_position < sorted_object_list->size;
+											ptr = get_queue_element (sorted_object_list,++container_position))
+										;
+
+									assert (container_position < sorted_object_list->size);
+									assert (data == get_queue_element (sorted_object_list,container_position));
+
+//fprintf (stdout," ++ Removing object %u with distance %f at position %lu.\n",data->object,data->sort_key,container_position);
+									remove_queue_element (sorted_object_list,container_position);
+									container_position = 0;
+								}
+
+								for (unsigned k=0; k<cardinality; ++k) {
+									if (partial_dists->key[k] < 0) {
+										is_object_encountered_in_all_domains = false;
+										break;
+									}
+								}
+
+								if (is_object_encountered_in_all_domains) {
+//fprintf (stdout," ++ Retrieved object %u with distance %f.\n",data->object,data->sort_key);
+									double key_distance = key_to_key_distance (data->key,reference_point,full_dimensionality);
+									data->sort_key = key_distance * key_distance;
+									insert_into_priority_queue (complete_distance_objects,data);
+
+									assert (data->object == partial_dists->object);
+									unset (dist_pairs,partial_dists->object);
+									unset (data_pairs,data->object);
+
+									free (partial_dists->key);
+									free (partial_dists);
+								}else{
+									if (sorted_object_list->size) {
+										container_position = find_position_in_sorted_queue (sorted_object_list,data,&mincompare_containers);
+									}
+//fprintf (stdout," ++ Inserting object %u with distance %f at position %lu.\n",data->object,data->sort_key,container_position);
+									insert_queue_element(sorted_object_list,container_position,data);
+								}
+							}
+						}
+						free (leaf_entry);
+					}
+				}else{
+					for (register uint32_t j=0; j<page->header.records; ++j) {
+						boolean is_dominated = false;
+						for (register uint64_t k=1; k<=complete_distance_objects->size; ++k) {
+							if (dominated_box (page->node.internal.intervals+j*TREE(i)->dimensions,
+										((data_container_t*)complete_distance_objects->buffer[k])->key+dimensions_offset[i],
+										corner,TREE(i)->dimensions)) {
+								is_dominated = true;
+								break;
+							}
+						}
+
+						if (!is_dominated) {
+							uint64_t subsumed_page_id = page_id*TREE(i)->internal_entries+j+1;
+							box_container_t *const subcontainer = (box_container_t *const) malloc (sizeof(box_container_t));
+							if (subcontainer == NULL) {
+								LOG (fatal,"Unable to allocate additional memory in multiskyline_indisk() to expand the branch from block %u.\n",subsumed_page_id);
+								abort();
+							}
+
+							subcontainer->id = subsumed_page_id;
+							subcontainer->box = page->node.internal.intervals+j*TREE(i)->dimensions;
+							double box_distance = key_to_box_mindistance(reference_point_i,subcontainer->box,TREE(i)->dimensions);
+							subcontainer->sort_key = box_distance * box_distance;
+
+							insert_into_priority_queue (browse_i,subcontainer);
+						}
+					}
+				}
+				pthread_rwlock_unlock (page_lock);
+			}
+		}else{
+			goto double_break;
 		}
 	}
 
@@ -860,25 +880,43 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 
 	fifo_t *const multiskyline = new_queue();
 	while (complete_distance_objects->size) {
-		data_container_t *const multiskyline_tuple = remove_from_priority_queue (complete_distance_objects);
+		data_container_t *const data = remove_from_priority_queue (complete_distance_objects);
 
-		insert_at_tail_of_queue (multiskyline,get(data_pairs,(object_t)multiskyline_tuple->object));
+		boolean is_dominated = false;
+		for (register uint64_t k=0; k<multiskyline->size; ++k) {
+			if (dominated_key (data->key,
+						((data_pair_t*)multiskyline->buffer[k])->key,
+						corner,full_dimensionality)) {
+				is_dominated = true;
+				break;
+			}
+		}
 
-fprintf (stdout," !! Retrieved object %u with distance %f.\n",multiskyline_tuple->object,multiskyline_tuple->sort_key);
+		if (!is_dominated) {
+			data_pair_t *const multiskyline_tuple = (data_pair_t *const) malloc (sizeof(data_pair_t));
+			multiskyline_tuple->dimensions = data->dimensions;
+			multiskyline_tuple->object = data->object;
+			multiskyline_tuple->key = data->key;
 
-		free (multiskyline_tuple->key);
-		free (multiskyline_tuple);
+			insert_at_tail_of_queue (multiskyline,multiskyline_tuple);
+
+//fprintf (stdout," !! Retrieved skyline object %u with distance %f.\n",data->object,data->sort_key);
+		}else{
+			free (data->key);
+		}
+
+		free (data);
 	}
 
 	while (sorted_object_list->size) {
-		multidata_container_t *const tmp0 = remove_tail_of_queue (sorted_object_list);
-		multidata_container_t *const tmp1 = get (dist_pairs, (object_t)tmp0->objects);
+		data_container_t *const tmp0 = remove_tail_of_queue (sorted_object_list);
+		data_container_t *const tmp1 = get (dist_pairs,tmp0->object);
 
 		assert (tmp1 != NULL);
 		assert (tmp1 == tmp0);
 
-		//free (tmp0->keys); ////////////////////////////////
-		//free (tmp0); //////////////////////////////////////
+		free (tmp0->key);
+		free (tmp0);
 	}
 
 	delete_queue (sorted_object_list);
@@ -891,21 +929,14 @@ fprintf (stdout," !! Retrieved object %u with distance %f.\n",multiskyline_tuple
 			free (remove_from_priority_queue (browse[i]));
 		}
 		delete_priority_queue (browse[i]);
-
-		while (skyline[i]->size) {
-			data_pair_t *const data_pair = remove_from_stack (skyline[i]);
-			free (data_pair->key);
-			free (data_pair);
-		}
-		delete_stack (skyline[i]);
-
-		free (reference_point[i]);
 	}
 
 	delete_priority_queue (complete_distance_objects);
 	delete_priority_queue (leaf_entries);
 
+	free (reference_point);
+
+	assert (validate_skyline(multiskyline,corner,full_dimensionality));
+
 	return multiskyline;
 }
-*/
-
