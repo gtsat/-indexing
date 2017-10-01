@@ -4,15 +4,19 @@
 	#include<stdio.h>
 	#include"queue.h"
 	#include"stack.h"
-	#include "defs.h"
+	#include"defs.h"
+	#include"PUT.tab.h"
+	#include"lex.PUT_.h"
 
 	#define YYERROR_VERBOSE
+	//#define YYLEX_PARAM scanner
+	//#define YYPARSE_PARAM yyscan_t scanner
 
-	void yyerror (char*);
+	void yyerror (yyscan_t scanner, char const *msg);
 	void stack_insertion (lifo_t *const, index_t const[], unsigned const, object_t const);
 
-	int PUT_lex (void);
-	int PUT_parse (lifo_t *const, index_t[], char[]);
+	extern int PUT_lex (YYSTYPE * yylval_param ,yyscan_t yyscanner);
+	//int PUT_parse (lifo_t *const, index_t[], char[]);
 /*
 	index_t varray [BUFSIZ];
 	lifo_t *insertions = NULL;
@@ -24,8 +28,10 @@
 
 %expect 0
 %token_table
-/* %pure_parser */
+%pure_parser
 %name-prefix="PUT_"
+%lex-param {yyscan_t scanner}
+%parse-param {yyscan_t scanner}
 
 %union{
 	char* str;
@@ -47,13 +53,15 @@
 %token ':'
 %right ','
 %token '"'
+%token null
 
 %start REQUEST
 
 %%
 
 REQUEST :
-	'{' HEAPFILE_DEF ',' DATA_DEF  '}'	{LOG (debug,"Parsed request.\n");}
+	'{' HEAPFILE_DEF '}'			{LOG (debug,"Parsed no data request.\n");}
+	| '{' HEAPFILE_DEF ',' DATA_DEF  '}'	{LOG (debug,"Parsed request.\n");}
 	| '{' DATA_DEF ',' HEAPFILE_DEF '}' 	{LOG (debug,"Parsed request.\n")}
 	| error 				{
 						LOG (error,"Erroneous request... \n");
@@ -64,15 +72,16 @@ REQUEST :
 ;
 
 HEAPFILE_DEF :
-	'"' _HEAPFILE_ '"' ':' '"' ID '"'		{
-						LOG (debug,"Heapfile definition containing identifier: $6\n");
+	'"' _HEAPFILE_ '"' ':' '"' ID '"'	{
+						LOG (debug,"Heapfile definition containing identifier: %s\n",$6);
 						strcpy(heapfile,$6);
 						free($6);
 						}
 ;
 
 DATA_DEF:
-	'"' _DATA_ '"' ':' '[' DATA ']'		{LOG (debug,"Data sequence definition.\n");}
+	'"' _DATA_ '"' ':' null			{LOG (debug,"Data nulled sequence definition.\n");}
+	| '"' _DATA_ '"' ':' '[' DATA ']'	{LOG (debug,"Data sequence definition.\n");}
 ;
 
 DATA :
@@ -114,10 +123,10 @@ void stack_insertion (lifo_t *const insertions, index_t const varray[], unsigned
 /***
 int main (int argc, char* argv[]) {
 	insertions= new_stack();
-	yyparse();
+	PUT_parse();
 }
 ***/
-void yyerror (char* description) {
+void yyerror (yyscan_t scanner, char const *description) {
 	LOG (error," %s\n", description);
 }
 

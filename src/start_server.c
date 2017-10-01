@@ -38,7 +38,6 @@
 uint32_t PORT;
 char const* HOST;
 char const* FOLDER;
-const boolean write_through = true;
 
 static char ok_response[] = "HTTP/1.0 200 OK\n"
 				"Content-type: text/json\n\n"
@@ -152,12 +151,11 @@ void process_arguments (int argc,char *argv[]) {
 
 static
 void handle (int fd, char const method[], char url[], char const body[], char const folder[]) {
-	LOG (info,"Server received request: %s %s\n",method,url);
+	LOG (info,"Server received request: %s %s %s\n",method,url,body);
 
+	boolean write_through = true;
 	char* request = url;
-
 	if (*request == '/') {
-
 		uint64_t i = strlen(request)-1;
 		while (i && request[i] == '/') {
 			request [i--] = '\0';
@@ -169,17 +167,13 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		bzero (message,BUFSIZ);
 		*message = '\0';
 
+		char* result_code;
 		char* data = NULL;
+		boolean free_data = false;
 		double io_mb_counter = 0;
 		uint64_t io_blocks_counter = 0;
 		clock_t start = clock();
-		if (!strcmp(method,"DELETE")) {
-			LOG (info,"Processing deletion sub-request '%s'.\n",request);
-		}else if (!strcmp(method,"POST")) {
-			LOG (info,"Processing sub-request of type '%s'.\n",request);
-		}else if (!strcmp(method,"PUT")) {
-			LOG (info,"Processing insertion sub-request '%s'.\n",request);
-		}else if (!strcmp(method,"GET")) {
+		if (!strcmp(method,"GET")) {
 			if (write_through) {
 				uint32_t message_length = strlen(ok_data);
 				if (write (fd,ok_data,strlen(ok_data)*sizeof(char)) < strlen(ok_data)*sizeof(char)) {
@@ -191,19 +185,49 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 			}else{
 				data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,0);
 			}
+
+			if (data != NULL) {
+				free_data = true;
+				result_code = "SUCCESS";
+			}else{
+				free_data = false;
+				data = " null\n";
+				result_code = "FAILURE";
+			}
+		}else{
+			write_through = false;
+			int rval = EXIT_FAILURE;
+			if (!strcmp(method,"DELETE")) {
+				rval = process_rest_request (body,folder,message,&io_blocks_counter,&io_mb_counter,DELETE);
+			}else if (!strcmp(method,"PUT")) {
+				rval = process_rest_request (body,folder,message,&io_blocks_counter,&io_mb_counter,PUT);
+			}else{
+				strcat (message,"Unknown request type.");
+			}
+
+			data = " null\n";
+			if (rval == EXIT_SUCCESS) {
+				result_code = "SUCCESS";
+			}else{
+				result_code = "FAILURE";
+			}
+
+			for (request = body; *request != '\0'; ++request) {
+				switch (*request) {
+					case '"':
+						*request = '\'';
+						break;
+					case '\n':
+					case '\t':
+						*request = ' ';
+						break;
+					default:
+						;
+				}
+			}
+			request = body;
 		}
 		clock_t end = clock();
-
-		boolean free_data;
-		char *result_code;
-		if (data != NULL) {
-			free_data = true;
-			result_code = "SUCCESS";
-		}else{
-			free_data = false;
-			data = " null\n";
-			result_code = "FAILURE";
-		}
 
 		if (write_through) {
 			char response[strlen(metadata)+strlen(result_code)+strlen(message)+1];
@@ -227,7 +251,9 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 			}
 		}
 
-		if (free_data != NULL) free (data);
+		if (free_data) {
+			free (data);
+		}
 
 		char body_end[] = "}\n";
 

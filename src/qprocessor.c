@@ -21,18 +21,21 @@
 #include<limits.h>
 #include<unistd.h>
 #include"QL.tab.h"
+#include"lex.QL_.h"
+#include"PUT.tab.h"
+#include"lex.PUT_.h"
+#include"DELETE.tab.h"
+#include"lex.DELETE_.h"
 #include"symbol_table.h"
 #include"skyline_queries.h"
 #include"spatial_standard_queries.h"
 #include"priority_queue.h"
+#include"common.h"
 #include"stack.h"
 #include"rtree.h"
 #include"defs.h"
 
 #define MEMORY_BOUND 1<<15
-
-extern FILE* yyin;
-extern FILE* yyout;
 
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -48,30 +51,121 @@ static int strcompare (key__t x, key__t y) {
 	return strcmp ((char const*const)x,(char const*const)y);
 }
 
+int process_rest_request (char const json[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, request_t const type) {
+	LOG(error,"Now processing JSON request: %s\n",json)
+	get_rtree (NULL);
+
+	char heapfile [64];
+	index_t varray [BUFSIZ];
+	lifo_t *const data_entries = new_stack();
+
+	yyscan_t scanner;
+	YY_BUFFER_STATE buffer = null;
+
+	int parser_rval = 0;
+	if (type == PUT) {
+		PUT_lex_init (&scanner);
+		//PUT_set_in (fptr,scanner);
+	    buffer = PUT__scan_string (json,scanner);
+		parser_rval = PUT_parse (scanner,data_entries,varray,heapfile);
+	    PUT__delete_buffer (buffer,scanner);
+		PUT_lex_destroy (scanner);
+	}else{
+		DELETE_lex_init (&scanner);
+		//DELETE_set_in (fptr,scanner);
+	    buffer = DELETE__scan_string (json,scanner);
+		parser_rval = DELETE_parse (scanner,data_entries,varray,heapfile);
+	    DELETE__delete_buffer (buffer,scanner);
+		DELETE_lex_destroy (scanner);
+	}
+
+	if (parser_rval) {
+		LOG (error,"Syntax error; unable to parse request: '%s'\n",json);
+		strcat (message,"Syntax error; unable to parse request.");
+		return EXIT_FAILURE;
+	}
+
+	boolean delete_new_tree = false;
+	tree_t *tree = get_rtree (heapfile);
+	if (tree == NULL) {
+		if (type == PUT) {
+			if (data_entries->size) {
+				uint16_t dimensionality = 0xffff;
+				for (register uint64_t i=0; i<data_entries->size; ++i) {
+					data_pair_t *const data_pair = (data_pair_t *const) data_entries->buffer[i];
+					if (dimensionality > data_pair->dimensions) {
+						dimensionality = data_pair->dimensions;
+					}
+				}
+				tree = new_rtree (heapfile,1024,dimensionality);
+				delete_new_tree = true;
+			}else{
+				LOG (error,"No entries found for heapfile '%s'.\n",heapfile);
+				sprintf (message,"No entries found for heapfile '%s'.",heapfile);
+				return EXIT_FAILURE;
+			}
+		}else{
+			LOG (error,"Unable to access heapfile '%s'.\n",heapfile);
+			sprintf (message,"Unable to access heapfile '%s'.",heapfile);
+			return EXIT_FAILURE;
+		}
+	}
+
+	uint64_t failed_entries = 0;
+	uint64_t successful_entries = 0;
+	lifo_t *const failed = new_stack();
+	while (data_entries->size) {
+		data_pair_t *const data_pair = remove_from_stack (data_entries);
+		if (data_pair->dimensions >= tree->dimensions) {
+			if (type == PUT) {
+				insert_into_rtree (tree,data_pair->key,data_pair->object);
+			}else{
+				delete_from_rtree (tree,data_pair->key);
+			}
+			++successful_entries;
+			free (data_pair->key);
+			free (data_pair);
+		}else{
+			insert_into_stack (failed,data_pair);
+			++failed_entries;
+		}
+	}
+
+	while (failed->size) {
+		data_pair_t *const data_pair = remove_from_stack (failed);
+
+		free (data_pair->key);
+		free (data_pair);
+	}
+
+	sprintf (message,"Successfully processed %lu data entries out of %lu.",successful_entries,successful_entries+failed_entries);
+
+	*io_mb_counter += tree->io_counter * tree->page_size;
+	*io_blocks_counter += tree->io_counter;
+
+	delete_stack (data_entries);
+	delete_stack (failed);
+
+	if (delete_new_tree) {
+		delete_rtree (tree);
+	}else{
+		flush_tree (tree);
+	}
+	return EXIT_SUCCESS;
+}
 
 char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, int fd) {
-	get_rtree (NULL);
-	char command_filepath [64];
-	sprintf (command_filepath,"/tmp/cached_command.%lu.txt",time(NULL));
-	FILE* fptr = fopen (command_filepath,"w+");
-
-	//char command[] = "/NY.rtree?key=41.127369,-73.529746;";
-	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5;";
-	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5&corn=II;";
-	//char command[] = "/NY.rtree?from=41.1,-73.6&to=41.2,-73.5/BAY.rtree?corn=II/-10;";
-	//char command[] = "/NY.rtree?corn=oo/BAY.rtree?corn=oo/NW.rtree?corn=oo/5;"
-
 	LOG (info,"Will now initiate the processing of command '%s'.\n",command);
-
-	fprintf (fptr,"%s",command);
-	rewind (fptr);
-
-	yyin = fptr;
-
-	lifo_t *const stack = new_stack();
+	get_rtree (NULL);
 	double varray [BUFSIZ];
-	int parser_rval = yyparse(stack,varray);
-	fclose (fptr);
+	lifo_t *const stack = new_stack();
+
+	yyscan_t scanner;
+	QL_lex_init (&scanner);
+	YY_BUFFER_STATE command_buffer = QL__scan_string (command,scanner);
+	int parser_rval = QL_parse (scanner,stack,varray);
+    QL__delete_buffer (command_buffer,scanner);
+	QL_lex_destroy (scanner);
 
 	if (parser_rval) {
 		LOG (error,"Syntax error; unable to parse query: '%s'\n",command);
@@ -84,8 +178,6 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		}
 		return NULL;
 	}
-
-	//unroll (stack); exit (EXIT_SUCCESS);
 
 	srand48(time(NULL));
 	char *buffer = NULL;

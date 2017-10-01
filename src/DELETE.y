@@ -4,14 +4,18 @@
 	#include<stdio.h>
 	#include"stack.h"
 	#include"defs.h"
+	#include"DELETE.tab.h"
+	#include"lex.DELETE_.h"
 
 	#define YYERROR_VERBOSE
+	//#define YYLEX_PARAM scanner
+	//#define YYPARSE_PARAM yyscan_t scanner
 
-	void yyerror (char*);
+	void yyerror (yyscan_t scanner, char const *msg);
 	void stack_deletion (lifo_t *const, index_t const varray[], unsigned const vindex);
 
-	int DELETE_lex (void);
-	int DELETE_parse (lifo_t *const, index_t[], char[]);
+	extern int DELETE_lex (YYSTYPE * yylval_param ,yyscan_t yyscanner);
+//	int DELETE_parse (lifo_t *const, index_t[], char[]);
 /*
 	index_t varray [BUFSIZ];
 	lifo_t *deletions = NULL;
@@ -23,8 +27,10 @@
 
 %expect 0
 %token_table
-/* %pure_parser */
+%pure_parser
 %name-prefix="DELETE_"
+%lex-param {yyscan_t scanner}
+%parse-param {yyscan_t scanner}
 
 %union{
 	char* str;
@@ -45,13 +51,15 @@
 %token ':'
 %right ','
 %token '"'
+%token null
 
 %start REQUEST
 
 %%
 
 REQUEST :
-	'{' HEAPFILE_DEF ',' KEYS_DEF  '}'	{LOG (debug,"Parsed request.\n");}
+	'{' HEAPFILE_DEF '}'			{LOG (debug,"Parsed no data request.\n");}
+	| '{' HEAPFILE_DEF ',' KEYS_DEF  '}'	{LOG (debug,"Parsed request.\n");}
 	| '{' KEYS_DEF ',' HEAPFILE_DEF '}' 	{LOG (debug,"Parsed request.\n")}
 	| error 				{
 						LOG (error,"Erroneous request... \n");
@@ -62,15 +70,16 @@ REQUEST :
 ;
 
 HEAPFILE_DEF :
-	'"' _HEAPFILE_ '"' ':' '"' ID '"'		{
-						LOG (debug,"Heapfile definition containing identifier: $6\n");
+	'"' _HEAPFILE_ '"' ':' '"' ID '"'	{
+						LOG (debug,"Heapfile definition containing identifier: %s\n",$6);
 						strcpy(heapfile,$6);
 						free($6);
 						}
 ;
 
 KEYS_DEF:
-	'"' _KEYS_ '"' ':' '[' KEY_SEQ ']'	{LOG (debug,"KEYS sequence definition.\n");}
+	'"' _KEYS_ '"' ':' null			{LOG (debug,"KEYS nulled sequence definition.\n");}
+	| '"' _KEYS_ '"' ':' '[' KEY_SEQ ']'	{LOG (debug,"KEYS sequence definition.\n");}
 ;
 
 KEY_SEQ :
@@ -109,7 +118,7 @@ int main (int argc, char* argv[]) {
 	DELETE_parse();
 }
 ***/
-void yyerror (char* description) {
+void yyerror (yyscan_t scanner, char const *description) {
 	LOG (error," %s\n", description);
 }
 

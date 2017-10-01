@@ -42,7 +42,8 @@
      _HEAPFILE_ = 258,
      _KEYS_ = 259,
      REAL = 260,
-     ID = 261
+     ID = 261,
+     null = 262
    };
 #endif
 /* Tokens.  */
@@ -50,27 +51,26 @@
 #define _KEYS_ 259
 #define REAL 260
 #define ID 261
+#define null 262
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 29 "DELETE.y"
+#line 36 "DELETE.y"
 {
 	char* str;
 	double dval;
 }
 /* Line 1529 of yacc.c.  */
-#line 66 "DELETE.tab.h"
+#line 68 "DELETE.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1
 #endif
 
-extern YYSTYPE DELETE_lval;
-
-#include "defs.h"
-int DELETE_parse (lifo_t *const, index_t[], char[]);
-
+#include"defs.h"
+#include"lex.DELETE_.h"
+int DELETE_parse (yyscan_t scanner,lifo_t *const deletions, index_t varray[], char heapfile[]);

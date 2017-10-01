@@ -44,7 +44,8 @@
      _KEY_ = 260,
      _OBJECT_ = 261,
      REAL = 262,
-     ID = 263
+     ID = 263,
+     null = 264
    };
 #endif
 /* Tokens.  */
@@ -54,27 +55,26 @@
 #define _OBJECT_ 261
 #define REAL 262
 #define ID 263
+#define null 264
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 30 "PUT.y"
+#line 37 "PUT.y"
 {
 	char* str;
 	double dval;
 }
 /* Line 1529 of yacc.c.  */
-#line 70 "PUT.tab.h"
+#line 72 "PUT.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1
 #endif
 
-extern YYSTYPE PUT_lval;
-
-#include "defs.h"
-int PUT_parse (lifo_t *const, index_t[], char[]);
-
+#include"defs.h"
+#include"lex.PUT_.h"
+int PUT_parse (yyscan_t scanner,lifo_t *const deletions, index_t varray[], char heapfile[]);

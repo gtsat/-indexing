@@ -1,12 +1,16 @@
 %{
 	#include<string.h>
-	#include"PUT.tab.h"
+	#include"lex.PUT_.h"
+	#include"QL.tab.h"
 	#include"defs.h"
 %}
 
+%option reentrant
+%option bison-bridge
 %option prefix="PUT_"
+%option header-file="lex.PUT_.h"
 %option noyywrap
-%option stack
+%option warn
 %array 
 
 DIGIT 		[0-9]
@@ -14,27 +18,32 @@ ID		[_a-zA-Z][_a-zA-Z0-9\.]*
 
 %%
 
-heapfile		{LOG(debug,"Symbol for HEAPFILE"); return _HEAPFILE_;}
-data			{LOG(debug,"Symbol for DATA."); return _DATA_;}
-object			{LOG(debug,"Symbol for _OBJECT_."); return _OBJECT_;}
-key			{LOG(debug,"Symbol for _KEY_."); return _KEY_;}
+null			{LOG(debug,"Symbol for NULL.\n"); return null;}
+heapfile		{LOG(debug,"Symbol for HEAPFILE.\n"); return _HEAPFILE_;}
+data			{LOG(debug,"Symbol for DATA.\n"); return _DATA_;}
+object			{LOG(debug,"Symbol for _OBJECT_.\n"); return _OBJECT_;}
+key			{LOG(debug,"Symbol for _KEY_.\n"); return _KEY_;}
 
+:			{LOG(debug,"Colon.\n"); return ':';}
+\"			{LOG(debug,"Double quote.\n"); return '"';}
+\{			{LOG(debug,"Opening brace.\n"); return '{';}
+\}			{LOG(debug,"Closing brace.\n"); return '}';}
 \[			{LOG(debug,"Opening bracket.\n"); return '[';}
 ]			{LOG(debug,"Closing bracket.\n"); return ']';}
 ,			{LOG(debug,"Symbol sequence delimiter.\n"); return ',';}
 \-?{DIGIT}+		{
 				LOG(debug,"An integer: %s\n", yytext); 
-				PUT_lval.dval= atof (yytext);
+				yylval->dval= atof (yytext);
 				return REAL;
 			}
 \-?{DIGIT}*"."{DIGIT}*	{
 				LOG(debug,"A float: %s\n", yytext); 
-				PUT_lval.dval= atof (yytext);
+				yylval->dval= atof (yytext);
 				return REAL;
 			}
 {ID}			{
 				LOG(debug,"An identifier: %s\n", yytext); 
-				PUT_lval.str = strdup (yytext);
+				yylval->str = strdup (yytext);
 				return ID; /* heapfile name */
 			}
 
@@ -48,7 +57,7 @@ int main (int  argc, char* argv[])
 {
 	++argv, --argc;
 	yyin = argc > 0 ? fopen (argv[0],"r") : stdin;
-	yylex();
+	PUT_lex();
 }
 */
 

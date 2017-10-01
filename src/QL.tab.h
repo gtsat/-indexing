@@ -66,7 +66,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 28 "QL.y"
+#line 37 "QL.y"
 {
 	char* str;
 	double dval;
@@ -80,8 +80,7 @@ typedef union YYSTYPE
 # define YYSTYPE_IS_TRIVIAL 1
 #endif
 
-extern YYSTYPE QL_lval;
 
-#include "defs.h"
-int QL_parse (lifo_t *const, double[]);
-
+#include"defs.h"
+#include"lex.QL_.h"
+int QL_parse (void* scanner, lifo_t *const stack, double varray[]);

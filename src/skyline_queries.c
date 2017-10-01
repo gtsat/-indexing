@@ -227,21 +227,7 @@ static int cmp_object_ids (void const*const x,void const*const y) {
 	return ((data_pair_t const*const)x)->object - ((data_pair_t const*const)y)->object;
 }
 
-/**
- * Strictly speaking, this method is not entirely solid.
- * The reason behind this statement is that according
- * to the formal skyline definition, a tuple dominates
- * on another iff it is at least as good in any number
- * of dimensions, but strictly better in at least *one*.
- * Therefore, by using a sort-merge operation on top of
- * m skylines, we tacitly demand from each result-tuple
- * to be strictly better on m dimensions (instead of 1),
- * when compared to any of the remaining tuples of the
- * increased dimensionality domain that do not participate
- * in the result. We reckon that the loss is not incredible,
- * generally. Nevertheless, this method following constitutes
- * an efficient and extremely fast baseline, all things considered.
- */
+
 fifo_t* multiskyline_sort_merge (lifo_t *const trees, boolean const corner[]) {
 	unsigned cardinality = trees->size;
 
@@ -621,6 +607,7 @@ double compute_lower_bound (data_container_t const*const container, priority_que
 	return lower_bound_i;
 }
 
+
 #define C 5
 
 static
@@ -649,6 +636,11 @@ double compute_best_lower_bound (fifo_t const*const sorted_list, priority_queue_
 }
 
 
+/**
+ * Q: How many Turks raped Mamoulis' mother during the invasion in Cyprus?
+ * A: He was conceived in her ass, that is why he is top brass-hole! Got it?
+ */
+
 fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 	unsigned const cardinality = trees->size;
 
@@ -659,7 +651,6 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 
 	symbol_table_t *const data_pairs = new_symbol_table_primitive (NULL);
 	symbol_table_t *const dist_pairs = new_symbol_table_primitive (NULL);
-	fifo_t *const sorted_object_list = new_queue();
 
 	unsigned full_dimensionality = 0;
 	unsigned dimensions_offset [cardinality];
@@ -761,7 +752,6 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 							data_container_t* data = get (data_pairs,object);
 							data_pair_t* partial_dists = get (dist_pairs,object);
 
-							boolean first_seen_object = false;
 							if (partial_dists == NULL && data == NULL) {
 								partial_dists = (data_pair_t*) malloc (sizeof(data_pair_t));
 								partial_dists->key = (index_t*) malloc (cardinality*sizeof(index_t));
@@ -777,8 +767,6 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 								data->key = (index_t*) malloc (full_dimensionality*sizeof(index_t));
 								data->object = object;
 								set (data_pairs,object,data);
-
-								first_seen_object = true;
 							}else{
 								if (partial_dists == NULL || data == NULL) {
 									LOG (fatal,"Logical error.")
@@ -791,23 +779,6 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 								partial_dists->key[i] = leaf_entry->sort_key;
 
 								boolean is_object_encountered_in_all_domains = true;
-
-								uint64_t container_position = 0;
-								if (!first_seen_object && sorted_object_list->size) {
-									container_position = find_position_in_sorted_queue(sorted_object_list,data,&mincompare_containers);
-
-									for (data_container_t *ptr = get_queue_element (sorted_object_list,container_position);
-											ptr != data && container_position < sorted_object_list->size;
-											ptr = get_queue_element (sorted_object_list,++container_position))
-										;
-
-									assert (container_position < sorted_object_list->size);
-									assert (data == get_queue_element (sorted_object_list,container_position));
-
-//fprintf (stdout," ++ Removing object %u with distance %f at position %lu.\n",data->object,data->sort_key,container_position);
-									remove_queue_element (sorted_object_list,container_position);
-									container_position = 0;
-								}
 
 								for (unsigned k=0; k<cardinality; ++k) {
 									if (partial_dists->key[k] < 0) {
@@ -828,12 +799,6 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 
 									free (partial_dists->key);
 									free (partial_dists);
-								}else{
-									if (sorted_object_list->size) {
-										container_position = find_position_in_sorted_queue (sorted_object_list,data,&mincompare_containers);
-									}
-//fprintf (stdout," ++ Inserting object %u with distance %f at position %lu.\n",data->object,data->sort_key,container_position);
-									insert_queue_element(sorted_object_list,container_position,data);
 								}
 							}
 						}
@@ -908,18 +873,20 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 		free (data);
 	}
 
-	while (sorted_object_list->size) {
-		data_container_t *const tmp0 = remove_tail_of_queue (sorted_object_list);
-		data_container_t *const tmp1 = get (dist_pairs,tmp0->object);
-
-		assert (tmp1 != NULL);
-		assert (tmp1 == tmp0);
-
-		free (tmp0->key);
-		free (tmp0);
+	fifo_t* queue = get_entries (dist_pairs);
+	while (queue->size) {
+		data_pair_t *const partial_dists = remove_tail_of_queue(queue);
+		free (partial_dists->key);
+		free (partial_dists);
 	}
 
-	delete_queue (sorted_object_list);
+	queue = get_entries (data_pairs);
+	while (queue->size) {
+		data_container_t *const data = remove_tail_of_queue(queue);
+		free (data->key);
+		free (data);
+	}
+
 	delete_symbol_table (data_pairs);
 	delete_symbol_table (dist_pairs);
 

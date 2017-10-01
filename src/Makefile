@@ -4,7 +4,7 @@ CFLAGS  =        -std=gnu11 -g3 -O0 -fPIC -mtune=generic -mno-red-zone -pedantic
 #CFLAGS	=        -std=gnu11 -DNDEBUG -O2 -fPIC -mtune=generic -mno-red-zone -pedantic -Werror-implicit-function-declaration -Wall
 
 OBJECTS =        qprocessor.o QL.tab.o lex.QL_.o DELETE.tab.o lex.DELETE_.o PUT.tab.o lex.PUT_.o \
-		 spatial_standard_queries.o skyline_queries.o rtree.o \
+                 spatial_standard_queries.o skyline_queries.o rtree.o \
                  symbol_table.o priority_queue.o queue.o \
                  stack.o buffer.o swap.o common.o defs.o
                  #ntree.o

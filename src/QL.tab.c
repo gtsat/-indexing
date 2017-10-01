@@ -53,7 +53,7 @@
 #define YYSKELETON_NAME "yacc.c"
 
 /* Pure parsers.  */
-#define YYPURE 0
+#define YYPURE 1
 
 /* Using locations.  */
 #define YYLSP_NEEDED 0
@@ -108,20 +108,24 @@
 	#include"queue.h"
 	#include"stack.h"
 	#include"defs.h"
+	#include"QL.tab.h"
+	#include"lex.QL_.h"
 
 	#define YYERROR_VERBOSE
+	//#define YYLEX_PARAM scanner
+	//#define YYPARSE_PARAM yyscan_t scanner
 
-	void yyerror (char*);
+	void yyerror (yyscan_t,char*);
 
-	int QL_lex (void);
-	int QL_parse (lifo_t *const, double[]);
+
+	extern int QL_lex (YYSTYPE *yylval_param, yyscan_t yyscanner);
 /*
 	lifo_t* stack;
 	double varray [BUFSIZ];
 
-	unsigned vindex;
-	unsigned key_cardinality;
-	unsigned predicates_cardinality;
+	unsigned vindex = 0;
+	unsigned key_cardinality = 0;
+	unsigned predicates_cardinality = 0;
 */
 
 
@@ -145,14 +149,14 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 28 "QL.y"
+#line 37 "QL.y"
 {
 	char* str;
 	double dval;
 	int ival;
 }
 /* Line 193 of yacc.c.  */
-#line 154 "QL.tab.c"
+#line 161 "QL.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -165,7 +169,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 167 "QL.tab.c"
+#line 174 "QL.tab.c"
 
 #ifdef short
 # undef short
@@ -462,10 +466,10 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    58,    58,    65,    72,    79,    86,    93,   100,   109,
-     110,   113,   114,   122,   123,   127,   128,   135,   136,   143,
-     148,   156,   160,   167,   172,   177,   182,   187,   196,   197,
-     201,   202,   206,   207,   211,   216,   221,   226
+       0,    67,    67,    74,    81,    88,    95,   102,   109,   118,
+     119,   122,   123,   131,   132,   136,   137,   144,   145,   152,
+     157,   165,   169,   176,   181,   186,   191,   196,   205,   206,
+     210,   211,   215,   216,   220,   225,   230,   235
 };
 #endif
 
@@ -622,7 +626,7 @@ do								\
     }								\
   else								\
     {								\
-      yyerror (YY_("syntax error: cannot back up")); \
+      yyerror (scanner, YY_("syntax error: cannot back up")); \
       YYERROR;							\
     }								\
 while (YYID (0))
@@ -677,9 +681,9 @@ while (YYID (0))
 /* YYLEX -- calling `yylex' with the right arguments.  */
 
 #ifdef YYLEX_PARAM
-# define YYLEX yylex (YYLEX_PARAM)
+# define YYLEX yylex (&yylval, YYLEX_PARAM)
 #else
-# define YYLEX yylex ()
+# define YYLEX yylex (&yylval, scanner)
 #endif
 
 /* Enable debugging if requested.  */
@@ -702,7 +706,7 @@ do {									  \
     {									  \
       YYFPRINTF (stderr, "%s ", Title);					  \
       yy_symbol_print (stderr,						  \
-		  Type, Value); \
+		  Type, Value, scanner); \
       YYFPRINTF (stderr, "\n");						  \
     }									  \
 } while (YYID (0))
@@ -716,17 +720,19 @@ do {									  \
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, yyscan_t scanner)
 #else
 static void
-yy_symbol_value_print (yyoutput, yytype, yyvaluep)
+yy_symbol_value_print (yyoutput, yytype, yyvaluep, scanner)
     FILE *yyoutput;
     int yytype;
     YYSTYPE const * const yyvaluep;
+    yyscan_t scanner;
 #endif
 {
   if (!yyvaluep)
     return;
+  YYUSE (scanner);
 # ifdef YYPRINT
   if (yytype < YYNTOKENS)
     YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
@@ -748,13 +754,14 @@ yy_symbol_value_print (yyoutput, yytype, yyvaluep)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, yyscan_t scanner)
 #else
 static void
-yy_symbol_print (yyoutput, yytype, yyvaluep)
+yy_symbol_print (yyoutput, yytype, yyvaluep, scanner)
     FILE *yyoutput;
     int yytype;
     YYSTYPE const * const yyvaluep;
+    yyscan_t scanner;
 #endif
 {
   if (yytype < YYNTOKENS)
@@ -762,7 +769,7 @@ yy_symbol_print (yyoutput, yytype, yyvaluep)
   else
     YYFPRINTF (yyoutput, "nterm %s (", yytname[yytype]);
 
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep);
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, scanner);
   YYFPRINTF (yyoutput, ")");
 }
 
@@ -802,12 +809,13 @@ do {								\
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_reduce_print (YYSTYPE *yyvsp, int yyrule)
+yy_reduce_print (YYSTYPE *yyvsp, int yyrule, yyscan_t scanner)
 #else
 static void
-yy_reduce_print (yyvsp, yyrule)
+yy_reduce_print (yyvsp, yyrule, scanner)
     YYSTYPE *yyvsp;
     int yyrule;
+    yyscan_t scanner;
 #endif
 {
   int yynrhs = yyr2[yyrule];
@@ -821,7 +829,7 @@ yy_reduce_print (yyvsp, yyrule)
       fprintf (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr, yyrhs[yyprhs[yyrule] + yyi],
 		       &(yyvsp[(yyi + 1) - (yynrhs)])
-		       		       );
+		       		       , scanner);
       fprintf (stderr, "\n");
     }
 }
@@ -829,7 +837,7 @@ yy_reduce_print (yyvsp, yyrule)
 # define YY_REDUCE_PRINT(Rule)		\
 do {					\
   if (yydebug)				\
-    yy_reduce_print (yyvsp, Rule); \
+    yy_reduce_print (yyvsp, Rule, scanner); \
 } while (YYID (0))
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1080,16 +1088,18 @@ yysyntax_error (char *yyresult, int yystate, int yychar)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, yyscan_t scanner)
 #else
 static void
-yydestruct (yymsg, yytype, yyvaluep)
+yydestruct (yymsg, yytype, yyvaluep, scanner)
     const char *yymsg;
     int yytype;
     YYSTYPE *yyvaluep;
+    yyscan_t scanner;
 #endif
 {
   YYUSE (yyvaluep);
+  YYUSE (scanner);
 
   if (!yymsg)
     yymsg = "Deleting";
@@ -1105,18 +1115,23 @@ yydestruct (yymsg, yytype, yyvaluep)
 
 
 /* Prevent warnings from -Wmissing-prototypes.  */
-int yyparse (lifo_t *const, double[]);
+
+#ifdef YYPARSE_PARAM
+#if defined __STDC__ || defined __cplusplus
+int yyparse (void *YYPARSE_PARAM, lifo_t *const stack, double varray[]);
+#else
+int yyparse (lifo_t *const stack, double varray[]);
+#endif
+#else /* ! YYPARSE_PARAM */
+#if defined __STDC__ || defined __cplusplus
+int yyparse (yyscan_t scanner, lifo_t *const stack, double varray[]);
+#else
+int yyparse (lifo_t *const stack, double varray[]);
+#endif
+#endif /* ! YYPARSE_PARAM */
 
 
 
-/* The look-ahead symbol.  */
-int yychar;
-
-/* The semantic value of the look-ahead symbol.  */
-YYSTYPE yylval;
-
-/* Number of syntax errors so far.  */
-int yynerrs;
 
 
 
@@ -1124,12 +1139,40 @@ int yynerrs;
 | yyparse.  |
 `----------*/
 
-int yyparse (lifo_t *const stack, double varray[])
+#ifdef YYPARSE_PARAM
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
+int
+yyparse (void *YYPARSE_PARAM, lifo_t *const stack, double varray[])
+#else
+int
+yyparse (YYPARSE_PARAM)
+    void *YYPARSE_PARAM;
+#endif
+#else /* ! YYPARSE_PARAM */
+#if (defined __STDC__ || defined __C99__FUNC__ \
+     || defined __cplusplus || defined _MSC_VER)
+int
+yyparse (yyscan_t scanner, lifo_t *const stack, double varray[])
+#else
+int
+yyparse (scanner)
+    yyscan_t scanner;
+#endif
+#endif
 {
- 
-  unsigned vindex = 0;
-  unsigned key_cardinality = 0;
-  unsigned predicates_cardinality = 0; 
+	unsigned vindex = 0;
+	unsigned key_cardinality = 0;
+	unsigned predicates_cardinality = 0;
+
+  /* The look-ahead symbol.  */
+int yychar;
+
+/* The semantic value of the look-ahead symbol.  */
+YYSTYPE yylval;
+
+/* Number of syntax errors so far.  */
+int yynerrs;
 
   int yystate;
   int yyn;
@@ -1375,7 +1418,7 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 58 "QL.y"
+#line 67 "QL.y"
     {
 						LOG (info,"SINGLE COMMAND ';' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1386,7 +1429,7 @@ yyreduce:
     break;
 
   case 3:
-#line 65 "QL.y"
+#line 74 "QL.y"
     {
 						LOG (info,"SINGLE COMMAND '/;' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1397,7 +1440,7 @@ yyreduce:
     break;
 
   case 4:
-#line 72 "QL.y"
+#line 81 "QL.y"
     {
 						LOG (info,"DISTANCE JOIN. \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1408,7 +1451,7 @@ yyreduce:
     break;
 
   case 5:
-#line 79 "QL.y"
+#line 88 "QL.y"
     {
 						LOG (info,"DISTANCE JOIN/ . \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1419,7 +1462,7 @@ yyreduce:
     break;
 
   case 6:
-#line 86 "QL.y"
+#line 95 "QL.y"
     {
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1430,7 +1473,7 @@ yyreduce:
     break;
 
   case 7:
-#line 93 "QL.y"
+#line 102 "QL.y"
     {
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
@@ -1441,7 +1484,7 @@ yyreduce:
     break;
 
   case 8:
-#line 100 "QL.y"
+#line 109 "QL.y"
     {
 						LOG (error,"Erroneous command... \n");
 						yyclearin;
@@ -1451,22 +1494,22 @@ yyreduce:
     break;
 
   case 9:
-#line 109 "QL.y"
+#line 118 "QL.y"
     {LOG (info,"PAIR OF COMMANDS. \n");;}
     break;
 
   case 10:
-#line 110 "QL.y"
+#line 119 "QL.y"
     {LOG (info,"COMMAND ADDED IN COMMAND SEQUENCE. \n");;}
     break;
 
   case 11:
-#line 113 "QL.y"
+#line 122 "QL.y"
     {LOG (info,"cSUBQUERY PARSED. \n");;}
     break;
 
   case 12:
-#line 114 "QL.y"
+#line 123 "QL.y"
     {
 						LOG (info,"REVERSE NN. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
@@ -1475,22 +1518,22 @@ yyreduce:
     break;
 
   case 13:
-#line 122 "QL.y"
+#line 131 "QL.y"
     {LOG (info,"FIRST rSUBQUERY PARSED. \n");;}
     break;
 
   case 14:
-#line 123 "QL.y"
+#line 132 "QL.y"
     {LOG (info,"NEW rSUBQUERY PARSED. \n");;}
     break;
 
   case 15:
-#line 127 "QL.y"
+#line 136 "QL.y"
     {LOG (info,"More slashes preceding rsubquery. \n");;}
     break;
 
   case 16:
-#line 128 "QL.y"
+#line 137 "QL.y"
     {
 						LOG (info,"Put together rsubquery. \n");
 						insert_into_stack (stack,(void*)'%');
@@ -1498,12 +1541,12 @@ yyreduce:
     break;
 
   case 17:
-#line 135 "QL.y"
+#line 144 "QL.y"
     {LOG (info,"More slashes preceding csubquery. \n");;}
     break;
 
   case 18:
-#line 136 "QL.y"
+#line 145 "QL.y"
     {
 						LOG (info,"Put together csubquery. \n");
 						insert_into_stack (stack,(void*)'/');
@@ -1511,7 +1554,7 @@ yyreduce:
     break;
 
   case 19:
-#line 143 "QL.y"
+#line 152 "QL.y"
     {
 						LOG (info,"Single identifier subquery. \n");
 						insert_into_stack (stack,NULL);
@@ -1520,7 +1563,7 @@ yyreduce:
     break;
 
   case 20:
-#line 148 "QL.y"
+#line 157 "QL.y"
     {
 						LOG (info,"Parsed subquery. \n")
 						insert_into_stack (stack,(void*)predicates_cardinality);
@@ -1529,7 +1572,7 @@ yyreduce:
     break;
 
   case 21:
-#line 156 "QL.y"
+#line 165 "QL.y"
     {
 						LOG (info,"Yet another predicate in the collection... \n");
 						predicates_cardinality++;
@@ -1537,7 +1580,7 @@ yyreduce:
     break;
 
   case 22:
-#line 160 "QL.y"
+#line 169 "QL.y"
     {
 						LOG (info,"First query predicate encountered. \n");
 						predicates_cardinality = 1;
@@ -1545,7 +1588,7 @@ yyreduce:
     break;
 
   case 23:
-#line 167 "QL.y"
+#line 176 "QL.y"
     {
 						LOG (info,"LOOKUP. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
@@ -1554,7 +1597,7 @@ yyreduce:
     break;
 
   case 24:
-#line 172 "QL.y"
+#line 181 "QL.y"
     {
 						LOG (info,"FROM. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
@@ -1563,7 +1606,7 @@ yyreduce:
     break;
 
   case 25:
-#line 177 "QL.y"
+#line 186 "QL.y"
     {
 						LOG (info,"TO. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
@@ -1572,7 +1615,7 @@ yyreduce:
     break;
 
   case 26:
-#line 182 "QL.y"
+#line 191 "QL.y"
     {
 						LOG (info,"BOUND. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
@@ -1581,7 +1624,7 @@ yyreduce:
     break;
 
   case 27:
-#line 187 "QL.y"
+#line 196 "QL.y"
     {
 						LOG (info,"SKYLINE. \n");
 						insert_into_stack (stack,(yyvsp[(3) - (3)].str));
@@ -1591,37 +1634,37 @@ yyreduce:
     break;
 
   case 28:
-#line 196 "QL.y"
+#line 205 "QL.y"
     {;}
     break;
 
   case 29:
-#line 197 "QL.y"
+#line 206 "QL.y"
     {LOG (info,"rKEY encountered.\n");;}
     break;
 
   case 30:
-#line 201 "QL.y"
+#line 210 "QL.y"
     {;}
     break;
 
   case 31:
-#line 202 "QL.y"
+#line 211 "QL.y"
     {LOG (info,"Distance join predicate encountered.\n");;}
     break;
 
   case 32:
-#line 206 "QL.y"
+#line 215 "QL.y"
     {;}
     break;
 
   case 33:
-#line 207 "QL.y"
+#line 216 "QL.y"
     {LOG (info,"Closest pairs predicate encountered.\n");;}
     break;
 
   case 34:
-#line 211 "QL.y"
+#line 220 "QL.y"
     {
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = (yyvsp[(3) - (3)].dval);
@@ -1630,7 +1673,7 @@ yyreduce:
     break;
 
   case 35:
-#line 216 "QL.y"
+#line 225 "QL.y"
     {
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = (yyvsp[(3) - (3)].ival);
@@ -1639,7 +1682,7 @@ yyreduce:
     break;
 
   case 36:
-#line 221 "QL.y"
+#line 230 "QL.y"
     {
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = (yyvsp[(1) - (1)].dval);
@@ -1648,7 +1691,7 @@ yyreduce:
     break;
 
   case 37:
-#line 226 "QL.y"
+#line 235 "QL.y"
     {
 						insert_into_stack (stack,varray+vindex);
 						varray [vindex++] = (yyvsp[(1) - (1)].ival);
@@ -1658,7 +1701,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 1689 "QL.tab.c"
+#line 1702 "QL.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1694,7 +1737,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (YY_("syntax error"));
+      yyerror (scanner, YY_("syntax error"));
 #else
       {
 	YYSIZE_T yysize = yysyntax_error (0, yystate, yychar);
@@ -1718,11 +1761,11 @@ yyerrlab:
 	if (0 < yysize && yysize <= yymsg_alloc)
 	  {
 	    (void) yysyntax_error (yymsg, yystate, yychar);
-	    yyerror (yymsg);
+	    yyerror (scanner, yymsg);
 	  }
 	else
 	  {
-	    yyerror (YY_("syntax error"));
+	    yyerror (scanner, YY_("syntax error"));
 	    if (yysize != 0)
 	      goto yyexhaustedlab;
 	  }
@@ -1746,7 +1789,7 @@ yyerrlab:
       else
 	{
 	  yydestruct ("Error: discarding",
-		      yytoken, &yylval);
+		      yytoken, &yylval, scanner);
 	  yychar = YYEMPTY;
 	}
     }
@@ -1802,7 +1845,7 @@ yyerrlab1:
 
 
       yydestruct ("Error: popping",
-		  yystos[yystate], yyvsp);
+		  yystos[yystate], yyvsp, scanner);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -1840,7 +1883,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (YY_("memory exhausted"));
+  yyerror (scanner, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -1848,7 +1891,7 @@ yyexhaustedlab:
 yyreturn:
   if (yychar != YYEOF && yychar != YYEMPTY)
      yydestruct ("Cleanup: discarding lookahead",
-		 yytoken, &yylval);
+		 yytoken, &yylval, scanner);
   /* Do not reclaim the symbols of the rule which action triggered
      this YYABORT or YYACCEPT.  */
   YYPOPSTACK (yylen);
@@ -1856,7 +1899,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-		  yystos[*yyssp], yyvsp);
+		  yystos[*yyssp], yyvsp, scanner);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
@@ -1872,7 +1915,7 @@ yyreturn:
 }
 
 
-#line 233 "QL.y"
+#line 242 "QL.y"
 
 
 /***
@@ -1882,7 +1925,7 @@ int main (int argc, char* argv[]) {
 }
 }
 ***/
-void yyerror (char* description) {
+void yyerror (yyscan_t scanner, char* description) {
 	LOG (error," %s\n", description);
 }
 

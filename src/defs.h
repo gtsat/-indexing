@@ -443,7 +443,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {debug=1,info,warn,error,fatal};
 
-#define logging warn
+#define logging debug
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

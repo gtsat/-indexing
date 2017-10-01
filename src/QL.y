@@ -5,27 +5,34 @@
 	#include"queue.h"
 	#include"stack.h"
 	#include"defs.h"
+	#include"QL.tab.h"
+	#include"lex.QL_.h"
 
 	#define YYERROR_VERBOSE
+	//#define YYLEX_PARAM scanner
+	//#define YYPARSE_PARAM yyscan_t scanner
 
-	void yyerror (char*);
+	void yyerror (yyscan_t,char*);
 
-	int QL_lex (void);
-	int QL_parse (lifo_t *const, double[]);
+
+	extern int QL_lex (YYSTYPE *yylval_param, yyscan_t yyscanner);
+	//int QL_parse (lifo_t *const, double[]);
 /*
 	lifo_t* stack;
 	double varray [BUFSIZ];
 
-	unsigned vindex;
-	unsigned key_cardinality;
-	unsigned predicates_cardinality;
+	unsigned vindex = 0;
+	unsigned key_cardinality = 0;
+	unsigned predicates_cardinality = 0;
 */
 %}
 
 %expect 0
 %token_table
-/* %pure_parser */
+%pure_parser
 %name-prefix="QL_"
+%lex-param {yyscan_t scanner}
+%parse-param {yyscan_t scanner}
 
 %union{
 	char* str;
@@ -241,7 +248,7 @@ int main (int argc, char* argv[]) {
 }
 }
 ***/
-void yyerror (char* description) {
+void yyerror (yyscan_t scanner, char* description) {
 	LOG (error," %s\n", description);
 }
 
