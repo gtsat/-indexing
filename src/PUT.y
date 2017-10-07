@@ -80,7 +80,8 @@ HEAPFILE_DEF :
 ;
 
 DATA_DEF:
-	'"' _DATA_ '"' ':' null			{LOG (debug,"Data nulled sequence definition.\n");}
+	'"' _DATA_ '"' ':' '[' ']'		{LOG (debug,"Data empty sequence definition.\n");}
+	| '"' _DATA_ '"' ':' null		{LOG (debug,"Data nulled sequence definition.\n");}
 	| '"' _DATA_ '"' ':' '[' DATA ']'	{LOG (debug,"Data sequence definition.\n");}
 ;
 
@@ -94,7 +95,7 @@ DATUM :
 										LOG (debug,"Data entry encountered.\n");
 										stack_insertion (insertions,varray,vindex,(object_t)$<dval>14);
 										}
-      '{' '"' _OBJECT_ '"' ':' REAL ',' '"' _KEY_ '"' ':' '[' KEY ']' '}'	{
+      | '{' '"' _OBJECT_ '"' ':' REAL ',' '"' _KEY_ '"' ':' '[' KEY ']' '}'	{
 										LOG (debug,"Data entry encountered.\n");
 										stack_insertion (insertions,varray,vindex,(object_t)$<dval>6);
 										}

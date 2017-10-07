@@ -78,7 +78,8 @@ HEAPFILE_DEF :
 ;
 
 KEYS_DEF:
-	'"' _KEYS_ '"' ':' null			{LOG (debug,"KEYS nulled sequence definition.\n");}
+	'"' _KEYS_ '"' ':' '[' ']'		{LOG (debug,"KEYS empty sequence definition.\n");}
+	|'"' _KEYS_ '"' ':' null		{LOG (debug,"KEYS nulled sequence definition.\n");}
 	| '"' _KEYS_ '"' ':' '[' KEY_SEQ ']'	{LOG (debug,"KEYS sequence definition.\n");}
 ;
 

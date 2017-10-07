@@ -230,16 +230,16 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		clock_t end = clock();
 
 		if (write_through) {
-			char response[strlen(metadata)+strlen(result_code)+strlen(message)+1];
-			sprintf (response,metadata,result_code,request,message,
+			char response[strlen(metadata)+strlen(result_code)+strlen(request)+strlen(message)+1];
+			snprintf (response,sizeof(response),metadata,result_code,request,message,
 					io_blocks_counter,io_mb_counter,
 					((end-start)*1000/CLOCKS_PER_SEC));
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else{
-			char response[strlen(ok_response)+strlen(result_code)+strlen(message)+1];
-			sprintf (response,ok_response,result_code,request,message,
+			char response[strlen(ok_response)+strlen(result_code)+strlen(request)+strlen(message)+1];
+			snprintf (response,sizeof(response),ok_response,result_code,request,message,
 					io_blocks_counter,io_mb_counter,
 					((end-start)*1000/CLOCKS_PER_SEC));
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
@@ -261,8 +261,8 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
 	}else{
-		char response[BUFSIZ];
-		sprintf (response,sizeof(response),not_found_response_template,url,request);
+		char response[strlen(not_found_response_template)+strlen(url)+strlen(request)+1];
+		snprintf (response,sizeof(response),not_found_response_template,url,request);
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 		}
@@ -339,12 +339,12 @@ void handle_connection (void *const args) {
 
 		char response[BUFSIZ];
 		if (strcmp(protocol,"HTTP/1.0") && strcmp(protocol,"HTTP/1.1")) {
-			sprintf (response,bad_request_response,url);
+			snprintf (response,sizeof(response),bad_request_response,url);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else if (strcmp(method,"GET") && strcmp(method,"POST") && strcmp(method,"PUT") && strcmp(method,"DELETE")) {
-			sprintf (response,bad_method_response_template,url,method);
+			snprintf (response,sizeof(response),bad_method_response_template,url,method);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
 				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 			}

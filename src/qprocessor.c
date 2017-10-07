@@ -31,6 +31,7 @@
 #include"spatial_standard_queries.h"
 #include"priority_queue.h"
 #include"common.h"
+#include"queue.h"
 #include"stack.h"
 #include"rtree.h"
 #include"defs.h"
@@ -52,7 +53,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 int process_rest_request (char const json[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, request_t const type) {
-	LOG(error,"Now processing JSON request: %s\n",json)
+	LOG(info,"Now processing JSON request: %s\n",json)
 	get_rtree (NULL);
 
 	char heapfile [64];
@@ -85,8 +86,16 @@ int process_rest_request (char const json[], char const folder[], char message[]
 		return EXIT_FAILURE;
 	}
 
+	char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(heapfile)+2));
+	strcpy (filepath,folder);
+	if (folder[strlen(folder)-1]!='/') {
+		strcat (filepath,"/");
+	}
+	LOG (debug,"HEAPFILE: '%s'. \n",heapfile);
+	strcat (filepath,heapfile);
+
 	boolean delete_new_tree = false;
-	tree_t *tree = get_rtree (heapfile);
+	tree_t *tree = get_rtree (filepath);
 	if (tree == NULL) {
 		if (type == PUT) {
 			if (data_entries->size) {
@@ -97,16 +106,19 @@ int process_rest_request (char const json[], char const folder[], char message[]
 						dimensionality = data_pair->dimensions;
 					}
 				}
-				tree = new_rtree (heapfile,1024,dimensionality);
+				tree = new_rtree (filepath,1024,dimensionality);
 				delete_new_tree = true;
+				free (filepath);
 			}else{
-				LOG (error,"No entries found for heapfile '%s'.\n",heapfile);
-				sprintf (message,"No entries found for heapfile '%s'.",heapfile);
+				LOG (error,"No entries found for heapfile '%s'.\n",filepath);
+				sprintf (message,"No entries found for heapfile '%s'.",filepath);
+				free (filepath);
 				return EXIT_FAILURE;
 			}
 		}else{
-			LOG (error,"Unable to access heapfile '%s'.\n",heapfile);
-			sprintf (message,"Unable to access heapfile '%s'.",heapfile);
+			LOG (error,"Unable to access heapfile '%s'.\n",filepath);
+			sprintf (message,"Unable to access heapfile '%s'.",filepath);
+			free (filepath);
 			return EXIT_FAILURE;
 		}
 	}
@@ -130,7 +142,6 @@ int process_rest_request (char const json[], char const folder[], char message[]
 			++failed_entries;
 		}
 	}
-
 	while (failed->size) {
 		data_pair_t *const data_pair = remove_from_stack (failed);
 
@@ -138,6 +149,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 		free (data_pair);
 	}
 
+	LOG (debug,"Successfully processed %lu data entries out of %lu.\n",successful_entries,successful_entries+failed_entries);
 	sprintf (message,"Successfully processed %lu data entries out of %lu.",successful_entries,successful_entries+failed_entries);
 
 	*io_mb_counter += tree->io_counter * tree->page_size;
@@ -149,7 +161,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	if (delete_new_tree) {
 		delete_rtree (tree);
 	}else{
-		flush_tree (tree);
+		//flush_tree (tree);
 	}
 	return EXIT_SUCCESS;
 }

@@ -110,7 +110,6 @@
 	void stack_deletion (lifo_t *const, index_t const varray[], unsigned const vindex);
 
 	extern int DELETE_lex (YYSTYPE * yylval_param ,yyscan_t yyscanner);
-//	int DELETE_lex (void);
 //	int DELETE_parse (lifo_t *const, index_t[], char[]);
 /*
 	index_t varray [BUFSIZ];
@@ -141,13 +140,13 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 36 "DELETE.y"
+#line 35 "DELETE.y"
 {
 	char* str;
 	double dval;
 }
 /* Line 193 of yacc.c.  */
-#line 151 "DELETE.tab.c"
+#line 150 "DELETE.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -160,7 +159,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 164 "DELETE.tab.c"
+#line 163 "DELETE.tab.c"
 
 #ifdef short
 # undef short
@@ -375,16 +374,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  7
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   38
+#define YYLAST   37
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  15
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  6
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  12
+#define YYNRULES  13
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  40
+#define YYNSTATES  41
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
@@ -430,8 +429,8 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint8 yyprhs[] =
 {
-       0,     0,     3,     7,    13,    19,    21,    29,    35,    43,
-      47,    53,    57
+       0,     0,     3,     7,    13,    19,    21,    29,    36,    42,
+      50,    54,    60,    64
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
@@ -440,16 +439,17 @@ static const yytype_int8 yyrhs[] =
       16,     0,    -1,     7,    17,     8,    -1,     7,    17,    12,
       18,     8,    -1,     7,    18,    12,    17,     8,    -1,     1,
       -1,    13,     3,    13,    11,    13,     6,    13,    -1,    13,
-       4,    13,    11,    14,    -1,    13,     4,    13,    11,     9,
-      19,    10,    -1,     9,    20,    10,    -1,    19,    12,     9,
-      20,    10,    -1,    20,    12,     5,    -1,     5,    -1
+       4,    13,    11,     9,    10,    -1,    13,     4,    13,    11,
+      14,    -1,    13,     4,    13,    11,     9,    19,    10,    -1,
+       9,    20,    10,    -1,    19,    12,     9,    20,    10,    -1,
+      20,    12,     5,    -1,     5,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    62,    62,    63,    64,    65,    74,    82,    83,    87,
-      91,    98,    99
+       0,    61,    61,    62,    63,    64,    73,    81,    82,    83,
+      87,    91,    98,    99
 };
 #endif
 
@@ -477,15 +477,15 @@ static const yytype_uint16 yytoknum[] =
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    15,    16,    16,    16,    16,    17,    18,    18,    19,
-      19,    20,    20
+       0,    15,    16,    16,    16,    16,    17,    18,    18,    18,
+      19,    19,    20,    20
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     3,     5,     5,     1,     7,     5,     7,     3,
-       5,     3,     1
+       0,     2,     3,     5,     5,     1,     7,     6,     5,     7,
+       3,     5,     3,     1
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -495,31 +495,33 @@ static const yytype_uint8 yydefact[] =
 {
        0,     5,     0,     0,     0,     0,     0,     1,     0,     0,
        2,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     3,     4,     0,     0,     7,     0,     0,     0,     6,
-      12,     0,     8,     0,     9,     0,     0,    11,     0,    10
+       0,     3,     4,     0,     0,     8,     0,     0,     7,     0,
+       6,    13,     0,     9,     0,    10,     0,     0,    12,     0,
+      11
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     3,     5,     6,    28,    31
+      -1,     3,     5,     6,    29,    32
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-#define YYPACT_NINF -10
+#define YYPACT_NINF -18
 static const yytype_int8 yypact[] =
 {
-      -1,   -10,    -8,     9,    11,    -4,     4,   -10,     5,     6,
-     -10,     7,     8,    12,    13,    18,    17,    14,    19,    15,
-      -7,   -10,   -10,    20,    21,   -10,    16,    26,    -9,   -10,
-     -10,     0,   -10,    23,   -10,    28,    26,   -10,     1,   -10
+      -1,   -18,    -8,     9,    11,    -4,     6,   -18,     8,    10,
+     -18,    12,    13,    16,    17,    15,    14,    21,    22,    18,
+      -7,   -18,   -18,    23,     7,   -18,    19,    28,   -18,    -9,
+     -18,   -18,     0,   -18,    25,   -18,    30,    28,   -18,     1,
+     -18
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -10,   -10,    22,    24,   -10,     2
+     -18,   -18,    24,    26,   -18,   -17
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
@@ -529,18 +531,18 @@ static const yytype_int8 yypgoto[] =
 #define YYTABLE_NINF -1
 static const yytype_uint8 yytable[] =
 {
-       1,    32,    24,    33,    10,     4,     2,    25,    11,     7,
-      34,    39,    35,    35,     8,     9,    12,     8,    13,    14,
-      15,    17,     9,    19,    20,    21,    26,    22,    23,    29,
-      27,    30,    36,    37,    18,    16,     0,     0,    38
+       1,    33,    24,    34,    10,     4,     2,    25,    11,     7,
+      35,    40,    36,    36,     8,     9,    27,    28,    12,     9,
+      39,    13,    21,    14,     8,    15,    17,    19,    20,    26,
+      22,    23,    30,    31,    37,    38,    18,    16
 };
 
-static const yytype_int8 yycheck[] =
+static const yytype_uint8 yycheck[] =
 {
        1,    10,     9,    12,     8,    13,     7,    14,    12,     0,
-      10,    10,    12,    12,     3,     4,    12,     3,    13,    13,
-      13,    13,     4,    11,    11,     8,     6,     8,    13,    13,
-       9,     5,     9,     5,    12,    11,    -1,    -1,    36
+      10,    10,    12,    12,     3,     4,     9,    10,    12,     4,
+      37,    13,     8,    13,     3,    13,    13,    11,    11,     6,
+       8,    13,    13,     5,     9,     5,    12,    11
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -549,8 +551,9 @@ static const yytype_uint8 yystos[] =
 {
        0,     1,     7,    16,    13,    17,    18,     0,     3,     4,
        8,    12,    12,    13,    13,    13,    18,    13,    17,    11,
-      11,     8,     8,    13,     9,    14,     6,     9,    19,    13,
-       5,    20,    10,    12,    10,    12,     9,     5,    20,    10
+      11,     8,     8,    13,     9,    14,     6,     9,    10,    19,
+      13,     5,    20,    10,    12,    10,    12,     9,     5,    20,
+      10
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1373,22 +1376,22 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 62 "DELETE.y"
+#line 61 "DELETE.y"
     {LOG (debug,"Parsed no data request.\n");;}
     break;
 
   case 3:
-#line 63 "DELETE.y"
+#line 62 "DELETE.y"
     {LOG (debug,"Parsed request.\n");;}
     break;
 
   case 4:
-#line 64 "DELETE.y"
+#line 63 "DELETE.y"
     {LOG (debug,"Parsed request.\n");}
     break;
 
   case 5:
-#line 65 "DELETE.y"
+#line 64 "DELETE.y"
     {
 						LOG (error,"Erroneous request... \n");
 						yyclearin;
@@ -1398,7 +1401,7 @@ yyreduce:
     break;
 
   case 6:
-#line 74 "DELETE.y"
+#line 73 "DELETE.y"
     {
 						LOG (debug,"Heapfile definition containing identifier: %s\n",(yyvsp[(6) - (7)].str));
 						strcpy(heapfile,(yyvsp[(6) - (7)].str));
@@ -1407,16 +1410,21 @@ yyreduce:
     break;
 
   case 7:
+#line 81 "DELETE.y"
+    {LOG (debug,"KEYS empty sequence definition.\n");;}
+    break;
+
+  case 8:
 #line 82 "DELETE.y"
     {LOG (debug,"KEYS nulled sequence definition.\n");;}
     break;
 
-  case 8:
+  case 9:
 #line 83 "DELETE.y"
     {LOG (debug,"KEYS sequence definition.\n");;}
     break;
 
-  case 9:
+  case 10:
 #line 87 "DELETE.y"
     {
 						LOG (debug,"First key assembled.\n");
@@ -1424,7 +1432,7 @@ yyreduce:
 						;}
     break;
 
-  case 10:
+  case 11:
 #line 91 "DELETE.y"
     {
 						LOG (debug,"Another key assembled.\n");
@@ -1432,12 +1440,12 @@ yyreduce:
 						;}
     break;
 
-  case 11:
+  case 12:
 #line 98 "DELETE.y"
     {varray [vindex++] = (yyvsp[(3) - (3)].dval);;}
     break;
 
-  case 12:
+  case 13:
 #line 99 "DELETE.y"
     {
 						*varray = (yyvsp[(1) - (1)].dval);
@@ -1447,7 +1455,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 1449 "DELETE.tab.c"
+#line 1457 "DELETE.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

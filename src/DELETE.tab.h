@@ -58,7 +58,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 36 "DELETE.y"
+#line 35 "DELETE.y"
 {
 	char* str;
 	double dval;
