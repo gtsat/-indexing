@@ -1024,10 +1024,13 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 uint64_t flush_tree (tree_t *const tree) {
 	uint64_t count_dirty_pages = 0;
 
+	LOG (info,"[%s] Now flushing tree hierarchy.\n",tree->filename);
+
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	fifo_t* queue = get_entries (tree->heapfile_index);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
+	load_page (tree,0);
 	if (LOADED_PAGE(0) == NULL || LOADED_PAGE(0)->header.records) {
 		while (queue->size) {
 			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_head_of_queue (queue);
@@ -1044,12 +1047,8 @@ uint64_t flush_tree (tree_t *const tree) {
 			if (page->header.is_dirty) {
 				low_level_write_of_page_to_disk (tree,page,entry->key);
 				++count_dirty_pages;
-				if (	page->header.is_leaf) delete_rtree_page (page);
-				else delete_rtree_page (page);
-			}else{
-				if (page->header.is_leaf) delete_rtree_page (page);
-				else delete_rtree_page (page);
 			}
+			delete_rtree_page (page);
 
 			free (entry);
 

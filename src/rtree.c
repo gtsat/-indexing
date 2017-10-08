@@ -277,6 +277,7 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	int fd = open (filename,O_RDONLY,0);
 	lseek (fd,0,SEEK_SET);
 	if (fd < 0) {
+		tree->is_dirty = true;
 		tree->dimensions = dimensions;
 		tree->page_size = page_size;
 		tree->indexed_records = 0;
@@ -305,10 +306,11 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 		tree->page_size = le32toh(tree->page_size);
 		tree->tree_size = le64toh(tree->tree_size);
 		tree->indexed_records = le64toh(tree->indexed_records);
+
+		tree->is_dirty = false;
 	}
 
 	tree->io_counter = 0;
-	tree->is_dirty = false;
 
 	tree->internal_entries = (tree->page_size-sizeof(header_t)) / (sizeof(interval_t)*tree->dimensions);
 	tree->leaf_entries = (tree->page_size-sizeof(header_t)) / (sizeof(index_t)*tree->dimensions + sizeof(object_t));
@@ -1959,9 +1961,6 @@ object_t delete_from_rtree (tree_t *const tree, index_t const key[]) {
 
 						pthread_rwlock_unlock (&tree->tree_lock);
 
-
-						page->header.is_dirty = true;
-
 						cascade_deletion (tree,PARENT_ID(page_id),CHILD_OFFSET(page_id));
 
 
@@ -2001,6 +2000,7 @@ object_t delete_from_rtree (tree_t *const tree, index_t const key[]) {
 						pthread_rwlock_unlock (&tree->tree_lock);
 					}else{
 						page->header.records--;
+						page->header.is_dirty = true;
 						pthread_rwlock_unlock (page_lock);
 
 						update_boxes(tree,page_id);

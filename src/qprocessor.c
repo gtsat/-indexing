@@ -161,7 +161,11 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	if (delete_new_tree) {
 		delete_rtree (tree);
 	}else{
-		//flush_tree (tree);
+		flush_tree (tree);
+		if (!tree->indexed_records) {
+			unset (server_trees,filepath);
+			delete_rtree (tree);
+		}
 	}
 	return EXIT_SUCCESS;
 }
@@ -876,7 +880,7 @@ tree_t* get_rtree (char const*const filepath) {
 			}
 			pthread_rwlock_unlock (&server_lock);
 		}else{
-			LOG (info,"Retrieved R#-Tree: '%s'\n",tree->filename)
+			LOG (info,"Found R#-Tree: '%s'\n",tree->filename)
 		}
 		return tree;
 	}else{
