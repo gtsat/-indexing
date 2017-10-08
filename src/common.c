@@ -1022,40 +1022,11 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 }
 
 uint64_t flush_tree (tree_t *const tree) {
+	LOG (warn,"[%s] Now flushing tree hierarchy.\n",tree->filename);
+
 	uint64_t count_dirty_pages = 0;
-
-	LOG (info,"[%s] Now flushing tree hierarchy.\n",tree->filename);
-
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	fifo_t* queue = get_entries (tree->heapfile_index);
-	pthread_rwlock_unlock (&tree->tree_lock);
-
-	load_page (tree,0);
-	if (LOADED_PAGE(0) == NULL || LOADED_PAGE(0)->header.records) {
-		while (queue->size) {
-			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_head_of_queue (queue);
-			page_t *const page = entry->value;
-
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			pthread_rwlock_t *const page_lock = LOADED_LOCK(entry->key);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
-			assert (page_lock != NULL);
-
-			pthread_rwlock_wrlock (page_lock);
-
-			if (page->header.is_dirty) {
-				low_level_write_of_page_to_disk (tree,page,entry->key);
-				++count_dirty_pages;
-			}
-			delete_rtree_page (page);
-
-			free (entry);
-
-			pthread_rwlock_unlock (page_lock);
-			pthread_rwlock_destroy (page_lock);
-		}
-
+	if (tree->is_dirty) {
 		int fd = open (tree->filename, O_WRONLY | O_CREAT, PERMS);
 		if (fd < 0) {
 			LOG (error,"[%s] Cannot open file '%s' for writing...\n",tree->filename,tree->filename);
@@ -1089,15 +1060,48 @@ uint64_t flush_tree (tree_t *const tree) {
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
-
 		close (fd);
-		//truncate_heapfile (tree);
-	}else{
-		LOG (warn,"Deleting heapfile '%s' for it indexes no data anymore!\n",tree->filename);
-		unlink (tree->filename);
 	}
 
-	delete_queue (queue);
+	boolean allow_dump = tree->indexed_records > 0;
+	pthread_rwlock_unlock (&tree->tree_lock);
+
+	if (allow_dump) {
+		pthread_rwlock_rdlock (&tree->tree_lock);
+		fifo_t* queue = get_entries (tree->heapfile_index);
+		pthread_rwlock_unlock (&tree->tree_lock);
+
+		while (queue->size) {
+			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_head_of_queue (queue);
+			page_t *const page = entry->value;
+
+			pthread_rwlock_rdlock (&tree->tree_lock);
+			pthread_rwlock_t *const page_lock = LOADED_LOCK(entry->key);
+			pthread_rwlock_unlock (&tree->tree_lock);
+
+			assert (page_lock != NULL);
+
+			pthread_rwlock_wrlock (page_lock);
+
+			if (page->header.is_dirty) {
+				low_level_write_of_page_to_disk (tree,page,entry->key);
+				++count_dirty_pages;
+			}
+			delete_rtree_page (page);
+
+			free (entry);
+
+			pthread_rwlock_unlock (page_lock);
+			pthread_rwlock_destroy (page_lock);
+		}
+
+		delete_queue (queue);
+		//truncate_heapfile (tree);
+	}else{
+		LOG (warn,"[%s] Deleting heapfile for it indexes no data anymore!\n",tree->filename);
+		unlink (tree->filename);
+	}
+	LOG (warn,"[%s] Done flushing tree hierarchy. Overall %lu dirty blocks were found!\n",tree->filename,count_dirty_pages);
 
 	pthread_rwlock_wrlock (&tree->tree_lock);
 	clear_symbol_table (tree->heapfile_index);
@@ -1108,5 +1112,3 @@ uint64_t flush_tree (tree_t *const tree) {
 
 	return count_dirty_pages;
 }
-
-
