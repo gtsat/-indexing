@@ -58,7 +58,8 @@ bound			{LOG(debug,"Keyword BOUND."); return BOUND;}
 			}
 
 \;			{LOG(debug,"Termination.\n"); return ';';}
-[:blank:]+		/* eat it up */
+[:blank:]+
+\n+
 .			{LOG(debug,"Unrecognized character: %s\n", yytext);}
 
 %%

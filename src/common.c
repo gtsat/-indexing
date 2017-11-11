@@ -1022,7 +1022,7 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 }
 
 uint64_t flush_tree (tree_t *const tree) {
-	LOG (warn,"[%s] Now flushing tree hierarchy.\n",tree->filename);
+	LOG (warn,"[%s] Now flushing tree hierarchy. Overall %lu entries are indexed overall.\n",tree->filename,tree->indexed_records);
 
 	uint64_t count_dirty_pages = 0;
 	pthread_rwlock_rdlock (&tree->tree_lock);

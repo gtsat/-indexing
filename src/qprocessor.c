@@ -36,7 +36,7 @@
 #include"rtree.h"
 #include"defs.h"
 
-#define MEMORY_BOUND 1<<15
+#define MEMORY_BOUND 1<<20
 
 symbol_table_t* server_trees = NULL;
 pthread_rwlock_t server_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -66,17 +66,15 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	int parser_rval = 0;
 	if (type == PUT) {
 		PUT_lex_init (&scanner);
-		//PUT_set_in (fptr,scanner);
-	    buffer = PUT__scan_string (json,scanner);
+		buffer = PUT__scan_string (json,scanner);
 		parser_rval = PUT_parse (scanner,data_entries,varray,heapfile);
-	    PUT__delete_buffer (buffer,scanner);
+		PUT__delete_buffer (buffer,scanner);
 		PUT_lex_destroy (scanner);
 	}else{
 		DELETE_lex_init (&scanner);
-		//DELETE_set_in (fptr,scanner);
-	    buffer = DELETE__scan_string (json,scanner);
+		buffer = DELETE__scan_string (json,scanner);
 		parser_rval = DELETE_parse (scanner,data_entries,varray,heapfile);
-	    DELETE__delete_buffer (buffer,scanner);
+		DELETE__delete_buffer (buffer,scanner);
 		DELETE_lex_destroy (scanner);
 	}
 
@@ -180,7 +178,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	QL_lex_init (&scanner);
 	YY_BUFFER_STATE command_buffer = QL__scan_string (command,scanner);
 	int parser_rval = QL_parse (scanner,stack,varray);
-    QL__delete_buffer (command_buffer,scanner);
+	QL__delete_buffer (command_buffer,scanner);
 	QL_lex_destroy (scanner);
 
 	if (parser_rval) {
@@ -615,6 +613,9 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		}
 
 		result = range (subq_tree,from,to,subq_tree->dimensions);
+		if (result->size != subq_tree->indexed_records) {
+			LOG (fatal,"Result-size: %lu, Tree-size: %lu \n",result->size,subq_tree->indexed_records);
+		}
 		assert (result->size == subq_tree->indexed_records);
 
 

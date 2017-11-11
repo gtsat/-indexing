@@ -48,7 +48,8 @@ keys			{LOG(debug,"Symbol for KEYS.\n"); return _KEYS_;}
 				return ID; /* heapfile name */
 			}
 
-[:blank:]+		/* eat it up */
+[:blank:]+
+\n+
 .			{LOG(debug,"Unrecognized character: %s\n", yytext);}
 
 %%

@@ -330,7 +330,7 @@ extern int DELETE_lex \
 #undef YY_DECL
 #endif
 
-#line 54 "DELETE.l"
+#line 55 "DELETE.l"
 
 
 #line 337 "lex.DELETE_.h"

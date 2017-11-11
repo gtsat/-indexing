@@ -151,7 +151,8 @@ void process_arguments (int argc,char *argv[]) {
 
 static
 void handle (int fd, char const method[], char url[], char const body[], char const folder[]) {
-	LOG (info,"Server received request: %s %s %s\n",method,url,body);
+	//LOG (info,"Server received request: %s %s %s\n",method,url,body);
+	LOG (info,"Server received request: %s %s\n",method,url);
 
 	boolean write_through = true;
 	char* request = url;
@@ -163,8 +164,8 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		request [i+1] = ';';
 		request [i+2] = '\0';
 
-		char message [BUFSIZ];
-		bzero (message,BUFSIZ);
+		char message [BUFSIZ<<2];
+		bzero (message,sizeof(message));
 		*message = '\0';
 
 		char* result_code;
@@ -211,7 +212,7 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 			}else{
 				result_code = "FAILURE";
 			}
-
+/*
 			for (request = body; *request != '\0'; ++request) {
 				switch (*request) {
 					case '"':
@@ -226,6 +227,7 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 				}
 			}
 			request = body;
+*/
 		}
 		clock_t end = clock();
 
@@ -283,7 +285,7 @@ void handle_connection (void *const args) {
 
 	LOG (info,"Handling new connection for file descriptor %u.\n",fd)
 
-	char buffer[BUFSIZ];
+	char buffer[BUFSIZ<<1];
 	ssize_t bytes_read = read (fd,buffer,sizeof(buffer));
 	if (bytes_read > 0) {
 		char url[BUFSIZ];
@@ -294,19 +296,22 @@ void handle_connection (void *const args) {
 
 		sscanf (buffer,"%s %s %s",method,url,protocol);
 
-		ssize_t content_length = 0;
+		uint64_t content_length = 0;
 		lifo_t* content_stack = NULL;
 		char* content = NULL;
 		do{
-			if ((content = strstr(buffer,"\n\n")) != NULL || (content = strstr(buffer,"\r\n\r\n")) != NULL) {
+			if ((content = strstr(buffer,"\r\n\r\n")) != NULL || (content = strstr(buffer,"\n\n")) != NULL) {
 				char* cl_ptr = strstr (buffer,"content-length");
 				if (cl_ptr == NULL) cl_ptr = strstr (buffer,"Content-Length");
 
 				if (cl_ptr != NULL) {
 					cl_ptr += strlen("content-length: ");
-					content += 4;
-
 					sscanf (cl_ptr,"%u",&content_length);
+
+					if (*content == '\r') ++content;
+					if (*content == '\n') ++content;
+					if (*content == '\r') ++content;
+					if (*content == '\n') ++content;
 
 					content_stack = new_stack();
 					do{
@@ -315,6 +320,7 @@ void handle_connection (void *const args) {
 							;
 
 						if (content_stack->size < content_length) {
+LOG (info,"Emptying and refilling network buffer...\n");
 							bzero (buffer,sizeof(buffer));
 							bytes_read = read (fd,buffer,sizeof(buffer));
 							content = buffer;
