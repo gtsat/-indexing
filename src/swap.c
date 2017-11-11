@@ -28,8 +28,8 @@ swap_t* new_swap (uint64_t const capacity) {
 	swap->qp = (uint64_t*) malloc ((1+capacity)*sizeof(uint64_t));
 
 	for (register uint64_t i=0; i<=capacity; ++i) {
-		swap->identifiers[i] = ULONG_MAX;
-		swap->qp[i] = ULONG_MAX;
+		swap->identifiers[i] = 0xffffffffffffffff;
+		swap->qp[i] = 0xffffffffffffffff;
 	}
 
 	swap->capacity = capacity;
@@ -50,8 +50,8 @@ void delete_swap (swap_t *const swap) {
 
 void clear_swap (swap_t *const swap) {
 	for (register uint64_t i=0; i<=swap->capacity; ++i) {
-		swap->identifiers[i] = ULONG_MAX;
-		swap->qp[i] = ULONG_MAX;
+		swap->identifiers[i] = 0xffffffffffffffff;
+		swap->qp[i] = 0xffffffffffffffff;
 	}
 	swap->size = 0;
 }
@@ -133,15 +133,15 @@ static void decrease_key (swap_t const*const swap, uint64_t const i, double cons
 static uint64_t del_min (swap_t *const swap) {
 	if (swap->size==0) {
 		LOG (error,"Swap underflow error...\n");
-		return -ULONG_MAX;
+		return -0xffffffffffffffff;
 	}
 
 	uint64_t min = swap->pq[1];
 	exch (swap,1,swap->size--);
 	sink (swap,1);
 
-	swap->qp[min] = ULONG_MAX;
-	swap->pq[swap->size+1] = ULONG_MAX;
+	swap->qp[min] = 0xffffffffffffffff;
+	swap->pq[swap->size+1] = 0xffffffffffffffff;
 
 	return min;
 }
@@ -151,19 +151,19 @@ static void delete (swap_t *const swap, uint64_t i) {
 	exch (swap,index,swap->size--);
 	swim (swap,index);
 	sink (swap,index);
-	swap->keys[i] = ULONG_MAX;
-	swap->qp[i] = ULONG_MAX;
+	swap->keys[i] = 0xffffffffffffffff;
+	swap->qp[i] = 0xffffffffffffffff;
 
-	swap->identifiers[i-1] = ULONG_MAX;
+	swap->identifiers[i-1] = 0xffffffffffffffff;
 }
 
 static uint64_t get_available (swap_t const*const swap) {
 	for (register uint64_t i=0; i<swap->capacity; ++i) {
-		if (swap->identifiers[i] == ULONG_MAX) {
+		if (swap->identifiers[i] == 0xffffffffffffffff) {
 			return i;
 		}
 	}
-	return ULONG_MAX;
+	return 0xffffffffffffffff;
 }
 
 static uint64_t get_index (swap_t const*const swap, uint64_t const id) {
@@ -172,16 +172,16 @@ static uint64_t get_index (swap_t const*const swap, uint64_t const id) {
 			return i;
 		}
 	}
-	return ULONG_MAX;
+	return 0xffffffffffffffff;
 }
 
 boolean is_active_identifier (swap_t const*const swap, uint64_t const id) {
-	return get_index (swap,id) != ULONG_MAX;
+	return get_index (swap,id) != 0xffffffffffffffff;
 }
 
 void print_identifiers_priorities (swap_t const*const swap) {
 	for (register uint64_t i=0; i<swap->capacity; ++i) {
-		if (swap->qp[i] != ULONG_MAX) {
+		if (swap->qp[i] != 0xffffffffffffffff) {
 			LOG (info,"Identifier %lu has priority %lf. \n",swap->identifiers[i],swap->keys[i+1]);
 		}
 	}
@@ -189,11 +189,11 @@ void print_identifiers_priorities (swap_t const*const swap) {
 
 boolean unset_priority (swap_t *const swap, uint64_t const id) {
 	uint64_t alias = get_index (swap,id);
-	if (alias != ULONG_MAX) {
+	if (alias != 0xffffffffffffffff) {
 		assert (alias <= swap->capacity);
-		assert (swap->qp[alias+1] != ULONG_MAX);
+		assert (swap->qp[alias+1] != 0xffffffffffffffff);
 		assert (swap->identifiers[alias] == id);
-		swap->identifiers[alias] = ULONG_MAX;
+		swap->identifiers[alias] = 0xffffffffffffffff;
 
 		delete (swap,alias+1);
 
@@ -209,15 +209,15 @@ boolean unset_priority (swap_t *const swap, uint64_t const id) {
 uint64_t set_priority (swap_t *const swap, uint64_t const id, double const priority) {
 	uint64_t alias = get_index (swap,id);
 
-	if (alias != ULONG_MAX) {
+	if (alias != 0xffffffffffffffff) {
 		assert (alias <= swap->capacity);
-		assert (swap->qp[alias+1] != ULONG_MAX);
+		assert (swap->qp[alias+1] != 0xffffffffffffffff);
 		assert (swap->identifiers[alias] == id);
 
 		increase_key (swap,alias+1,priority);
 	}else if (swap->size < swap->capacity) {
 		alias = get_available (swap);
-		assert (alias != ULONG_MAX);
+		assert (alias != 0xffffffffffffffff);
 
 		swap->identifiers[alias] = id;
 
@@ -226,7 +226,7 @@ uint64_t set_priority (swap_t *const swap, uint64_t const id, double const prior
 		alias = del_min (swap);
 
 		uint64_t previous = swap->identifiers[alias-1];
-		assert (previous != ULONG_MAX);
+		assert (previous != 0xffffffffffffffff);
 		assert (previous != id);
 
 		swap->identifiers[alias-1] = id;
@@ -234,6 +234,6 @@ uint64_t set_priority (swap_t *const swap, uint64_t const id, double const prior
 
 		return previous;
 	}
-	return ULONG_MAX;
+	return 0xffffffffffffffff;
 }
 

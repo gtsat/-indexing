@@ -31,7 +31,9 @@
 #include <float.h>
 #include <pthread.h>
 
-#ifdef __APPLE__
+#ifdef __FreeBSD__
+  #include "endian.h"
+#elif __APPLE__
   #include <libkern/OSByteOrder.h>
 
   #define htobe16(x) OSSwapHostToBigInt16(x)
@@ -110,11 +112,11 @@ static const uint64_t initial_capacity = 5;
 
 #define fairness_threshold 	.5
 
-typedef uint32_t 	object_t;
+typedef uint64_t 	object_t;
 typedef float		index_t;
 
-#define OBJECT_T_MAX 	UINT_MAX
-#define INDEX_T_MAX 		FLT_MAX
+#define OBJECT_T_MAX 	0xffffffffffffffff
+#define INDEX_T_MAX 	FLT_MAX
 
 
 typedef struct {
@@ -255,10 +257,10 @@ typedef struct {
 
 
 	uint64_t indexed_records;
-
 	uint64_t tree_size;
-	uint64_t leaf_entries;
-	uint64_t internal_entries;
+
+	uint32_t leaf_entries;
+	uint32_t internal_entries;
 
 	uint64_t io_counter;
 
@@ -443,7 +445,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {debug=1,info,warn,error,fatal};
 
-#define logging debug
+#define logging info
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\

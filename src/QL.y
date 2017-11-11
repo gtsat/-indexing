@@ -95,14 +95,14 @@ QUERY :
 	| COMMANDS CP_PRED ';'	{
 						LOG (info,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)ULONG_MAX);
+						insert_into_stack (stack,(void*)0xffffffffffffffff);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<ival>3;
 					}
 	| COMMANDS CP_PRED '/' ';'	{
 						LOG (info,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
-						insert_into_stack (stack,(void*)ULONG_MAX);
+						insert_into_stack (stack,(void*)0xffffffffffffffff);
 						insert_into_stack (stack,';');
 						varray [vindex++] = $<ival>3;
 					}
