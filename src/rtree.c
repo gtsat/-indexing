@@ -48,8 +48,8 @@ void delete_rtree (tree_t *const tree) {
 		if (tree->root_box != NULL)
 			free (tree->root_box);
 
-		if (tree->object_range != NULL)
-			free (tree->object_range);
+		if (tree->root_range != NULL)
+			free (tree->root_range);
 
 		if (tree->heapfile_index != NULL) {
 			flush_tree (tree);
@@ -242,7 +242,7 @@ tree_t* load_rtree (char const filename[]) {
 	LOG (info,"[%s] Heapfile consists of %llu pages and has %llu %u-dimensional records.\n",
 				filename,tree->tree_size,tree->indexed_records,tree->dimensions);
 
-	tree->object_range = NULL;
+	tree->root_range = NULL;
 	tree->root_box = (interval_t*) malloc (tree->dimensions*sizeof(interval_t));
 	if (tree->root_box == NULL) {
 		LOG (fatal,"[%s] Unable to allocate memory for new tree hierarchy...\n",tree->filename);
@@ -328,7 +328,7 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	LOG (info,"[%s] Heapfile consists of %llu pages and has %llu %u-dimensional records.\n",
 				filename,tree->tree_size,tree->indexed_records,tree->dimensions);
 
-	tree->object_range = NULL;
+	tree->root_range = NULL;
 	tree->root_box = (interval_t*) malloc (tree->dimensions*sizeof(interval_t));
 	if (tree->root_box == NULL) {
 		LOG (fatal,"[%s] Unable to allocate memory for new tree hierarchy...\n",tree->filename);
@@ -936,7 +936,7 @@ static uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *c
 		for (uint32_t insertions=0,deletions=0; priority_queue->size;) {
 			box_container_t *const box_container = (box_container_t *const) remove_from_priority_queue (priority_queue);
 
-			if (box_container->sort_key == box_container->box[j].start) {
+			if (box_container->sort_key == (double)box_container->box[j].start) {
 				++insertions;
 				if (lo_records >= fairness_threshold*(tree->internal_entries>>1)
 				 && hi_records >= fairness_threshold*(tree->internal_entries>>1)) {
@@ -950,7 +950,7 @@ static uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *c
 						jzone = zone;
 					}
 				}
-			}else if (box_container->sort_key == box_container->box[j].end) {
+			}else if (box_container->sort_key == (double)box_container->box[j].end) {
 				++deletions;
 				++lo_records;
 
@@ -2053,9 +2053,9 @@ static void process_records_from_textfile (tree_t *const tree, char const filena
 			}
 
 			if (insert) {
-				LOG(info,"Indexing value '%lu' by key: (",id);
+				LOG(info,"[%s] Indexing value '%lu' by key: (",tree->filename,id);
 			}else{
-				LOG(info,"Deleting value '%lu' indexed by key: (",id);
+				LOG(info,"[%s] Deleting value '%lu' indexed by key: (",tree->filename,id);
 			}
 
 			for (uint16_t i=0; i<tree->dimensions; ++i) {
@@ -2170,6 +2170,7 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 	uint64_t minexp = 0;
 	page_t* minleaf = NULL;
 	index_t minvol = INDEX_T_MAX;
+	pthread_rwlock_t* minleaf_lock = NULL;
 
 	lifo_t* browse = new_stack();
 	insert_into_stack (browse,0);
@@ -2191,6 +2192,7 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 				minload = page->header.records;
 				minpos = position;
 				minleaf = page;
+				minleaf_lock = page_lock;
 			}
 		}else{
 			for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -2212,11 +2214,11 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 	delete_stack (browse);
 
 
-	if (minleaf != NULL) {
+	if (minleaf != NULL) {/*
 		pthread_rwlock_rdlock (&tree->tree_lock);
 		pthread_rwlock_t* minleaf_lock = LOADED_LOCK(minpos);
 		pthread_rwlock_unlock (&tree->tree_lock);
-
+*/
 		pthread_rwlock_rdlock (minleaf_lock);
 		uint32_t minleaf_records = minleaf->header.records;
 		pthread_rwlock_unlock (minleaf_lock);

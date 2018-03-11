@@ -40,6 +40,8 @@ char const* HOST;
 char const* FOLDER;
 
 static char ok_response[] = "HTTP/1.0 200 OK\n"
+				"Access-Control-Allow-Origin: *\n"
+				"Access-Control-Allow-Methods: GET, POST, DELETE, PUT\n"
 				"Content-type: text/json\n\n"
 				"{\n\t\"status\": \"%s\",\n"
 				"\t\"query\": \"%s\",\n"
@@ -50,6 +52,8 @@ static char ok_response[] = "HTTP/1.0 200 OK\n"
 				"\t\"data\": ";
 
 static char ok_data[] = "HTTP/1.0 200 OK\n"
+				"Access-Control-Allow-Origin: *\n"
+				"Access-Control-Allow-Methods: GET, POST, DELETE, PUT\n"
 				"Content-type: text/json\n\n"
 				"{\n\t\"data\": ";
 
@@ -61,6 +65,8 @@ static char metadata[] = "\t\"status\": \"%s\",\n"
 				"\t\"proc_time\": %lu\n";
 
 static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
+				"Access-Control-Allow-Origin: *\n"
+				"Access-Control-Allow-Methods: GET, POST, DELETE, PUT\n"
 				"Content-type: text/json\n\n"
 				"{\n\t\"status\": \"ERROR\"\n,"
 				"\t\"query\": \"%s\",\n"
@@ -72,6 +78,8 @@ static char bad_request_response[] = "HTTP/1.0 400 Bad Request\n"
 				"}\n";
 
 static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
+				"Access-Control-Allow-Origin: *\n"
+				"Access-Control-Allow-Methods: GET, POST, DELETE, PUT\n"
 				"Content-type: text/json\n\n"
 				"{\n\t\"status\":\"ERROR\"\n,"
 				"\t\"query\": \"%s\",\n"
@@ -83,6 +91,8 @@ static char not_found_response_template[] = "HTTP/1.0 404 Not Found\n"
 				"}\n";
 
 static char bad_method_response_template[] = "HTTP/1.0 501 Method Not implemented\n"
+				"Access-Control-Allow-Origin: *\n"
+				"Access-Control-Allow-Methods: GET, POST, DELETE, PUT\n"
 				"Content-type: text/json\n\n"
 				"{\n\t\"status\":\"ERROR\"\n,"
 				"\t\"query\": \"%s\"\n"
@@ -176,7 +186,6 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		clock_t start = clock();
 		if (!strcmp(method,"GET")) {
 			if (write_through) {
-				uint32_t message_length = strlen(ok_data);
 				if (write (fd,ok_data,strlen(ok_data)*sizeof(char)) < strlen(ok_data)*sizeof(char)) {
 					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
 					data = NULL;

@@ -243,7 +243,7 @@ typedef struct {
 /***** R-TREE DEFINITIONS BEGIN *****/
 
 typedef struct {
-	object_range_t* object_range;
+	object_range_t* root_range;
 	interval_t* root_box;
 
 	pthread_rwlock_t tree_lock;

@@ -403,7 +403,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 		result_string -= 2;
 		*result_string = '\0';
-		result_string = strcat (result_string,"\n\t]\n");
+		result_string = strcat (result_string,"\n\t],\n");
 		result_string += strlen (result_string);
 		*result_string = '\0';
 

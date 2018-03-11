@@ -1420,7 +1420,7 @@ yyreduce:
         case 2:
 #line 67 "QL.y"
     {
-						LOG (info,"SINGLE COMMAND ';' ENCOUNTERED. \n");
+						LOG (debug,"SINGLE COMMAND ';' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
@@ -1431,7 +1431,7 @@ yyreduce:
   case 3:
 #line 74 "QL.y"
     {
-						LOG (info,"SINGLE COMMAND '/;' ENCOUNTERED. \n");
+						LOG (debug,"SINGLE COMMAND '/;' ENCOUNTERED. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
@@ -1442,7 +1442,7 @@ yyreduce:
   case 4:
 #line 81 "QL.y"
     {
-						LOG (info,"DISTANCE JOIN. \n");
+						LOG (debug,"DISTANCE JOIN. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
@@ -1453,7 +1453,7 @@ yyreduce:
   case 5:
 #line 88 "QL.y"
     {
-						LOG (info,"DISTANCE JOIN/ . \n");
+						LOG (debug,"DISTANCE JOIN/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,';');
@@ -1464,7 +1464,7 @@ yyreduce:
   case 6:
 #line 95 "QL.y"
     {
-						LOG (info,"CLOSEST PAIRS. \n");
+						LOG (debug,"CLOSEST PAIRS. \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)0xffffffffffffffff);
 						insert_into_stack (stack,';');
@@ -1475,7 +1475,7 @@ yyreduce:
   case 7:
 #line 102 "QL.y"
     {
-						LOG (info,"CLOSEST PAIRS/ . \n");
+						LOG (debug,"CLOSEST PAIRS/ . \n");
 						insert_into_stack (stack,varray+vindex);
 						insert_into_stack (stack,(void*)0xffffffffffffffff);
 						insert_into_stack (stack,';');
@@ -1495,23 +1495,23 @@ yyreduce:
 
   case 9:
 #line 118 "QL.y"
-    {LOG (info,"PAIR OF COMMANDS. \n");;}
+    {LOG (debug,"PAIR OF COMMANDS. \n");;}
     break;
 
   case 10:
 #line 119 "QL.y"
-    {LOG (info,"COMMAND ADDED IN COMMAND SEQUENCE. \n");;}
+    {LOG (debug,"COMMAND ADDED IN COMMAND SEQUENCE. \n");;}
     break;
 
   case 11:
 #line 122 "QL.y"
-    {LOG (info,"cSUBQUERY PARSED. \n");;}
+    {LOG (debug,"cSUBQUERY PARSED. \n");;}
     break;
 
   case 12:
 #line 123 "QL.y"
     {
-						LOG (info,"REVERSE NN. \n");
+						LOG (debug,"REVERSE NN. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)'%');
 					;}
@@ -1519,36 +1519,36 @@ yyreduce:
 
   case 13:
 #line 131 "QL.y"
-    {LOG (info,"FIRST rSUBQUERY PARSED. \n");;}
+    {LOG (debug,"FIRST rSUBQUERY PARSED. \n");;}
     break;
 
   case 14:
 #line 132 "QL.y"
-    {LOG (info,"NEW rSUBQUERY PARSED. \n");;}
+    {LOG (debug,"NEW rSUBQUERY PARSED. \n");;}
     break;
 
   case 15:
 #line 136 "QL.y"
-    {LOG (info,"More slashes preceding rsubquery. \n");;}
+    {LOG (debug,"More slashes preceding rsubquery. \n");;}
     break;
 
   case 16:
 #line 137 "QL.y"
     {
-						LOG (info,"Put together rsubquery. \n");
+						LOG (debug,"Put together rsubquery. \n");
 						insert_into_stack (stack,(void*)'%');
 					;}
     break;
 
   case 17:
 #line 144 "QL.y"
-    {LOG (info,"More slashes preceding csubquery. \n");;}
+    {LOG (debug,"More slashes preceding csubquery. \n");;}
     break;
 
   case 18:
 #line 145 "QL.y"
     {
-						LOG (info,"Put together csubquery. \n");
+						LOG (debug,"Put together csubquery. \n");
 						insert_into_stack (stack,(void*)'/');
 					;}
     break;
@@ -1556,7 +1556,7 @@ yyreduce:
   case 19:
 #line 152 "QL.y"
     {
-						LOG (info,"Single identifier subquery. \n");
+						LOG (debug,"Single identifier subquery. \n");
 						insert_into_stack (stack,NULL);
 						insert_into_stack (stack,(yyvsp[(1) - (1)].str));
 					;}
@@ -1565,7 +1565,7 @@ yyreduce:
   case 20:
 #line 157 "QL.y"
     {
-						LOG (info,"Parsed subquery. \n")
+						LOG (debug,"Parsed subquery. \n")
 						insert_into_stack (stack,(void*)predicates_cardinality);
 						insert_into_stack (stack,(yyvsp[(1) - (3)].str));
 					;}
@@ -1574,7 +1574,7 @@ yyreduce:
   case 21:
 #line 165 "QL.y"
     {
-						LOG (info,"Yet another predicate in the collection... \n");
+						LOG (debug,"Yet another predicate in the collection... \n");
 						predicates_cardinality++;
 					;}
     break;
@@ -1582,7 +1582,7 @@ yyreduce:
   case 22:
 #line 169 "QL.y"
     {
-						LOG (info,"First query predicate encountered. \n");
+						LOG (debug,"First query predicate encountered. \n");
 						predicates_cardinality = 1;
 					;}
     break;
@@ -1590,7 +1590,7 @@ yyreduce:
   case 23:
 #line 176 "QL.y"
     {
-						LOG (info,"LOOKUP. \n");
+						LOG (debug,"LOOKUP. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)LOOKUP);
 					;}
@@ -1599,7 +1599,7 @@ yyreduce:
   case 24:
 #line 181 "QL.y"
     {
-						LOG (info,"FROM. \n");
+						LOG (debug,"FROM. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)FROM);
 					;}
@@ -1608,7 +1608,7 @@ yyreduce:
   case 25:
 #line 186 "QL.y"
     {
-						LOG (info,"TO. \n");
+						LOG (debug,"TO. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)TO);
 					;}
@@ -1617,7 +1617,7 @@ yyreduce:
   case 26:
 #line 191 "QL.y"
     {
-						LOG (info,"BOUND. \n");
+						LOG (debug,"BOUND. \n");
 						insert_into_stack (stack,(void*)key_cardinality);
 						insert_into_stack (stack,(void*)BOUND);
 					;}
@@ -1626,7 +1626,7 @@ yyreduce:
   case 27:
 #line 196 "QL.y"
     {
-						LOG (info,"SKYLINE. \n");
+						LOG (debug,"SKYLINE. \n");
 						insert_into_stack (stack,(yyvsp[(3) - (3)].str));
 						insert_into_stack (stack,1);
 						insert_into_stack (stack,(void*)CORN);
@@ -1640,7 +1640,7 @@ yyreduce:
 
   case 29:
 #line 206 "QL.y"
-    {LOG (info,"rKEY encountered.\n");;}
+    {LOG (debug,"rKEY encountered.\n");;}
     break;
 
   case 30:
@@ -1650,7 +1650,7 @@ yyreduce:
 
   case 31:
 #line 211 "QL.y"
-    {LOG (info,"Distance join predicate encountered.\n");;}
+    {LOG (debug,"Distance join predicate encountered.\n");;}
     break;
 
   case 32:
@@ -1660,7 +1660,7 @@ yyreduce:
 
   case 33:
 #line 216 "QL.y"
-    {LOG (info,"Closest pairs predicate encountered.\n");;}
+    {LOG (debug,"Closest pairs predicate encountered.\n");;}
     break;
 
   case 34:

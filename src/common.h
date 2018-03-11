@@ -21,6 +21,7 @@ uint64_t compute_page_priority (tree_t *const tree, uint64_t const page_id);
 fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint64_t const to);
 uint64_t anchor (tree_t const*const tree, uint64_t id);
 
+void update_rootrange (tree_t *const tree);
 void update_rootbox (tree_t *const tree);
 
 #endif
