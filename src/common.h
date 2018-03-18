@@ -9,6 +9,7 @@ page_t* new_leaf (tree_t const*const tree);
 page_t* new_internal (tree_t const*const tree);
 void delete_rtree_page (page_t *const page);
 void delete_ntree_page (page_t *const page);
+void delete_tree (tree_t *const);
 
 page_t* load_page (tree_t *const tree, uint64_t const position);
 

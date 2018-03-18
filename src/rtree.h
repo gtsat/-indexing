@@ -6,8 +6,6 @@
 tree_t* load_rtree (char const[]);
 tree_t* new_rtree (char const[], uint32_t const pagesize, uint32_t const dims);
 
-void delete_rtree (tree_t *const);
-
 object_t delete_from_rtree (tree_t *const, index_t const[]);
 void insert_into_rtree (tree_t *const, index_t const[], object_t const);
 

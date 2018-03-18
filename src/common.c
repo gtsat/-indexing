@@ -213,7 +213,6 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 		assert (!is_active_identifier(tree->swap,original_id));
 		pthread_rwlock_unlock (&tree->tree_lock);
 
-
 		pthread_rwlock_wrlock (page_lock);
 		page->header.is_dirty = true;
 		if (!page->header.is_leaf) {
@@ -226,7 +225,6 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 		pthread_rwlock_destroy (page_lock);
 		free (page_lock);
 	}
-
 	assert (!original->size);
 	assert (!transposed->size);
 
@@ -252,7 +250,6 @@ void update_rootbox (tree_t *const tree) {
 	pthread_rwlock_rdlock (page_lock);
 
 	assert (page != NULL);
-
 	if (page->header.is_leaf) {
 		for (register uint32_t i=0; i<page->header.records; ++i) {
 			for (uint16_t j=0; j<tree->dimensions; ++j) {
@@ -280,7 +277,6 @@ void update_rootbox (tree_t *const tree) {
 			}
 		}
 	}
-
 	pthread_rwlock_unlock (page_lock);
 	pthread_rwlock_unlock (&tree->tree_lock);
 }
@@ -341,7 +337,7 @@ void new_root (tree_t *const tree) {
 
 		while (sorted_pages->size) {
 			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
-			if (entry->key<=1) {
+			if (true || entry->key<=1) {
 				pthread_rwlock_wrlock (&tree->tree_lock);
 				assert (!is_active_identifier(tree->swap,entry->key));
 				uint64_t swapped = set_priority (tree->swap,entry->key,compute_page_priority(tree,entry->key));
@@ -424,11 +420,6 @@ void new_root (tree_t *const tree) {
 
 static
 page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
-	/*
-	assert (tree->root_range == NULL);
-	assert (tree->root_box != NULL);
-	*/
-
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	page_t* page = LOADED_PAGE(position);
 	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
@@ -481,7 +472,6 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 		if (page->header.is_leaf) {
 			page->node.leaf.objects = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
-
 			if (page->node.leaf.objects == NULL) {
 				LOG (fatal,"[%s][load_rtree_page()] Unable to allocate additional memory for the objects of a disk-page...\n",tree->filename);
 				close (fd);
@@ -496,7 +486,6 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			}
 
 			memcpy (page->node.leaf.keys,ptr,sizeof(index_t)*tree->dimensions*page->header.records);
-
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = page->node.leaf.keys;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
@@ -517,10 +506,9 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-
 			ptr += sizeof(index_t)*tree->dimensions*page->header.records;
-			memcpy (page->node.leaf.objects,ptr,sizeof(object_t)*page->header.records);
 
+			memcpy (page->node.leaf.objects,ptr,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = page->node.leaf.objects;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -537,7 +525,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
-				LOG (fatal,"[%s][load_rtree_page()] Unable to serialize into a global heapfile format.\n",tree->filename);
+				LOG (fatal,"[%s][load_rtree_page()] Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
@@ -550,7 +538,6 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			}
 
 			memcpy (page->node.internal.intervals,ptr,sizeof(interval_t)*tree->dimensions*page->header.records);
-
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = page->node.internal.intervals;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
@@ -567,12 +554,11 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
-				LOG (fatal,"[%s][load_rtree_page()] Unable to serialize into a global heapfile format.\n",tree->filename);
+				LOG (fatal,"[%s][load_rtree_page()] Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
 		}
-
 		close (fd);
 		free (buffer);
 		page->header.is_dirty = false;
@@ -611,149 +597,219 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 }
 
 static
-page_t* load_ntree_page (tree_t *const tree, uint64_t const page_id) {
-	assert (tree->root_range != NULL);
-	assert (tree->root_box == NULL);
-
+page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	page_t* page = LOADED_PAGE(page_id);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(page_id);
+	page_t* page = LOADED_PAGE(position);
+	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	if (page_lock != NULL) {
 		if (page != NULL) {
 			return page;
 		}else{
-			LOG (error,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,page_id);
+			LOG (fatal,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
 			exit (EXIT_FAILURE);
 		}
-	}else{
+	}else if (page == NULL) {
 		if (tree->filename == NULL) {
 			LOG (info,"[%s][load_ntree_page()] No binary file was provided...\n",tree->filename);
 			return page;
 		}
-
 		int fd = open (tree->filename,O_RDONLY,0);
 		if (fd < 0) {
-			LOG (error,"[%s][load_ntree_page()] Cannot open file '%s' for reading...\n",tree->filename,tree->filename);
+			LOG (warn,"[%s][load_ntree_page()] Cannot open file '%s' for reading...\n",tree->filename,tree->filename);
 			return page;
 		}
 
-		if (lseek (fd,(1+page_id)*tree->page_size,SEEK_SET) < 0) {
-			LOG (error,"[%s][load_ntree_page()] There are less than %llu pages in file '%s'...\n",tree->filename,page_id+1,tree->filename);
+		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
+			LOG (error,"[%s][load_ntree_page()] There are less than %llu pages in file '%s'...\n",tree->filename,position+1,tree->filename);
 			close (fd);
 			return page;
 		}
 
-		page = (page_t*) malloc (sizeof(page));
-
+		page = (page_t*) malloc (sizeof(page_t));
 		if (page == NULL) {
-			LOG (fatal,"[%s][load_ntree_page()] Unable to reserve additional memory to load page from the external memory...\n",tree->filename);
-			close (fd);
-			exit (EXIT_FAILURE);
-		}
-		if (read (fd,&page->header,sizeof(header_t)) < sizeof(header_t)) {
-			LOG (fatal,"[%s][load_ntree_page()] Unable to read the header of page %llu from '%s'...\n",tree->filename,page_id,tree->filename);
+			LOG (fatal,"[%s][load_ntree_page()] Unable to reserve additional memory to load page %llu from the external memory...\n",tree->filename,position);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
+		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
+		if (buffer == NULL) {
+			LOG (fatal,"[%s][load_ntree_page()] Unable to buffer page %llu from the external memory...\n",tree->filename,position);
+			abort ();
+		}
+		if (read (fd,buffer,tree->page_size) < tree->page_size) {
+			LOG (warn,"[%s][load_ntree_page()] Read less than %u bytes from page %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+		}
+
+		memcpy (&page->header,buffer,sizeof(header_t));
+		page->header.records = le32toh (page->header.records);
+		ptr = buffer + sizeof(header_t);
 		if (page->header.is_leaf) {
-			page->node.subgraph.from = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
-			if (page->node.subgraph.from == NULL) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the arc sources of a disk-page...\n",tree->filename);
+			memcpy (page->node.subgraph.from,ptr,sizeof(object_t)*page->header.records);
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le16toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le32toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = ptr;
+				for (register uint64_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le64toh (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][load_ntree_page()] 1.Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-			page->node.subgraph.pointers = (arc_pointer_t*) malloc (tree->leaf_entries*sizeof(arc_pointer_t));
-			if (page->node.subgraph.pointers == NULL) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the arc pointers of a disk-page...\n",tree->filename);
+			ptr += sizeof(object_t)*page->header.records;
+
+			memcpy (page->node.subgraph.pointers,ptr,sizeof(arc_pointer_t)*page->header.records);
+			if (sizeof(arc_pointer_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le16toh (le_ptr[i]);
+				}
+			}else if (sizeof(arc_pointer_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le32toh (le_ptr[i]);
+				}
+			}else if (sizeof(arc_pointer_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = le64toh (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][load_ntree_page()] 2.Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-			if (read (fd,page->node.subgraph.from,sizeof(object_t)*page->header.records)
-												< sizeof(object_t)*page->header.records) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to read the arc sources of page %llu from '%s'...\n",tree->filename,page_id,tree->filename);
-				close (fd);
-				exit (EXIT_FAILURE);
-			}
-			if (read (fd,page->node.subgraph.pointers,sizeof(arc_pointer_t)*page->header.records)
-													< sizeof(arc_pointer_t)*page->header.records) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to read the arc pointers of page %llu from '%s'...\n",tree->filename,page_id,tree->filename);
-				close (fd);
-				exit (EXIT_FAILURE);
-			}
+			ptr += sizeof(arc_pointer_t)*page->header.records;
 
 			uint64_t total_arcs_number = 0;
 			for (register uint32_t i=0; i<page->header.records; ++i) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
+			LOG (debug,"[%s][load_ntree_page()] Deserializing %llu bytes.\n",tree->filename,
+					(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 
-			if (read (fd,page->node.subgraph.to,sizeof(object_t)*total_arcs_number)
-												< sizeof(object_t)*total_arcs_number) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to read the arc targets of dirty page %llu in '%s'...\n",tree->filename,page_id,tree->filename);
+			memcpy (page->node.subgraph.to,ptr,sizeof(object_t)*total_arcs_number);
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le16toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le32toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le64toh (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][load_ntree_page()] 3.Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-			if (read (fd,page->node.subgraph.weights,sizeof(arc_weight_t)*total_arcs_number)
-													< sizeof(arc_weight_t)*total_arcs_number) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to read the arc weight of dirty page %llu in '%s'...\n",tree->filename,page_id,tree->filename);
+			ptr += sizeof(object_t)*total_arcs_number;
+
+			memcpy (page->node.subgraph.weights,ptr,sizeof(arc_weight_t)*total_arcs_number);
+			if (sizeof(arc_weight_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le16toh (le_ptr[i]);
+				}
+			}else if (sizeof(arc_weight_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le32toh (le_ptr[i]);
+				}
+			}else if (sizeof(arc_weight_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = le64toh (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][load_ntree_page()] 4.Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
 		}else{
-			page->node.group.ranges = (object_range_t*) malloc (tree->internal_entries*tree->leaf_entries*sizeof(object_range_t));
+			page->node.group.ranges = (object_range_t*) malloc (tree->page_size-sizeof(header_t));
 			if (page->node.group.ranges == NULL) {
 				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the run-length sequence of a disk-page...\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-
-			if (read (fd, page->node.group.ranges,page->header.records*sizeof(object_range_t))
-												< page->header.records*sizeof(object_range_t)) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to read the run-length sequence of page %llu in '%s'...\n",tree->filename,page_id,tree->filename);
+			memcpy (page->node.group.ranges,ptr,page->header.records*sizeof(object_range_t));
+			LOG (debug,"[%s][load_ntree_page()] About to deserialize %llu bytes.\n",tree->filename,sizeof(object_range_t)*page->header.records);
+			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
+				uint16_t* le_ptr = buffer;
+				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = le16toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_range_t) == sizeof(uint32_t)<<1) {
+				uint32_t* le_ptr = buffer;
+				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = le32toh (le_ptr[i]);
+				}
+			}else if (sizeof(object_range_t) == sizeof(uint64_t)<<1) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = le64toh (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][load_ntree_page()] Unable to deserialize into a global heapfile format.\n",tree->filename);
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
 		}
-
 		close (fd);
-
+		free (buffer);
 		page->header.is_dirty = false;
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
-
-		SET_PAGE(page_id,page);
-
+		++tree->io_counter;
+		SET_PAGE(position,page);
 		assert (page_lock == NULL);
-
 		page_lock = (pthread_rwlock_t*) malloc (sizeof(pthread_rwlock_t));
 		pthread_rwlock_init (page_lock,NULL);
-		SET_LOCK(page_id,page_lock);
-
+		SET_LOCK(position,page_lock);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
-		if (!page_id) update_rootrange (tree);
+		if (!position) update_rootrange (tree);
 
-		LOG (info,"[%s][load_ntree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
-								tree->filename,page_id,page->header.records);
-/**/
+		LOG (info,"[%s][load_rtree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
+								tree->filename,position,page->header.records);
+
 		pthread_rwlock_wrlock (&tree->tree_lock);
-		uint64_t swapped = set_priority (tree->swap,page_id,compute_page_priority(tree,page_id));
+		uint64_t swapped = set_priority (tree->swap,position,compute_page_priority(tree,position));
 		pthread_rwlock_unlock (&tree->tree_lock);
 
+		assert (swapped != position);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][load_ntree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,page_id);
+			LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][load_ntree_page()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
-/**/
-		return page;
+	}else{
+		LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+		exit (EXIT_FAILURE);
 	}
+	return page;
 }
-
 
 page_t* load_page (tree_t *const tree, uint64_t const position) {
 	return tree->root_range == NULL ?
@@ -875,25 +931,20 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		page->header.is_dirty = false;
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
-
 		if (buffer == NULL) {
 			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to allocate enough memory so as to dump page...\n",tree->filename);
 			exit (EXIT_FAILURE);
 		}
-
 		bzero (buffer,tree->page_size);
 
 		ptr = buffer;
 		memcpy (ptr,&page->header,sizeof(header_t));
 		((header_t *const)ptr)->records = htole32(((header_t *const)ptr)->records);
 		ptr += sizeof(header_t);
-
 		if (page->header.is_leaf) {
 			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping leaf-node at position %llu with %u records.\n",tree->filename,position,page->header.records);
-
 			memcpy (ptr,page->node.leaf.keys,sizeof(index_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
-
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional keys.\n",sizeof(header_t)+tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
@@ -914,11 +965,10 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-
 			ptr += sizeof(index_t)*tree->dimensions*page->header.records;
-			memcpy (ptr,page->node.leaf.objects,sizeof(object_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
 
+			memcpy (ptr,page->node.leaf.objects,sizeof(object_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of identifiers.\n",tree->filename,sizeof(header_t)+sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -939,14 +989,11 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-
 			ptr += sizeof(object_t)*page->header.records;
 		}else{
 			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping internal page at position %llu with %u children.\n",tree->filename,position,page->header.records);
-
 			memcpy (ptr,page->node.leaf.keys,sizeof(interval_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
-
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(header_t)+sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
@@ -967,10 +1014,8 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-
 			ptr += sizeof(interval_t)*tree->dimensions*page->header.records;
 		}
-
 		uint64_t bytelength = ptr - buffer;
 		if (bytelength > tree->page_size) {
 			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Over-flown page at position %llu occupying %llu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
@@ -1003,64 +1048,157 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			exit (EXIT_FAILURE);
 		}
 		page->header.is_dirty = false;
-		if (write (fd,&page->header,sizeof(header_t)) != sizeof(header_t)) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the header of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
+
+		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
+		if (buffer == NULL) {
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to allocate enough memory so as to dump page...\n",tree->filename);
+			exit (EXIT_FAILURE);
+		}
+		bzero (buffer,tree->page_size);
+
+		ptr = buffer;
+		memcpy (ptr,&page->header,sizeof(header_t));
+		((header_t *const)ptr)->records = htole32(((header_t *const)ptr)->records);
+		ptr += sizeof(header_t);
+		if (page->header.is_leaf) {
+			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing leaf-node %llu with %u records.\n",tree->filename,position,page->header.records);
+			uint64_t total_arcs_number = 0;
+			for (register uint32_t i=0; i<page->header.records; ++i) {
+				total_arcs_number += page->node.subgraph.pointers[i];
+			}
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %llu bytes.\n",tree->filename,
+					sizeof(header_t)+(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
+			memcpy (ptr,page->node.subgraph.from,sizeof(object_t)*page->header.records);
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole16 (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole32 (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = ptr;
+				for (register uint64_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole64 (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] 1.Unable to serialize into a global heapfile format.\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+			ptr += sizeof(object_t)*page->header.records;
+
+			memcpy (ptr,page->node.subgraph.pointers,sizeof(arc_pointer_t)*page->header.records);
+			if (sizeof(arc_pointer_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole16 (le_ptr[i]);
+				}
+			}else if (sizeof(arc_pointer_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole32 (le_ptr[i]);
+				}
+			}else if (sizeof(arc_pointer_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<page->header.records; ++i) {
+					le_ptr[i] = htole64 (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] 2.Unable to serialize into a global heapfile format.\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+			ptr += sizeof(arc_pointer_t)*page->header.records;
+
+			memcpy (ptr,page->node.subgraph.to,sizeof(object_t)*total_arcs_number);
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole16 (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole32 (le_ptr[i]);
+				}
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole64 (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] 3.Unable to serialize into a global heapfile format.\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+			ptr += sizeof(object_t)*total_arcs_number;
+
+			memcpy (ptr,page->node.subgraph.weights,sizeof(arc_weight_t)*total_arcs_number);
+			if (sizeof(arc_weight_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole16 (le_ptr[i]);
+				}
+			}else if (sizeof(arc_weight_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole32 (le_ptr[i]);
+				}
+			}else if (sizeof(arc_weight_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+					le_ptr[i] = htole64 (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] 4.Unable to serialize into a global heapfile format.\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+			ptr += sizeof(arc_weight_t)*total_arcs_number;
+		}else{
+			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing internal page %llu with %u children.\n",tree->filename,position,page->header.records);
+			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records<<1);
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %llu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
+			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
+				uint16_t* le_ptr = buffer;
+				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = htole16 (le_ptr[i]);
+				}
+			}else if (sizeof(object_range_t) == sizeof(uint32_t)<<1) {
+				uint32_t* le_ptr = buffer;
+				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = htole32 (le_ptr[i]);
+				}
+			}else if (sizeof(object_range_t) == sizeof(uint64_t)<<1) {
+				uint64_t* le_ptr = buffer;
+				for (register uint64_t i=0; i<page->header.records<<1; ++i) {
+					le_ptr[i] = htole64 (le_ptr[i]);
+				}
+			}else{
+				LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to serialize into a global heapfile format.\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+			ptr += sizeof(object_range_t)*page->header.records;
+		}
+		uint64_t bytelength = ptr - buffer;
+		if (bytelength > tree->page_size) {
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Over-flown page at position %llu occupying %llu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
-		if (page->header.is_leaf) {
-			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing leaf-node %llu with %u records.\n",tree->filename,position,page->header.records);
-
-			if (tree->root_range != NULL) {
-				if (write (fd,page->node.subgraph.from,sizeof(object_t)*page->header.records)
-													!= sizeof(object_t)*page->header.records) {
-					LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the arc sources of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
-					close (fd);
-					exit (EXIT_FAILURE);
-				}
-				if (write (fd,page->node.subgraph.pointers,sizeof(arc_pointer_t)*page->header.records)
-														!= sizeof(arc_pointer_t)*page->header.records) {
-					LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the arc pointers of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
-					close (fd);
-					exit (EXIT_FAILURE);
-				}
-
-				uint64_t total_arcs_number = 0;
-				for (register uint32_t i=0; i<page->header.records; ++i) {
-					total_arcs_number += page->node.subgraph.pointers[i];
-				}
-
-				if (write (fd,page->node.subgraph.to,sizeof(object_t)*total_arcs_number)
-													!= sizeof(object_t)*total_arcs_number) {
-					LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the arc targets of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
-					close (fd);
-					exit (EXIT_FAILURE);
-				}
-				if (write (fd,page->node.subgraph.weights,sizeof(arc_weight_t)*total_arcs_number)
-														!= sizeof(arc_weight_t)*total_arcs_number) {
-					LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the arc weight of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
-					close (fd);
-					exit (EXIT_FAILURE);
-				}
-			}else{
-				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to flush tree hierarchy...\n",tree->filename);
-				exit (EXIT_FAILURE);
-			}
+		if (write (fd,buffer,bytelength) != bytelength) {
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to dump page at position %llu in '%s'...\n",tree->filename,position,tree->filename);
+			close (fd);
+			exit (EXIT_FAILURE);
 		}else{
-			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing internal page %llu with %u children.\n",tree->filename,position,page->header.records);
-
-			if (tree->root_range != NULL) {
-				if (write (fd,page->node.group.ranges,sizeof(object_range_t)*page->header.records)
-													!= sizeof(object_range_t)*page->header.records) {
-					LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to write the range entries of dirty page %llu in '%s'...\n",tree->filename,position,tree->filename);
-					close (fd);
-					exit (EXIT_FAILURE);
-				}
-			}else{
-				LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to flush tree hierarchy...\n",tree->filename);
-				exit (EXIT_FAILURE);
-			}
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] Done dumping %llu bytes of binary data.\n",tree->filename,bytelength);
 		}
+		free (buffer);
 	}
 	close(fd);
 	return position;
@@ -1070,6 +1208,35 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 	return tree->root_range == NULL ?
 			low_level_write_of_rtree_page_to_disk (tree,page,position)
 			:low_level_write_of_ntree_page_to_disk (tree,page,position);
+}
+
+void delete_tree (tree_t *const tree) {
+	if (tree != NULL) {
+		if (tree->root_box != NULL)
+			free (tree->root_box);
+
+		if (tree->root_range != NULL)
+			free (tree->root_range);
+
+		if (tree->heapfile_index != NULL) {
+			flush_tree (tree);
+			delete_swap (tree->swap);
+			delete_symbol_table (tree->heapfile_index);
+		}
+
+		if (tree->page_locks != NULL) {
+			fifo_t* queue = get_entries (tree->page_locks);
+			while (queue->size) {
+				pthread_rwlock_t *const page_lock = remove_tail_of_queue(queue);
+				pthread_rwlock_destroy (page_lock);
+				free (page_lock);
+			}
+			delete_symbol_table (tree->page_locks);
+		}
+		pthread_rwlock_destroy (&tree->tree_lock);
+		free (tree->filename);
+		free (tree);
+	}
 }
 
 uint64_t flush_tree (tree_t *const tree) {
@@ -1133,19 +1300,16 @@ uint64_t flush_tree (tree_t *const tree) {
 			assert (page_lock != NULL);
 
 			pthread_rwlock_wrlock (page_lock);
-
 			if (page->header.is_dirty) {
 				low_level_write_of_page_to_disk (tree,page,entry->key);
 				++count_dirty_pages;
 			}
-			delete_rtree_page (page);
-
+			if (tree->root_range==NULL) delete_rtree_page (page);
+			else delete_ntree_page (page);
 			free (entry);
-
 			pthread_rwlock_unlock (page_lock);
 			pthread_rwlock_destroy (page_lock);
 		}
-
 		delete_queue (queue);
 		//truncate_heapfile (tree);
 	}else{

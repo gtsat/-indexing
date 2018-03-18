@@ -157,12 +157,12 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	delete_stack (failed);
 
 	if (delete_new_tree) {
-		delete_rtree (tree);
+		delete_tree (tree);
 	}else{
 		flush_tree (tree);
 		if (!tree->indexed_records) {
 			unset (server_trees,filepath);
-			delete_rtree (tree);
+			delete_tree (tree);
 		}
 	}
 	return EXIT_SUCCESS;
@@ -415,7 +415,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	fifo_t *const server_tree_entries = get_entries (server_trees);
 	while (server_tree_entries->size) {
 		symbol_table_entry_t *const entry = remove_tail_of_queue (server_tree_entries);
-		delete_rtree (entry->value);
+		delete_tree (entry->value);
 		free (entry->key);
 		free (entry);
 	}
@@ -537,7 +537,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 						pthread_rwlock_unlock (&joined_tree->tree_lock);
 						
 						if (get_rtree(joined_tree->filename)==NULL) {
-							delete_rtree (joined_tree);
+							delete_tree (joined_tree);
 						}
 					}else{
 						LOG (error,"Error while finalizing join operands.\n");
@@ -559,7 +559,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					insert_into_stack (partial_results,range(remaining_tree,from,to,remaining_tree->dimensions));
 
 					if (get_rtree(remaining_tree->filename)==NULL) {
-						delete_rtree (remaining_tree);
+						delete_tree (remaining_tree);
 					}
 					has_tail = true;
 				}
@@ -622,7 +622,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		while (subq_trees->size) {
 			tree_t *const to_be_removed = remove_from_stack(subq_trees);
 			if (get_rtree(to_be_removed->filename)==NULL) {
-				delete_rtree(to_be_removed);
+				delete_tree (to_be_removed);
 			}
 		}
 		delete_stack (subq_trees);
@@ -910,7 +910,7 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 				while (feature_trees->size) {
 					tree_t *const to_be_removed = remove_from_stack(feature_trees);
 					if (get_rtree(to_be_removed->filename)==NULL) {
-						delete_rtree (to_be_removed);
+						delete_tree (to_be_removed);
 					}
 				}
 				delete_stack (feature_trees);
@@ -923,7 +923,7 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 				while (feature_trees->size) {
 					tree_t *const to_be_removed = remove_from_stack(feature_trees);
 					if (get_rtree(to_be_removed->filename)==NULL) {
-						delete_rtree (to_be_removed);
+						delete_tree (to_be_removed);
 					}
 				}
 				delete_stack (feature_trees);
@@ -1235,7 +1235,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		delete_stack (lookups);
 		if (delete_rtree_flag) {
 			if (get_rtree(tree->filename)==NULL) {
-				delete_rtree (tree);
+				delete_tree (tree);
 			}
 		}else{
 			pthread_rwlock_wrlock (&tree->tree_lock);

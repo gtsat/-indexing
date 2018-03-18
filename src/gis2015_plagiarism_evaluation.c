@@ -620,7 +620,7 @@ int main (int argc, char* argv[]) {
 			sum_ioC,sum_ioH,sum_ioM,
 			sum_scoreC,sum_scoreM);
 
-	delete_rtree (tree);
+	delete_tree (tree);
 
 	return EXIT_SUCCESS;
 }

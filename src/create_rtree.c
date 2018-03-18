@@ -108,7 +108,7 @@ int main (int argc, char* argv[]) {
 		insert_records_from_textfile (tree,DATASET);
 		//flush_tree (tree);
 		//delete_records_from_textfile (tree,DATASET);
-		delete_rtree (tree);
+		delete_tree (tree);
 		return EXIT_SUCCESS;
 	}else{
 		print_usage (argv[0]);
