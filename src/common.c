@@ -362,6 +362,11 @@ void new_root (tree_t *const tree) {
 				pthread_rwlock_unlock (&tree->tree_lock);
 			}else{
 				low_level_write_of_page_to_disk (tree,entry->value,entry->key);
+				if (((page_t*)entry->value)->header.is_leaf) {
+					assert (((page_t*)entry->value)->header.records <= tree->leaf_entries);
+				}else{
+					assert (((page_t*)entry->value)->header.records <= tree->internal_entries);
+				}
 				if (tree->root_range == NULL) delete_rtree_page (entry->value);
 				else delete_ntree_page (entry->value);
 			}
@@ -385,7 +390,6 @@ void new_root (tree_t *const tree) {
 					tree->root_range,
 					sizeof(object_range_t));
 		}
-
 	}else{
 		new_root = new_leaf (tree);
 		new_root->header.records = 0;
@@ -427,6 +431,10 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 	if (page_lock != NULL) {
 		if (page != NULL) {
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			uint64_t swapped = set_priority (tree->swap,position,compute_page_priority(tree,position));
+			pthread_rwlock_unlock (&tree->tree_lock);
+
 			return page;
 		}else{
 			LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
@@ -698,7 +706,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
 			LOG (debug,"[%s][load_ntree_page()] Deserializing %llu bytes.\n",tree->filename,
-					(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
+					(sizeof(header_t)+sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 
 			memcpy (page->node.subgraph.to,ptr,sizeof(object_t)*total_arcs_number);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
@@ -752,7 +760,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				exit (EXIT_FAILURE);
 			}
 			memcpy (page->node.group.ranges,ptr,page->header.records*sizeof(object_range_t));
-			LOG (debug,"[%s][load_ntree_page()] About to deserialize %llu bytes.\n",tree->filename,sizeof(object_range_t)*page->header.records);
+			LOG (debug,"[%s][load_ntree_page()] About to deserialize %llu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
 			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
@@ -789,7 +797,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 		if (!position) update_rootrange (tree);
 
-		LOG (info,"[%s][load_rtree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
+		LOG (info,"[%s][load_ntree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
 								tree->filename,position,page->header.records);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -798,14 +806,14 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 		assert (swapped != position);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+			LOG (info,"[%s][load_ntree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
 				LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
 	}else{
-		LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+		LOG (fatal,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
 		exit (EXIT_FAILURE);
 	}
 	return page;
