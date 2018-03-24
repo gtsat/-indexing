@@ -655,6 +655,34 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 		page->header.records = le32toh (page->header.records);
 		ptr = buffer + sizeof(header_t);
 		if (page->header.is_leaf) {
+			page->node.subgraph.from = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
+			if (page->node.subgraph.from == NULL) {
+				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the sources of a disk-page...\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+
+			page->node.subgraph.to = (object_t*) malloc (tree->page_size);
+			if (page->node.subgraph.to == NULL) {
+				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the targets of a disk-page...\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+
+			page->node.subgraph.pointers = (arc_pointer_t*) malloc (tree->leaf_entries*sizeof(arc_pointer_t));
+			if (page->node.subgraph.pointers == NULL) {
+				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the offsets of a disk-page...\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+
+			page->node.subgraph.weights = (arc_weight_t*) malloc (tree->page_size);
+			if (page->node.subgraph.weights == NULL) {
+				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the arc-weights of a disk-page...\n",tree->filename);
+				close (fd);
+				exit (EXIT_FAILURE);
+			}
+
 			memcpy (page->node.subgraph.from,ptr,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
@@ -1306,7 +1334,6 @@ uint64_t flush_tree (tree_t *const tree) {
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			assert (page_lock != NULL);
-
 			pthread_rwlock_wrlock (page_lock);
 			if (page->header.is_dirty) {
 				low_level_write_of_page_to_disk (tree,page,entry->key);

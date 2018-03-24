@@ -153,19 +153,18 @@ tree_t* load_rtree (char const filename[]) {
 	umask ( S_IRWXO | S_IWGRP);
 	tree_t *const tree = (tree_t *const) malloc (sizeof(tree_t));
 	if (tree == NULL) {
-		LOG (fatal,"[%s][load_rtree()] Unable to allocate memory for new R-Tree...\n",tree->filename);
+		LOG (fatal,"[%s][load_rtree()] Unable to allocate memory for new R-Tree...\n",filename);
 		exit (EXIT_FAILURE);
 	}
 
 	tree->filename = strdup (filename);
-
 	int fd = open (filename,O_RDONLY,0);
-	lseek (fd,0,SEEK_SET);
 	if (fd < 0) {
-		LOG (error,"[%s][load_rtree()] Could not find heapfile '%s'... \n",tree->filename,filename);
+		LOG (error,"[%s][load_rtree()] Could not find heapfile '%s'... \n",filename,filename);
 		return NULL;
 	}
 
+	lseek (fd,0,SEEK_SET);
 	if (read (fd,&tree->dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
 		LOG (fatal,"[%s][load_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
 		close (fd);
@@ -237,22 +236,21 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	umask ( S_IRWXO | S_IWGRP);
 	tree_t *const tree = (tree_t *const) malloc (sizeof(tree_t));
 	if (tree == NULL) {
-		LOG (fatal,"[%s][new_rtree()] Unable to allocate memory for new R-Tree...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree()] Unable to allocate memory for new R-Tree...\n",filename);
 		exit (EXIT_FAILURE);
 	}
 
-	tree->filename = (char*) malloc ((strlen(filename)+1)*sizeof(char));
-	strcpy (tree->filename,filename);
-
+	tree->filename = strdup (filename);
 	int fd = open (filename,O_RDONLY,0);
-	lseek (fd,0,SEEK_SET);
 	if (fd < 0) {
+		LOG (warn,"[%s][new_rtree()] Could not find heapfile '%s'... \n",filename,filename);
 		tree->is_dirty = true;
 		tree->dimensions = dimensions;
 		tree->page_size = page_size;
 		tree->indexed_records = 0;
 		tree->tree_size = 0;
 	}else{
+		lseek (fd,0,SEEK_SET);
 		if (read (fd,&tree->dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
 			LOG (fatal,"[%s][new_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
 			abort();
@@ -313,7 +311,6 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 
 	if (load_page (tree,0) == NULL) new_root(tree);
 	else update_rootbox (tree);
-
 	return tree;
 }
 
