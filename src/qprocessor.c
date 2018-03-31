@@ -935,6 +935,8 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 
 			*io_mb_counter += (sub_io_blocks_counter * feature_tree->page_size)/((double)(1<<20));
 			*io_blocks_counter += sub_io_blocks_counter;
+
+			insert_into_stack(feature_trees,feature_tree);
 		}
 
 		if (peek_at_stack (stack) != (void*)'/') {
@@ -957,12 +959,19 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 			return NULL;
 		}
 
-		*io_mb_counter += (sub_io_blocks_counter * data_tree->page_size)/((double)(1<<20));
-		*io_blocks_counter += sub_io_blocks_counter;
-
-
-		fifo_t *const result_list = new_queue(); //multichromatic_reverse_nearest_neighbors (key,data_tree,feature_trees);
+		fifo_t *const result_list = multichromatic_reverse_nearest_neighbors (key,data_tree,feature_trees,kcardinality);
 		tree_t *const result_tree = create_temp_rtree (result_list,data_tree->page_size,data_tree->dimensions);
+
+		*io_mb_counter += (data_tree->io_counter * data_tree->page_size)/((double)(1<<20));
+		*io_blocks_counter += data_tree->io_counter;
+		data_tree->io_counter = 0;
+
+		for (uint32_t itree=0; itree<feature_trees->size; ++itree) {
+			tree_t *const feature_tree = (tree_t *const) feature_trees->buffer[itree];
+			*io_mb_counter += (feature_tree->io_counter * feature_tree->page_size)/((double)(1<<20));
+			*io_blocks_counter += feature_tree->io_counter;
+			feature_tree->io_counter = 0;
+		}
 
 		delete_stack (feature_trees);
 		return result_tree;
