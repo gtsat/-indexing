@@ -30,10 +30,6 @@
 #include "defs.h"
 
 
-boolean allow_dangling_pages = true;
-boolean dump_transposed_pages = false;
-
-
 static
 page_t* new_rtree_leaf (tree_t const*const tree) {
 	page_t *const page = (page_t *const) malloc (sizeof(page_t));
@@ -209,7 +205,7 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 		UNSET_LOCK(original_id);
 		assert (LOADED_PAGE(original_id) == NULL);
 		assert (LOADED_LOCK(original_id) == NULL);
-		boolean rval = unset_priority (tree->swap,original_id);
+		boolean rval = UNSET_PRIORITY (original_id);
 		assert (!is_active_identifier(tree->swap,original_id));
 		pthread_rwlock_unlock (&tree->tree_lock);
 
@@ -337,39 +333,16 @@ void new_root (tree_t *const tree) {
 
 		while (sorted_pages->size) {
 			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
-			if (true || entry->key<=1) {
-				pthread_rwlock_wrlock (&tree->tree_lock);
-				assert (!is_active_identifier(tree->swap,entry->key));
-				uint64_t swapped = set_priority (tree->swap,entry->key,compute_page_priority(tree,entry->key));
-				assert (is_active_identifier (tree->swap,entry->key));
-				pthread_rwlock_unlock (&tree->tree_lock);
 
-				assert (swapped != entry->key);
-				if (swapped != 0xffffffffffffffff) {
-					LOG (info,"[%s][new_root()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,entry->key);
-					if (flush_page (tree,swapped) != swapped) {
-						LOG (fatal,"[%s][new_root()] Unable to flush page %llu...\n",tree->filename,swapped);
-						exit (EXIT_FAILURE);
-					}
-				}
-
-				pthread_rwlock_wrlock (&tree->tree_lock);
-				SET_PAGE(entry->key,entry->value);
-
-				pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const) malloc (sizeof(pthread_rwlock_t));
-				pthread_rwlock_init (page_lock,NULL);
-				SET_LOCK(entry->key,page_lock);
-				pthread_rwlock_unlock (&tree->tree_lock);
+			low_level_write_of_page_to_disk (tree,entry->value,entry->key);
+			if (((page_t*)entry->value)->header.is_leaf) {
+				assert (((page_t*)entry->value)->header.records <= tree->leaf_entries);
 			}else{
-				low_level_write_of_page_to_disk (tree,entry->value,entry->key);
-				if (((page_t*)entry->value)->header.is_leaf) {
-					assert (((page_t*)entry->value)->header.records <= tree->leaf_entries);
-				}else{
-					assert (((page_t*)entry->value)->header.records <= tree->internal_entries);
-				}
-				if (tree->root_range == NULL) delete_rtree_page (entry->value);
-				else delete_ntree_page (entry->value);
+				assert (((page_t*)entry->value)->header.records <= tree->internal_entries);
 			}
+			if (tree->root_range == NULL) delete_rtree_page (entry->value);
+			else delete_ntree_page (entry->value);
+
 			free (entry);
 		}
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -395,18 +368,20 @@ void new_root (tree_t *const tree) {
 		new_root->header.records = 0;
 	}
 
-	uint64_t swapped = set_priority (tree->swap,0,compute_page_priority(tree,0));
+	uint64_t swapped = SET_PRIORITY (0);
 	assert (is_active_identifier (tree->swap,0));
 	assert (swapped);
 	if (swapped != 0xffffffffffffffff) {
 		LOG (info,"[%s][new_root()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,0);
 		assert (LOADED_PAGE(swapped) != NULL);
-
+		assert (LOADED_LOCK(swapped) != NULL);
 		pthread_rwlock_unlock (&tree->tree_lock);
 		if (flush_page (tree,swapped) != swapped) {
 			LOG (fatal,"[%s][new_root()] Unable to flush page %llu...\n",tree->filename,swapped);
 			exit (EXIT_FAILURE);
 		}
+		assert (LOADED_PAGE(swapped) == NULL);
+		assert (LOADED_LOCK(swapped) == NULL);
 		pthread_rwlock_wrlock (&tree->tree_lock);
 	}
 
@@ -431,10 +406,19 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 	if (page_lock != NULL) {
 		if (page != NULL) {
+			//assert (is_active_identifier(tree->swap,position));
 			pthread_rwlock_wrlock (&tree->tree_lock);
-			uint64_t swapped = set_priority (tree->swap,position,compute_page_priority(tree,position));
+			uint64_t swapped = SET_PRIORITY (position);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
+			assert (swapped != position);
+			if (swapped != 0xffffffffffffffff) {
+				LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+				if (flush_page (tree,swapped) != swapped) {
+					LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
+					exit (EXIT_FAILURE);
+				}
+			}
 			return page;
 		}else{
 			LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
@@ -586,7 +570,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 								tree->filename,position,page->header.records);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
-		uint64_t swapped = set_priority (tree->swap,position,compute_page_priority(tree,position));
+		uint64_t swapped = SET_PRIORITY (position);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		assert (swapped != position);
@@ -829,7 +813,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 								tree->filename,position,page->header.records);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
-		uint64_t swapped = set_priority (tree->swap,position,compute_page_priority(tree,position));
+		uint64_t swapped = SET_PRIORITY (position);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		assert (swapped != position);
@@ -931,24 +915,24 @@ uint64_t flush_page (tree_t *const tree, uint64_t const page_id) {
 
 	pthread_rwlock_wrlock (page_lock);
 	if (page->header.is_dirty) {
-		if (!allow_dangling_pages) {
-			low_level_write_of_page_to_disk (tree,page,page_id);
-			if (tree->root_range == NULL) delete_rtree_page (page);
-			else delete_ntree_page (page);
-			UNSET_PAGE(page_id);
-			UNSET_LOCK(page_id);
-		}
-	}else{
-		if (tree->root_range == NULL) delete_rtree_page (page);
-		else delete_ntree_page (page);
-		UNSET_PAGE(page_id);
-		UNSET_LOCK(page_id);
+		low_level_write_of_page_to_disk (tree,page,page_id);
 	}
-	pthread_rwlock_unlock (page_lock);
+	if (tree->root_range == NULL) delete_rtree_page (page);
+	else delete_ntree_page (page);
 
 	pthread_rwlock_wrlock (&tree->tree_lock);
-	boolean rval = unset_priority (tree->swap,page_id);
+	UNSET_PAGE(page_id);
+	UNSET_LOCK(page_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
+
+	pthread_rwlock_wrlock (&tree->tree_lock);
+	boolean rval = UNSET_PRIORITY (page_id);
+	pthread_rwlock_unlock (&tree->tree_lock);
+
+	pthread_rwlock_unlock (page_lock);
+	pthread_rwlock_destroy (page_lock);
+	free (page_lock);
+
 	return page_id;
 }
 
@@ -980,7 +964,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		if (page->header.is_leaf) {
 			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping leaf-node at position %llu with %u records.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(index_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional keys.\n",sizeof(header_t)+tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
@@ -1004,7 +988,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			ptr += sizeof(index_t)*tree->dimensions*page->header.records;
 
 			memcpy (ptr,page->node.leaf.objects,sizeof(object_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of identifiers.\n",tree->filename,sizeof(header_t)+sizeof(object_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -1029,7 +1013,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		}else{
 			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping internal page at position %llu with %u children.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(interval_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(header_t)+sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
@@ -1248,27 +1232,20 @@ uint64_t low_level_write_of_page_to_disk (tree_t *const tree, page_t *const page
 
 void delete_tree (tree_t *const tree) {
 	if (tree != NULL) {
-		if (tree->root_box != NULL)
+		if (tree->root_box != NULL) {
 			free (tree->root_box);
+		}
 
-		if (tree->root_range != NULL)
+		if (tree->root_range != NULL) {
 			free (tree->root_range);
-
-		if (tree->heapfile_index != NULL) {
-			flush_tree (tree);
-			delete_swap (tree->swap);
-			delete_symbol_table (tree->heapfile_index);
 		}
 
-		if (tree->page_locks != NULL) {
-			fifo_t* queue = get_entries (tree->page_locks);
-			while (queue->size) {
-				pthread_rwlock_t *const page_lock = remove_tail_of_queue(queue);
-				pthread_rwlock_destroy (page_lock);
-				free (page_lock);
-			}
-			delete_symbol_table (tree->page_locks);
-		}
+		flush_tree (tree);
+
+		delete_symbol_table (tree->heapfile_index);
+		delete_symbol_table (tree->page_locks);
+		delete_swap (tree->swap);
+
 		pthread_rwlock_destroy (&tree->tree_lock);
 		free (tree->filename);
 		free (tree);
@@ -1325,12 +1302,22 @@ uint64_t flush_tree (tree_t *const tree) {
 		fifo_t* queue = get_entries (tree->heapfile_index);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
+		priority_queue_t *const sorted_pages = new_priority_queue (&mincompare_symbol_table_entries);
 		while (queue->size) {
-			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_head_of_queue (queue);
+			insert_into_priority_queue (sorted_pages,remove_head_of_queue(queue));
+		}
+		delete_queue (queue);
+
+		while (sorted_pages->size) {
+			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
 			page_t *const page = entry->value;
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
 			pthread_rwlock_t *const page_lock = LOADED_LOCK(entry->key);
+
+			UNSET_PAGE (entry->key);
+			UNSET_LOCK (entry->key);
+			UNSET_PRIORITY (entry->key);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			assert (page_lock != NULL);
@@ -1342,11 +1329,12 @@ uint64_t flush_tree (tree_t *const tree) {
 			if (tree->root_range==NULL) delete_rtree_page (page);
 			else delete_ntree_page (page);
 			free (entry);
+
 			pthread_rwlock_unlock (page_lock);
 			pthread_rwlock_destroy (page_lock);
+			free (page_lock);
 		}
-		delete_queue (queue);
-		//truncate_heapfile (tree);
+		delete_priority_queue (sorted_pages);
 	}else{
 		LOG (warn,"[%s][flush_tree()] Deleting heapfile for it indexes no data anymore!\n",tree->filename);
 		unlink (tree->filename);
@@ -1354,9 +1342,6 @@ uint64_t flush_tree (tree_t *const tree) {
 	LOG (warn,"[%s][flush_tree()] Done flushing tree hierarchy. Overall %llu dirty blocks were found!\n",tree->filename,count_dirty_pages);
 
 	pthread_rwlock_wrlock (&tree->tree_lock);
-	clear_symbol_table (tree->heapfile_index);
-	clear_symbol_table (tree->page_locks);
-	clear_swap (tree->swap);
 	tree->is_dirty = false;
 	pthread_rwlock_unlock (&tree->tree_lock);
 

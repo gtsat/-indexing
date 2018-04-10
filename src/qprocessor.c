@@ -478,6 +478,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 				*io_mb_counter += (sub_io_blocks_counter * subq_tree->page_size)/((double)(1<<20));
 				*io_blocks_counter += sub_io_blocks_counter;
 
+				flush_tree (subq_tree);
 				insert_into_stack (subq_trees,subq_tree);
 				LOG (info,"Processed subquery returned %lu tuples. \n",subq_tree->indexed_records);
 			}else{
@@ -535,7 +536,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 						*io_mb_counter += (joined_tree->io_counter * joined_tree->page_size)/((double)(1<<20));
 						joined_tree->io_counter = 0;
 						pthread_rwlock_unlock (&joined_tree->tree_lock);
-						
+
 						if (get_rtree(joined_tree->filename)==NULL) {
 							delete_tree (joined_tree);
 						}
@@ -564,8 +565,6 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					has_tail = true;
 				}
 			}while (subq_trees->size);
-
-			//printf ("partial_results->size: %lu\n\n",partial_results->size);
 
 			fifo_t* top_level_list = NULL;
 			if (partial_results->size > 1) {
@@ -614,10 +613,9 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 		result = range (subq_tree,from,to,subq_tree->dimensions);
 		if (result->size != subq_tree->indexed_records) {
-			LOG (fatal,"Result-size: %lu, Tree-size: %lu \n",result->size,subq_tree->indexed_records);
+			LOG (error,"Result-size: %lu, Tree-size: %lu \n",result->size,subq_tree->indexed_records);
 		}
 		assert (result->size == subq_tree->indexed_records);
-
 
 		while (subq_trees->size) {
 			tree_t *const to_be_removed = remove_from_stack(subq_trees);

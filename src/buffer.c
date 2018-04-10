@@ -22,7 +22,7 @@ void** adjust_buffer (void** buffer, uint64_t const old_size, uint64_t const new
 		return buffer;
 	}
 	if (new_size > old_size) {
-		void** new_buffer = (void**) calloc (new_size,new_size*sizeof(void*));
+		void** new_buffer = (void**) malloc (new_size*sizeof(void*));
 		if (new_buffer == NULL) {
 			LOG (fatal,"Unable to dynamically allocate additional memory...!\n");
 			abort ();
@@ -38,7 +38,7 @@ void** adjust_buffer (void** buffer, uint64_t const old_size, uint64_t const new
 			free(buffer);
 			buffer = NULL;
 		}else{
-			void** new_buffer = (void**) calloc (new_size,new_size*sizeof(void*));
+			void** new_buffer = (void**) malloc (new_size*sizeof(void*));
 			if (new_buffer == NULL) {
 				LOG (error,"Unable to unallocate redundant memory...!\n");
 				return buffer;

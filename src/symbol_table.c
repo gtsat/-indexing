@@ -79,8 +79,6 @@ void inorder_traversal_recursive (tree_node_t const*const tree_node,
 					boolean const get_entries,
 					boolean (*filter) (key__t const)) {
 
-	if (tree_node->left != NULL)
-		inorder_traversal_recursive (tree_node->left,queue,get_entries,filter);
 	if (filter(tree_node->key)) {
 		if (get_entries) {
 			symbol_table_entry_t* entry = (symbol_table_entry_t*) malloc (sizeof(symbol_table_entry_t));
@@ -94,8 +92,13 @@ void inorder_traversal_recursive (tree_node_t const*const tree_node,
 			insert_at_tail_of_queue (queue,entry);
 		}else insert_at_tail_of_queue (queue,tree_node->key);
 	}
-	if (tree_node->right != NULL)
+
+	if (tree_node->left != NULL) {
+		inorder_traversal_recursive (tree_node->left,queue,get_entries,filter);
+	}
+	if (tree_node->right != NULL) {
 		inorder_traversal_recursive (tree_node->right,queue,get_entries,filter);
+	}
 }
 
 static
@@ -541,7 +544,7 @@ value_t unset (symbol_table_t *const rbtree, key__t const key) {
 			rbtree->root = remove_key_recursive (rbtree,rbtree->root,key);
 			LOG (debug,"Successfully removed from the symbol-table value %lu indexed by key %lu.\n",value,key);
 		}else{
-			LOG (warn,"No entry indexed by key %lu was found in the symbol-table to be removed...\n",key);
+			LOG (debug,"No entry indexed by key %lu was found in the symbol-table to be removed...\n",key);
 		}
 	}
 	rbtree->size = (rbtree->root!=NULL?rbtree->root->size:0);

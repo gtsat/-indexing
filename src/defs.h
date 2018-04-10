@@ -283,6 +283,9 @@ typedef struct {
 #define UNSET_LOCK(x)		((pthread_rwlock_t *const)unset(tree->page_locks,(x)))
 #define LOADED_LOCK(x)		((pthread_rwlock_t *const)get(tree->page_locks,(x)))
 
+#define SET_PRIORITY(x) 	set_priority(tree->swap,(x),compute_page_priority(tree,(x)))
+#define UNSET_PRIORITY(x) 	unset_priority(tree->swap,(x))
+
 #define KEY(i)			keys+(i)*tree->dimensions
 #define KEYS(i,j)		keys[(i)*tree->dimensions+(j)]
 #define BOX(i)			intervals+(i)*tree->dimensions
@@ -445,7 +448,7 @@ arc_t* new_arc (object_t const, object_t const, arc_weight_t const);
 
 enum message_t {debug=1,info,warn,error,fatal};
 
-#define logging info
+#define logging warn
 
 #define LOG(level,message...)	if (logging<=level){\
 				switch (level) {\
