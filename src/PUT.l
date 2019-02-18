@@ -48,8 +48,8 @@ key			{LOG(debug,"Symbol for _KEY_.\n"); return _KEY_;}
 			}
 
 [:blank:]+		/* eat it up */
+\n+
 .			{LOG(debug,"Unrecognized character: %s\n", yytext);}
-
 %%
 
 /*

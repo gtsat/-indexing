@@ -22,7 +22,12 @@ uint64_t compute_page_priority (tree_t *const tree, uint64_t const page_id);
 fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint64_t const to);
 uint64_t anchor (tree_t const*const tree, uint64_t id);
 
-void update_rootrange (tree_t *const tree);
+void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t const offset);
+
+void update_upwards (tree_t *const tree, uint64_t page_id);
+
+void update_root_range (tree_t *const tree);
+
 void update_rootbox (tree_t *const tree);
 
 #endif

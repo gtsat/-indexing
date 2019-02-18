@@ -26,8 +26,11 @@
 #include "priority_queue.h"
 #include "common.h"
 #include "queue.h"
+#include "stack.h"
 #include "swap.h"
 #include "defs.h"
+#include "rtree.h"
+#include "ntree.h"
 
 
 static
@@ -415,7 +418,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			if (swapped != 0xffffffffffffffff) {
 				LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
 				if (flush_page (tree,swapped) != swapped) {
-					LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
+					LOG (fatal,"[%s][load_rtree_page()] Unable to flush page %llu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
 				}
 			}
@@ -454,7 +457,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {
-			LOG (warn,"[%s][load_rtree_page()] Read less than %u bytes from page %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+			LOG (warn,"[%s][load_rtree_page()] Read less than %u bytes for block %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
 		}
 
 		memcpy (&page->header,buffer,sizeof(header_t));
@@ -597,6 +600,19 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 	if (page_lock != NULL) {
 		if (page != NULL) {
+			//assert (is_active_identifier(tree->swap,position));
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			uint64_t swapped = SET_PRIORITY (position);
+			pthread_rwlock_unlock (&tree->tree_lock);
+
+			assert (swapped != position);
+			if (swapped != 0xffffffffffffffff) {
+				LOG (info,"[%s][load_ntree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+				if (flush_page (tree,swapped) != swapped) {
+					LOG (fatal,"[%s][load_ntree_page()] Unable to flush page %llu...\n",tree->filename,swapped);
+					exit (EXIT_FAILURE);
+				}
+			}
 			return page;
 		}else{
 			LOG (fatal,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
@@ -632,13 +648,14 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {
-			LOG (warn,"[%s][load_ntree_page()] Read less than %u bytes from page %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+			LOG (warn,"[%s][load_ntree_page()] Read less than %u bytes for block %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
 		}
 
 		memcpy (&page->header,buffer,sizeof(header_t));
 		page->header.records = le32toh (page->header.records);
 		ptr = buffer + sizeof(header_t);
 		if (page->header.is_leaf) {
+			assert (page->header.records <= tree->leaf_entries);
 			page->node.subgraph.from = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
 			if (page->node.subgraph.from == NULL) {
 				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the sources of a disk-page...\n",tree->filename);
@@ -765,6 +782,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				exit (EXIT_FAILURE);
 			}
 		}else{
+			assert (page->header.records <= tree->internal_entries);
 			page->node.group.ranges = (object_range_t*) malloc (tree->page_size-sizeof(header_t));
 			if (page->node.group.ranges == NULL) {
 				LOG (fatal,"[%s][load_ntree_page()] Unable to allocate additional memory for the run-length sequence of a disk-page...\n",tree->filename);
@@ -1181,7 +1199,7 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			ptr += sizeof(arc_weight_t)*total_arcs_number;
 		}else{
 			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing internal page %llu with %u children.\n",tree->filename,position,page->header.records);
-			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records<<1);
+			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records);
 			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %llu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
 			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
 				uint16_t* le_ptr = buffer;
@@ -1211,7 +1229,7 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
-		if (write (fd,buffer,bytelength) != bytelength) {
+		if (write (fd,buffer,tree->page_size) != tree->page_size) {
 			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to dump page at position %llu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
@@ -1346,4 +1364,441 @@ uint64_t flush_tree (tree_t *const tree) {
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	return count_dirty_pages;
+}
+
+
+static
+boolean update_box (tree_t *const tree, uint64_t const page_id) {
+	if (!page_id) return false;
+
+	page_t *const parent = load_page (tree,PARENT_ID(page_id));
+	page_t const*const page = load_page (tree,page_id);
+
+	pthread_rwlock_rdlock (&tree->tree_lock);
+	pthread_rwlock_t *const parent_lock = LOADED_LOCK(PARENT_ID(page_id));
+	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
+	pthread_rwlock_unlock (&tree->tree_lock);
+
+	assert (parent_lock != NULL);
+	assert (page_lock != NULL);
+
+	boolean is_updated = false;
+
+	pthread_rwlock_wrlock (parent_lock);
+	pthread_rwlock_rdlock (page_lock);
+
+	uint64_t const offset = CHILD_OFFSET(page_id);
+	if (page->header.is_leaf) {
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			for (uint16_t j=0; j<tree->dimensions; ++j) {
+				if (page->node.leaf.KEYS(i,j) < (parent->node.internal.BOX(offset)+j)->start) {
+					(parent->node.internal.BOX(offset)+j)->start = page->node.leaf.KEYS(i,j);
+					parent->header.is_dirty = true;
+					is_updated = true;
+				}
+				if (page->node.leaf.KEYS(i,j) > (parent->node.internal.BOX(offset)+j)->end) {
+					(parent->node.internal.BOX(offset)+j)->end = page->node.leaf.KEYS(i,j);
+					parent->header.is_dirty = true;
+					is_updated = true;
+				}
+			}
+		}
+	}else{
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			for (uint16_t j=0; j<tree->dimensions; ++j) {
+				if ((page->node.internal.BOX(i)+j)->start < (parent->node.internal.BOX(offset)+j)->start){
+					(parent->node.internal.BOX(offset)+j)->start = (page->node.internal.BOX(i)+j)->start;
+					parent->header.is_dirty = true;
+					is_updated = true;
+				}
+				if ((page->node.internal.BOX(i)+j)->end > (parent->node.internal.BOX(offset)+j)->end) {
+					(parent->node.internal.BOX(offset)+j)->end =(page->node.internal.BOX(i)+j)->end;
+					parent->header.is_dirty = true;
+					is_updated = true;
+				}
+			}
+		}
+	}
+	pthread_rwlock_unlock (parent_lock);
+	pthread_rwlock_unlock (page_lock);
+
+	if (is_updated) {
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		tree->is_dirty = true;
+		pthread_rwlock_unlock (&tree->tree_lock);
+	}
+	return is_updated;
+}
+
+void update_root_range (tree_t *const tree) {
+	page_t const*const page = load_page (tree,0);
+	assert (page != NULL);
+
+	pthread_rwlock_wrlock (&tree->tree_lock);
+	pthread_rwlock_t *const page_lock = LOADED_LOCK(0);
+	assert (page_lock != NULL);
+
+	pthread_rwlock_rdlock (page_lock);
+	if (page->header.is_leaf) {
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			if (page->node.subgraph.from[i] < tree->root_range->start) {
+				tree->root_range->start = page->node.subgraph.from[i];
+				tree->is_dirty = true;
+			}
+			if (page->node.subgraph.from[i] > tree->root_range->end) {
+				tree->root_range->end = page->node.subgraph.from[i];
+				tree->is_dirty = true;
+			}
+		}
+	}else{
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			if (page->node.group.ranges[i].start < tree->root_range->start){
+				tree->root_range->start = page->node.group.ranges[i].start;
+				tree->is_dirty = true;
+			}
+			if (page->node.group.ranges[i].end > tree->root_range->end){
+				tree->root_range->end = page->node.group.ranges[i].end;
+				tree->is_dirty = true;
+			}
+		}
+	}
+	pthread_rwlock_unlock (page_lock);
+	pthread_rwlock_unlock (&tree->tree_lock);
+}
+
+static
+boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
+	if (!page_id) return false;
+	page_t const*const page = load_page (tree,page_id);
+	page_t *const parent = load_page (tree,PARENT_ID(page_id));
+	assert (page != NULL);
+	assert (parent != NULL);
+
+	pthread_rwlock_rdlock (&tree->tree_lock);
+	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
+	pthread_rwlock_t *const parent_lock = LOADED_LOCK(PARENT_ID(page_id));
+	pthread_rwlock_unlock (&tree->tree_lock);
+
+	assert (parent_lock != NULL);
+	assert (page_lock != NULL);
+
+	pthread_rwlock_rdlock (page_lock);
+	pthread_rwlock_wrlock (parent_lock);
+	uint32_t const offset = CHILD_OFFSET(page_id);
+	boolean is_updated = false;
+	if (page->header.is_leaf) {
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			if (page->node.subgraph.from[i] < parent->node.group.ranges[offset].start) {
+				parent->node.group.ranges[offset].start = page->node.subgraph.from[i];
+				parent->header.is_dirty = true;
+				is_updated = true;
+			}
+			if (page->node.subgraph.from[i] > parent->node.group.ranges[offset].end) {
+				parent->node.group.ranges[offset].end = page->node.subgraph.from[i];
+				parent->header.is_dirty = true;
+				is_updated = true;
+			}
+		}
+	}else{
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			if (page->node.group.ranges[i].start < parent->node.group.ranges[offset].start) {
+				parent->node.group.ranges[offset].start = page->node.group.ranges[i].start;
+				parent->header.is_dirty = true;
+				is_updated = true;
+			}
+			if (page->node.group.ranges[i].end > parent->node.group.ranges[offset].end) {
+				parent->node.group.ranges[offset].end = page->node.group.ranges[i].end;
+				parent->header.is_dirty = true;
+				is_updated = true;
+			}
+		}
+	}
+	pthread_rwlock_unlock (parent_lock);
+	pthread_rwlock_unlock (page_lock);
+
+	if (is_updated) {
+		LOG(debug,"[%s][update_internal_range()] Updated internal range corresponding to page %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		tree->is_dirty = true;
+		pthread_rwlock_unlock (&tree->tree_lock);
+	}
+	return is_updated;
+}
+
+void update_upwards (tree_t *const tree, uint64_t page_id) {
+	for (;page_id; page_id = PARENT_ID(page_id)) {
+		if (tree->root_range == NULL) {
+			if (update_box (tree,page_id)) {
+				return;
+			}
+		}else{
+			if (!update_internal_range (tree,page_id)) {
+				return;
+			}
+		}
+	}
+
+	if (!page_id) {
+		if (tree->root_range == NULL) {
+			update_rootbox (tree);
+		}else{
+			update_root_range (tree);
+		}
+	}
+}
+
+void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t const offset) {
+	LOG(info,"[%s][cascade_deletion()] CASCADED DELETION TO PAGE %llu.\n",tree->filename,page_id);
+
+	page_t *const page = load_page (tree,page_id);
+
+	pthread_rwlock_wrlock (&tree->tree_lock);
+	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
+	tree->is_dirty = true;
+	pthread_rwlock_unlock (&tree->tree_lock);
+
+	assert (page_lock != NULL);
+
+	pthread_rwlock_wrlock (page_lock);
+
+	assert (offset < page->header.records);
+
+	page->header.is_dirty = true;
+
+	/***** Cascade deletion upward, or update the root if necessary *****/
+	boolean is_current_page_removed = false;
+	if (page->header.records >= fairness_threshold*(tree->internal_entries>>1)
+		|| (!page_id && page->header.records > 2)) {
+
+		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE 0 (Another page obtains the identifier of the removed page)\n",tree->filename);
+
+		/**
+		 * Another page obtains the identifier of the removed child of the root
+		 * and the pages under the moved replacement have to change accordingly.
+		 */
+
+		uint64_t const deleted_page_id = CHILD_ID(page_id,offset);
+		uint64_t const replacement_page_id = CHILD_ID(page_id,page->header.records-1);
+
+		if (deleted_page_id < replacement_page_id) {
+			if (tree->root_range == NULL) {
+				memcpy (page->node.internal.BOX(offset),
+						page->node.internal.BOX(page->header.records-1),
+						tree->dimensions*sizeof(interval_t));
+			}else{
+				page->node.group.ranges [offset] = page->node.group.ranges [page->header.records-1];
+			}
+
+			fifo_t* transposed_ids = transpose_subsumed_pages (tree,replacement_page_id,deleted_page_id);
+			priority_queue_t *const sorted_pages = new_priority_queue (&mincompare_symbol_table_entries);
+			while (transposed_ids->size) {
+				insert_into_priority_queue (sorted_pages,remove_head_of_queue (transposed_ids));
+			}
+			delete_queue (transposed_ids);
+
+			while (sorted_pages->size) {
+				symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
+
+				assert (UNSET_PAGE(entry->key) == NULL);
+				assert (UNSET_LOCK(entry->key) == NULL);
+				assert (!is_active_identifier (tree->swap,entry->key));
+				assert (!UNSET_PRIORITY (entry->key));
+
+				low_level_write_of_page_to_disk (tree,entry->value,entry->key);
+				delete_rtree_page (entry->value);
+				free (entry);
+			}
+			delete_priority_queue (sorted_pages);
+		}
+	}else if (page_id) {
+		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE I (Under-loaded non-root page.)\n",tree->filename);
+
+		/**
+		 * Under-loaded non-leaf non-root page.
+		 */
+
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		UNSET_PAGE(page_id);
+		UNSET_LOCK(page_id);
+		UNSET_PRIORITY (page_id);
+		pthread_rwlock_unlock (&tree->tree_lock);
+
+		lifo_t* leaf_entries = new_stack();
+		lifo_t* browse = new_stack();
+		for (register uint32_t i=0; i<page->header.records; ++i) {
+			if (i!=offset) {
+				insert_into_stack (browse,CHILD_ID(page_id,i));
+			}
+		}
+
+		while (browse->size) {
+			uint64_t const subsumed_id = remove_from_stack (browse);
+			load_page (tree,subsumed_id);
+
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			page_t* subsumed_page = UNSET_PAGE(subsumed_id);
+			pthread_rwlock_t* subsumed_lock = UNSET_LOCK(subsumed_id);
+			UNSET_PRIORITY (subsumed_id);
+			pthread_rwlock_unlock (&tree->tree_lock);
+
+			assert (subsumed_lock != NULL);
+			assert (subsumed_page != NULL);
+
+			pthread_rwlock_wrlock (subsumed_lock);
+			subsumed_page->header.is_dirty = true;
+			if (subsumed_page->header.is_leaf) {
+				if (tree->root_range == NULL) {
+					for (register uint32_t i=0; i<subsumed_page->header.records; ++i) {
+						data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
+
+						pair->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
+						memcpy (pair->key,subsumed_page->node.leaf.keys+i*tree->dimensions,sizeof(index_t)*tree->dimensions);
+
+						pair->object = subsumed_page->node.leaf.objects[i];
+
+						insert_into_stack (leaf_entries,pair);
+
+						pthread_rwlock_wrlock (&tree->tree_lock);
+						tree->indexed_records--;
+						pthread_rwlock_unlock (&tree->tree_lock);
+					}
+					delete_rtree_page (subsumed_page);
+				}else{
+					uint32_t start=0, end=0;
+					for (register uint32_t i=0; i<subsumed_page->header.records; ++i) {
+							start = end;
+							end += subsumed_page->node.subgraph.pointers[i];
+
+							for (uint32_t j=start; j<end; ++j) {
+								arc_t* arc = (arc_t*) malloc (sizeof(arc_t));
+
+								arc->from = subsumed_page->node.subgraph.from[i];
+								arc->to = subsumed_page->node.subgraph.to[j];
+								arc->weight = subsumed_page->node.subgraph.weights[j];
+
+								insert_into_stack (leaf_entries,arc);
+							}
+					}
+					delete_ntree_page (subsumed_page);
+				}
+			}else{
+				for (register uint32_t i=0; i<subsumed_page->header.records; ++i) {
+					insert_into_stack (browse,CHILD_ID(subsumed_id,i));
+				}
+				if (tree->root_range == NULL) {
+					delete_rtree_page (subsumed_page);
+				}else{
+					delete_ntree_page (subsumed_page);
+				}
+			}
+
+			pthread_rwlock_unlock (subsumed_lock);
+			pthread_rwlock_destroy (subsumed_lock);
+			free (subsumed_lock);
+		}
+		delete_stack (browse);
+
+		cascade_deletion (tree,PARENT_ID(page_id),CHILD_OFFSET(page_id));
+
+		/**** Reinsert the data subsumed by the removed page ****/
+		while (leaf_entries->size) {
+			data_pair_t* pair = (data_pair_t*) remove_from_stack (leaf_entries);
+			if (tree->root_range == NULL) {
+				insert_into_rtree (tree, pair->key, pair->object);
+			}else{
+				//insert_into_ntree (); ////////////////////////////////////////////////////////////////////////////////////////////
+			}
+			free (pair->key);
+			free (pair);
+		}
+		delete_stack (leaf_entries);
+		/*************************************************/
+
+		if (tree->root_range == NULL) {
+			delete_rtree_page (page);
+		}else{
+			delete_ntree_page (page);
+		}
+		is_current_page_removed = true;
+	}else if (page->header.records < 3) {
+		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE II (The only child of the root becomes the new root)\n",tree->filename);
+		assert (page->header.records == 2);
+
+		/**
+		 * The only child of the root becomes the new root.
+		 */
+
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		UNSET_PAGE(page_id);
+		UNSET_LOCK(page_id);
+		pthread_rwlock_unlock (&tree->tree_lock);
+
+		fifo_t* transposed_ids = offset?transpose_subsumed_pages(tree,1,0):transpose_subsumed_pages(tree,2,0);
+		priority_queue_t *const sorted_pages = new_priority_queue (&mincompare_symbol_table_entries);
+		while (transposed_ids->size) {
+			insert_into_priority_queue (sorted_pages,remove_head_of_queue (transposed_ids));
+		}
+		delete_queue (transposed_ids);
+
+		while (sorted_pages->size) {
+			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
+
+			if (UNSET_PRIORITY (entry->key) != NULL) {
+				LOG (error,"[%s][cascade_deletion()] Transposed block#%llu is still in swap...\n",tree->filename,entry->key);
+			}
+			assert (UNSET_PAGE(entry->key) == NULL);
+			assert (UNSET_LOCK(entry->key) == NULL);
+			assert (!is_active_identifier (tree->swap,entry->key));
+			assert (!UNSET_PRIORITY (entry->key));
+
+			low_level_write_of_page_to_disk (tree,entry->value,entry->key);
+			if (tree->root_range == NULL) {
+				delete_rtree_page (entry->value);
+			}else{
+				delete_ntree_page (entry->value);
+			}
+			free (entry);
+		}
+		delete_priority_queue (sorted_pages);
+
+		assert (!page->header.is_leaf);
+
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		if (tree->root_range == NULL) {
+			memcpy (tree->root_box,
+					offset?page->node.internal.intervals:page->node.internal.intervals+1,
+					tree->dimensions*sizeof(interval_t));
+		}else{
+			memcpy (tree->root_range,
+					offset?page->node.group.ranges:page->node.group.ranges+1,
+					sizeof(object_range_t));
+		}
+		pthread_rwlock_unlock (&tree->tree_lock);
+
+		if (tree->root_range == NULL) {
+			delete_rtree_page (page);
+		}else{
+			delete_ntree_page (page);
+		}
+		is_current_page_removed = true;
+	}else{
+		LOG(fatal,"[%s][cascade_deletion()] Erroneous cascaded deletion to remove page %llu enacted from page %llu...\n",
+					tree->filename,page_id,CHILD_ID(page_id,offset));
+		exit (EXIT_FAILURE);
+	}
+
+	if (is_current_page_removed) {
+		pthread_rwlock_unlock (page_lock);
+		pthread_rwlock_destroy (page_lock);
+		free (page_lock);
+
+		pthread_rwlock_wrlock (&tree->tree_lock);
+		tree->tree_size--;
+		pthread_rwlock_unlock (&tree->tree_lock);
+	}else{
+		page->header.records--;
+		pthread_rwlock_unlock (page_lock);
+
+		update_upwards(tree,page_id);
+	}
 }

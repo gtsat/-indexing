@@ -302,6 +302,7 @@ void handle_connection (void *const args) {
 		char protocol[BUFSIZ];
 
 		buffer[bytes_read] = '\0';
+		//LOG (info,"BUFFER:\n%s\n",buffer);
 
 		sscanf (buffer,"%s %s %s",method,url,protocol);
 
@@ -332,7 +333,9 @@ void handle_connection (void *const args) {
 LOG (info,"Emptying and refilling network buffer...\n");
 							bzero (buffer,sizeof(buffer));
 							bytes_read = read (fd,buffer,sizeof(buffer));
+							buffer[bytes_read] = '\0';
 							content = buffer;
+//LOG (info,"BUFFER:\n%s\n",buffer);
 						}else{
 							insert_into_stack (content_stack,'\0');
 							break;
@@ -349,9 +352,10 @@ LOG (info,"Emptying and refilling network buffer...\n");
 			for (register uint32_t i=0; i<=content_length; ++i) {
 				*to++ = content_stack->buffer[i];
 			}
+			*to = '\0';
 			delete_stack (content_stack);
 		}
-
+LOG (info,"FULL BODY:\n%s\n",body);
 		char response[BUFSIZ];
 		if (strcmp(protocol,"HTTP/1.0") && strcmp(protocol,"HTTP/1.1")) {
 			snprintf (response,sizeof(response),bad_request_response,url);

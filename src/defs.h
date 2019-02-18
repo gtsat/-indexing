@@ -139,7 +139,7 @@ typedef struct {
 /***** N-TREE DEFINITIONS BEGIN *****/
 
 typedef float arc_weight_t;
-typedef uint16_t arc_pointer_t;
+typedef uint32_t arc_pointer_t;
 
 /**
  * only arc sources information is kept in internal nodes,
