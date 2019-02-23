@@ -438,7 +438,7 @@ tree_node_t* insert_node_recursive (symbol_table_t const*const rbtree,
 }
 
 void set (symbol_table_t *const rbtree, key__t const key, value_t const value) {
-	LOG (debug,"Inserting into the symbol-table value %lx indexed by key %lu.\n",value,key);
+	LOG (debug,"Inserting into the symbol-table value %p indexed by key %lu.\n",value,key);
 	rbtree->root = insert_node_recursive (rbtree,rbtree->root,key,value);
 	rbtree->size = rbtree->root->size;
 }
@@ -542,7 +542,7 @@ value_t unset (symbol_table_t *const rbtree, key__t const key) {
 		value = get ((symbol_table_t const*const)rbtree,key);
 		if (value != rbtree->default_value) {
 			rbtree->root = remove_key_recursive (rbtree,rbtree->root,key);
-			LOG (debug,"Successfully removed from the symbol-table value %lu indexed by key %lu.\n",value,key);
+			LOG (debug,"Successfully removed from the symbol-table value %p indexed by key %lu.\n",value,key);
 		}else{
 			LOG (debug,"No entry indexed by key %lu was found in the symbol-table to be removed...\n",key);
 		}

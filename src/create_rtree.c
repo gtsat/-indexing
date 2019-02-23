@@ -20,6 +20,8 @@
 #include "unistd.h"
 #include "getopt.h"
 
+pthread_mutex_t lmx = PTHREAD_MUTEX_INITIALIZER;
+
 uint32_t DIMENSIONS;
 uint32_t PAGESIZE;
 char* HEAPFILE;
@@ -61,6 +63,7 @@ void process_arguments (int argc,char *argv[]) {
 		switch (next_option) {
 		case 'u':
 			print_usage (argv[0]);
+			pthread_mutex_destroy (&lmx);
 			exit (EXIT_SUCCESS);
 		case 'd':
 			DIMENSIONS = atoi (optarg);
@@ -77,9 +80,10 @@ void process_arguments (int argc,char *argv[]) {
 		case -1:
 			break;
 		case '?':
-			LOG (error,"Unknown option parameter: %s\n",optarg);
+			LOG (error,"[%s] Unknown option parameter: %s\n",argv[0],optarg);
 		default:
 			print_usage (argv[0]);
+			pthread_mutex_destroy (&lmx);
 			exit (EXIT_FAILURE);
 		}
 	}while(next_option!=-1);
@@ -90,16 +94,16 @@ int main (int argc, char* argv[]) {
 	process_arguments (argc,argv);
 
 	if (!DIMENSIONS) {
-		LOG (error,"Please specify the dimensionality of the domain...\n");
+		LOG (error,"[%s] Please specify the dimensionality of the domain...\n",argv[0]);
 	}
 	if (!PAGESIZE) {
-		LOG (error,"Please specify a block-size...\n");
+		LOG (error,"[%s] Please specify a block-size...\n",argv[0]);
 	}
 	if (!DATASET) {
-		LOG (error,"Please specify a dataset to be indexed...\n");
+		LOG (error,"[%s] Please specify a dataset to be indexed...\n",argv[0]);
 	}
 	if (!HEAPFILE) {
-		LOG (error,"Please specify a filepath for the produced heapfile...\n");
+		LOG (error,"[%s] Please specify a filepath for the produced heapfile...\n",argv[0]);
 	}
 
 	if (DIMENSIONS && PAGESIZE && DATASET && HEAPFILE) {
@@ -109,9 +113,11 @@ int main (int argc, char* argv[]) {
 		//flush_tree (tree);
 		//delete_records_from_textfile (tree,DATASET);
 		delete_tree (tree);
+		pthread_mutex_destroy (&lmx);
 		return EXIT_SUCCESS;
 	}else{
 		print_usage (argv[0]);
+		pthread_mutex_destroy (&lmx);
 		return EXIT_FAILURE;
 	}
 }

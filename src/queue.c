@@ -270,7 +270,7 @@ void insert_queue_element (fifo_t *const queue, uint64_t const pos, void *const 
 			queue->tail = 0;
 		}
 	}else{
-		LOG (error,"Cannot add an element in a list of %u elements at position %u...\n",queue->size,pos);
+		LOG (error,"Cannot add an element in a list of %lu elements at position %lu...\n",queue->size,pos);
 	}
 }
 
@@ -296,7 +296,7 @@ void* remove_queue_element (fifo_t *const queue, uint64_t const pos) {
 			queue->tail = queue->capacity-1;
 		}
 	}else{
-		LOG (error,"Cannot remove an element in a list of %u elements from position %u...\n",queue->size,pos);
+		LOG (error,"Cannot remove an element in a list of %lu elements from position %lu...\n",queue->size,pos);
 	}
 	return rval;
 }

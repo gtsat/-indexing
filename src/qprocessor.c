@@ -53,7 +53,7 @@ static int strcompare (key__t x, key__t y) {
 }
 
 int process_rest_request (char const json[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, request_t const type) {
-	LOG(info,"Now processing JSON request: %s\n",json)
+	LOG (info,"[process_rest_request()] Now processing JSON request: %s\n",json)
 	get_rtree (NULL);
 
 	char heapfile [64];
@@ -79,7 +79,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	}
 
 	if (parser_rval) {
-		LOG (error,"Syntax error; unable to parse request: '%s'\n",json);
+		LOG (error,"[process_rest_request()] Syntax error; unable to parse request: '%s'\n",json);
 		strcat (message,"Syntax error; unable to parse request.");
 		return EXIT_FAILURE;
 	}
@@ -89,7 +89,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 	if (folder[strlen(folder)-1]!='/') {
 		strcat (filepath,"/");
 	}
-	LOG (debug,"HEAPFILE: '%s'. \n",heapfile);
+	LOG (debug,"[process_rest_request()] HEAPFILE: '%s'. \n",heapfile);
 	strcat (filepath,heapfile);
 
 	boolean delete_new_tree = false;
@@ -108,13 +108,13 @@ int process_rest_request (char const json[], char const folder[], char message[]
 				delete_new_tree = true;
 				free (filepath);
 			}else{
-				LOG (error,"No entries found for heapfile '%s'.\n",filepath);
+				LOG (error,"[process_rest_request()] No entries found for heapfile '%s'.\n",filepath);
 				sprintf (message,"No entries found for heapfile '%s'.",filepath);
 				free (filepath);
 				return EXIT_FAILURE;
 			}
 		}else{
-			LOG (error,"Unable to access heapfile '%s'.\n",filepath);
+			LOG (error,"[process_rest_request()] Unable to access heapfile '%s'.\n",filepath);
 			sprintf (message,"Unable to access heapfile '%s'.",filepath);
 			free (filepath);
 			return EXIT_FAILURE;
@@ -147,7 +147,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 		free (data_pair);
 	}
 
-	LOG (debug,"Successfully processed %lu data entries out of %lu.\n",successful_entries,successful_entries+failed_entries);
+	LOG (debug,"[process_rest_request()] Successfully processed %lu data entries out of %lu.\n",successful_entries,successful_entries+failed_entries);
 	sprintf (message,"Successfully processed %lu data entries out of %lu.",successful_entries,successful_entries+failed_entries);
 
 	*io_mb_counter += tree->io_counter * tree->page_size;
@@ -169,7 +169,7 @@ int process_rest_request (char const json[], char const folder[], char message[]
 }
 
 char* qprocessor (char command[], char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter, int fd) {
-	LOG (info,"Will now initiate the processing of command '%s'.\n",command);
+	LOG (info,"[qprocessor()] Will now initiate the processing of command '%s'.\n",command);
 	get_rtree (NULL);
 	double varray [BUFSIZ];
 	lifo_t *const stack = new_stack();
@@ -182,12 +182,12 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	QL_lex_destroy (scanner);
 
 	if (parser_rval) {
-		LOG (error,"Syntax error; unable to parse query: '%s'\n",command);
+		LOG (error,"[qprocessor()] Syntax error; unable to parse query: '%s'\n",command);
 		strcat (message,"Syntax error; unable to parse query.");
 		char *null_string = "null,\n";
 		if (fd) {
 			if (write (fd,null_string,sizeof(null_string)) < sizeof(null_string)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[qprocessor()] Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}
 		return NULL;
@@ -203,10 +203,10 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 			char *null_string = "null,\n";
 			if (fd) {
 				if (write (fd,null_string,sizeof(null_string)) < sizeof(null_string)) {
-					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+					LOG (error,"[qprocessor()] Error while sending data using file-descriptor %u.\n",fd);
 				}
 			}
-			LOG (error,"Early return from query processor due to bad command...\n");
+			LOG (error,"[qprocessor()] Early return from query processor due to bad command...\n");
 			delete_stack (stack);
 			return NULL;
 		}
@@ -222,7 +222,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		result_string += strlen(result_string);
 
 		if (strchr(command,'/') == strrchr(command,'/')) {
-			LOG (info,"Processed query returned %lu tuples. \n",result->size);
+			LOG (info,"[qprocessor()] Processed query returned %lu tuples. \n",result->size);
 			while (result->size) {
 				data_pair_t *const tuple = remove_tail_of_queue (result);
 
@@ -230,7 +230,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 					uint64_t resultlen = strlen(buffer);
 					if (fd) {
 						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
-							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+							LOG (error,"[qprocessor()] Error while sending data using file-descriptor %u.\n",fd);
 						}
 						bzero (buffer,sizeof(buffer));
 						result_string = buffer;
@@ -298,7 +298,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 				free (tuple);
 			}
 		}else{
-			LOG (info,"Processed join returned %lu tuples. \n",result->size);
+			LOG (info,"[qprocessor()] Processed join returned %lu tuples. \n",result->size);
 			while (result->size) {
 				multidata_container_t *const tuple = remove_tail_of_queue (result);
 
@@ -306,7 +306,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 					uint64_t resultlen = strlen(buffer);
 					if (fd) {
 						if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
-							LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+							LOG (error,"[qprocessor()] Error while sending data using file-descriptor %u.\n",fd);
 						}
 						bzero (buffer,sizeof(buffer));
 						result_string = buffer;
@@ -407,7 +407,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		result_string += strlen (result_string);
 		*result_string = '\0';
 
-		LOG (info,"RESPONSE:\n%s",buffer);
+		LOG (info,"[qprocessor()] RESPONSE:\n%s",buffer);
 	}
 
 	delete_stack (stack);
@@ -428,7 +428,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 		if (fd) {
 			uint64_t resultlen = strlen(buffer);
 			if (write (fd,buffer,resultlen*sizeof(char)) < resultlen*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[qprocessor()] Error while sending data using file-descriptor %u.\n",fd);
 			}
 			bzero (buffer,sizeof(buffer));
 			*buffer = '\0';
@@ -444,7 +444,7 @@ static
 fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
-			LOG (error,"Syntax error: Command was not ended properly.\n");
+			LOG (error,"[process_command()] Syntax error: Command was not ended properly.\n");
 			strcpy (message,"Syntax error: Command was not ended properly.");
 			clear_stack(stack);
 			return NULL;
@@ -456,7 +456,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		}
 
 		double threshold = *((double*)remove_from_stack (stack));
-		LOG (debug,"Threshold parameter is equal to %lf. \n",threshold);
+		LOG (debug,"[process_command()] Threshold parameter is equal to %lf. \n",threshold);
 
 
 		/**
@@ -480,7 +480,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 				flush_tree (subq_tree);
 				insert_into_stack (subq_trees,subq_tree);
-				LOG (info,"Processed subquery returned %lu tuples. \n",subq_tree->indexed_records);
+				LOG (info,"[process_command()] Processed subquery returned %lu tuples. \n",subq_tree->indexed_records);
 			}else{
 				delete_stack (subq_trees);
 				return NULL;
@@ -521,7 +521,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					insert_into_stack (to_be_joined,top);
 				}
 
-				LOG (info,"Executing join \#%lu...\n",partial_results->size);
+				LOG (info,"[process_command()] Executing join \#%lu...\n",partial_results->size);
 
 				fifo_t *const partial_result = is_closest_pairs_operation
 					? x_tuples (threshold,closest,use_avg,pairwise,to_be_joined)
@@ -541,7 +541,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 							delete_tree (joined_tree);
 						}
 					}else{
-						LOG (error,"Error while finalizing join operands.\n");
+						LOG (error,"[process_command()] Error while finalizing join operands.\n");
 						strcat (message,"Error while finalizing join operands.");
 					}
 				}
@@ -613,7 +613,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 
 		result = range (subq_tree,from,to,subq_tree->dimensions);
 		if (result->size != subq_tree->indexed_records) {
-			LOG (error,"Result-size: %lu, Tree-size: %lu \n",result->size,subq_tree->indexed_records);
+			LOG (error,"[process_command()] Result-size: %lu, Tree-size: %lu \n",result->size,subq_tree->indexed_records);
 		}
 		assert (result->size == subq_tree->indexed_records);
 
@@ -628,7 +628,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 		return result;
 	}else{
 		strcpy (message,"Syntax error: No query has been parsed to be processed.");
-		LOG (error,"Syntax error: Command has not been parsed to be processed.\n");
+		LOG (error,"[process_command()] Syntax error: Command has not been parsed to be processed.\n");
 		return NULL;
 	}
 }
@@ -637,7 +637,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 static
 fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail) {
 	if (k <= 0) {
-		LOG (warn,"No point for zero or negative result-sizes in joins...\n");
+		LOG (warn,"[top_level_in_mem_closest_pairs()] No point for zero or negative result-sizes in joins...\n");
 		return new_queue();
 	}
 
@@ -658,7 +658,7 @@ fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_tha
 				}
 			}
 		}else{
-			LOG (error,"Partial result-set %lu contains no records...\n",i);
+			LOG (error,"[top_level_in_mem_closest_pairs()] Partial result-set %lu contains no records...\n",i);
 			return new_queue();
 		}
 	}
@@ -755,7 +755,7 @@ fifo_t* top_level_in_mem_closest_pairs (uint32_t const k, boolean const less_tha
 static
 fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_than_theta, boolean const pairwise, boolean const use_avg, lifo_t *const partial_results, boolean const has_tail) {
 	if (less_than_theta && theta < 0) {
-		LOG (warn,"No point for negative distances in joins...\n");
+		LOG (warn,"[top_level_in_mem_distance_join()] No point for negative distances in joins...\n");
 		return new_queue();
 	}
 
@@ -776,7 +776,7 @@ fifo_t* top_level_in_mem_distance_join (double const theta, boolean const less_t
 				}
 			}
 		}else{
-			LOG (error,"Partial result-set %lu contains no records...\n",i);
+			LOG (error,"[top_level_in_mem_distance_join()] Partial result-set %lu contains no records...\n",i);
 			return new_queue();
 		}
 	}
@@ -875,11 +875,11 @@ tree_t* get_rtree (char const*const filepath) {
 			tree = load_rtree (filepath);
 			if (tree != NULL) {
 				set (server_trees,filepath,tree);
-				LOG (info,"Loaded from the disk R#-Tree: '%s'\n",tree->filename);
+				LOG (info,"[get_rtree()] Loaded from the disk R#-Tree: '%s'\n",tree->filename);
 			}
 			pthread_rwlock_unlock (&server_lock);
 		}else{
-			LOG (info,"Found R#-Tree: '%s'\n",tree->filename)
+			LOG (info,"[get_rtree()] Found R#-Tree: '%s'\n",tree->filename)
 		}
 		return tree;
 	}else{
@@ -914,7 +914,7 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 				delete_stack (feature_trees);
 
 				strcpy (message,"Unable to retrieve feature-tree for the RNN query.");
-				LOG (error,"Unable to retrieve the feature-tree for the RNN query.\n");
+				LOG (error,"[process_reverse_NN_query()] Unable to retrieve the feature-tree for the RNN query.\n");
 				return NULL;
 			}else
 			if (feature_tree->dimensions > kcardinality) {
@@ -926,8 +926,8 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 				}
 				delete_stack (feature_trees);
 
-				LOG (error,"RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.\n");
-				strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.\n");
+				LOG (error,"[process_reverse_NN_query()] RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.\n");
+				strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of any feature-tree.");
 				return NULL;
 			}
 
@@ -939,7 +939,7 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 
 		if (peek_at_stack (stack) != (void*)'/') {
 			strcpy (message,"Syntax error: RNN query should start with a data-tree.");
-			LOG (error,"Syntax error: RNN query should start with a data-tree.\n");
+			LOG (error,"[process_reverse_NN_query()] Syntax error: RNN query should start with a data-tree.\n");
 			return NULL;
 		}
 
@@ -948,12 +948,12 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 
 		if (data_tree == NULL) {
 			strcpy (message,"Unable to retrieve the data-tree for the RNN query.");
-			LOG (error,"Unable to retrieve the data-tree for the RNN query.\n");
+			LOG (error,"[process_reverse_NN_query()] Unable to retrieve the data-tree for the RNN query.\n");
 			return NULL;
 		}else
 		if (data_tree->dimensions > kcardinality) {
-			LOG (error,"RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.\n");
-			strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.\n");
+			LOG (error,"[process_reverse_NN_query()] RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.\n");
+			strcat (message,"RNN key predicate dimensionality should be equal or greater than the dimensionality of the data-tree.");
 			return NULL;
 		}
 
@@ -974,8 +974,8 @@ tree_t* process_reverse_NN_query (lifo_t *const stack, char const folder[], char
 		delete_stack (feature_trees);
 		return result_tree;
 	}else{
-		LOG (error,"Syntax error: Was expecting the start of a reverse NN subquery.");
-		strcpy (message,"Syntax error.");
+		LOG (error,"[process_reverse_NN_query()] Syntax error: Was expecting the start of a reverse NN subquery.\n");
+		strcpy (message,"Syntax error: Was expecting the start of a reverse NN subquery.");
 		clear_stack (stack);
 		return NULL;
 	}
@@ -985,7 +985,7 @@ static
 tree_t* process_subquery (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_counter) {
 	if (peek_at_stack (stack) == (void*)'/' || peek_at_stack (stack) == (void*)'%') {
 		char start_symbol = (char) remove_from_stack (stack);
-		LOG (debug,"UNROLLING NEW SUBQUERY... \n");
+		LOG (debug,"[process_subquery()] UNROLLING NEW SUBQUERY... \n");
 
 		char *const filename = remove_from_stack (stack);
 		char *const filepath = (char *const) malloc (sizeof(char)*(strlen(folder)+strlen(filename)+2));
@@ -993,14 +993,14 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		if (folder[strlen(folder)-1]!='/') {
 			strcat (filepath,"/");
 		}
-		LOG (debug,"HEAPFILE: '%s'. \n",filename);
+		LOG (debug,"[process_subquery()] HEAPFILE: '%s'. \n",filename);
 		strcat (filepath,filename);
 		free (filename);
 
 		tree_t* tree = get_rtree (filepath);
 		if (tree == NULL) {
 			sprintf (message,"Cannot perform an operation on heapfile '%s' because it does not exist.",filepath);
-			LOG (error,"Cannot perform an operation on heapfile '%s' because it does not exist.\n",filepath);
+			LOG (error,"[process_subquery()] Cannot perform an operation on heapfile '%s' because it does not exist.\n",filepath);
 			return NULL;
 		}
 
@@ -1119,14 +1119,14 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 						}else if (bitfield[i]=='I' || bitfield[i]=='i') {
 							corner[i] = true;
 						}else{
-							LOG (error,"Unable to parse bitfield '%s'...\n",bitfield)
+							LOG (error,"[process_subquery()] Unable to parse bitfield '%s'...\n",bitfield)
 							is_skyline = false;
 							break;
 						}
 					}
 					break;
 				default:
-					LOG (error,"Unknown operation...\n");
+					LOG (error,"[process_subquery()] Unknown operation...\n");
 			}
 
 			if (logging <= debug) {
@@ -1135,20 +1135,20 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		}
 
 
-		LOG (debug,"Result computation to take place now...\n");
+		LOG (debug,"[process_subquery()] Result computation to take place now...\n");
 
 		boolean delete_rtree_flag = false;
 		tree_t* result_tree = NULL;
 		if (lookups->size) {
 			fifo_t *const lookups_result_list = new_queue();
-			LOG (debug,"lookups stack-size: %lu \n",lookups->size);
+			LOG (debug,"[process_subquery()] lookups stack-size: %lu \n",lookups->size);
 
 			while (lookups->size) {
 				index_t *const lookup = remove_from_stack (lookups);
-				LOG (debug,"lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
+				LOG (debug,"[process_subquery()] lookup-key: ( %12lf %12lf ) \n",(double)lookup[0],(double)lookup[1]);
 
 				fifo_t *const partial = find_all_in_rtree (tree,lookup,tree->dimensions);
-				LOG (debug,"Adding %lu new tuples in the result...\n",partial->size);
+				LOG (debug,"[process_subquery()] Adding %lu new tuples in the result...\n",partial->size);
 
 				while (partial->size) {
 					data_pair_t *const pair = (data_pair_t*) malloc (sizeof(data_pair_t));
@@ -1164,7 +1164,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 			}
 
 			if (lookups_result_list->size) {
-				LOG (info,"Creating materialized view for the result consisting of %lu records... \n",lookups_result_list->size);
+				LOG (info,"[process_subquery()] Creating materialized view for the result consisting of %lu records... \n",lookups_result_list->size);
 
 				pthread_rwlock_wrlock (&tree->tree_lock);
 				*io_counter = tree->io_counter;
@@ -1178,12 +1178,12 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 
 		if (bounded_dimensionality && !is_skyline) {
 			fifo_t *const bounded_result_list = bounded_search (tree,from,to,bound+1,*bound,bounded_dimensionality-1);
-			LOG (info,"Bounded search result contains %lu tuples.\n",bounded_result_list->size);
+			LOG (info,"[process_subquery()] Bounded search result contains %lu tuples.\n",bounded_result_list->size);
 
 			result_tree = create_temp_rtree (bounded_result_list,tree->page_size,tree->dimensions);
 		}else if (is_skyline) {
 			fifo_t *const skyline_result_list = skyline_constrained (tree,corner,from,to,projection);
-			LOG (info,"Skyline result contains %lu tuples.\n",skyline_result_list->size);
+			LOG (info,"[process_subquery()] Skyline result contains %lu tuples.\n",skyline_result_list->size);
 
 			if (bounded_dimensionality) {
 				priority_queue_t* max_heap = new_priority_queue(&maxcompare_containers);
@@ -1233,7 +1233,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 			result_tree = create_temp_rtree (skyline_result_list,tree->page_size,tree->dimensions);
 		}else{
 			fifo_t *const range_result_list = range (tree,from,to,tree->dimensions);
-			LOG (info,"Range query result contains %lu tuples.\n",range_result_list->size);
+			LOG (info,"[process_subquery()] Range query result contains %lu tuples.\n",range_result_list->size);
 
 			result_tree = create_temp_rtree (range_result_list,tree->page_size,tree->dimensions);
 		}
@@ -1252,7 +1252,7 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		}
 		return result_tree;
 	}else{
-		LOG (error,"Syntax error: Was expecting the start of a new subquery.");
+		LOG (error,"[process_subquery()] Syntax error: Was expecting the start of a new subquery.\n");
 		strcpy (message,"Syntax error.");
 		clear_stack (stack);
 		return NULL;

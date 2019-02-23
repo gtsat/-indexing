@@ -64,10 +64,10 @@ int truncate_heapfile (tree_t const*const tree) {
 	}
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	LOG (info,"[%s] Tree contains %llu data records.\n",tree->filename,tree->indexed_records);
+	LOG (info,"[%s] Tree contains %lu data records.\n",tree->filename,tree->indexed_records);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	LOG (info,"[%s] Truncating heapfile to %llu pages.\n",tree->filename,id+1);
+	LOG (info,"[%s] Truncating heapfile to %lu pages.\n",tree->filename,id+1);
 
 	return truncate (tree->filename,(id+1)*tree->page_size);
 }
@@ -90,22 +90,22 @@ tree_t* load_rtree (char const filename[]) {
 
 	lseek (fd,0,SEEK_SET);
 	if (read (fd,&tree->dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
-		LOG (fatal,"[%s][load_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
+		LOG (fatal,"[%s][load_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
 	if (read (fd,&tree->page_size,sizeof(uint32_t)) < sizeof(uint32_t)) {
-		LOG (fatal,"[%s][load_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
+		LOG (fatal,"[%s][load_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
 	if (read (fd,&tree->tree_size,sizeof(uint64_t)) < sizeof(uint64_t)) {
-		LOG (fatal,"[%s][load_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+		LOG (fatal,"[%s][load_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
 	if (read (fd,&tree->indexed_records,sizeof(uint64_t)) < sizeof(uint64_t)) {
-		LOG (fatal,"[%s][load_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+		LOG (fatal,"[%s][load_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
@@ -123,14 +123,14 @@ tree_t* load_rtree (char const filename[]) {
 	tree->leaf_entries = (tree->page_size-sizeof(header_t)) / (sizeof(index_t)*tree->dimensions + sizeof(object_t));
 
 
-	LOG (info,"[%s][load_rtree()] Configuration uses pages of %u bytes.\n",filename,tree->page_size);
+	LOG (info,"[%s][load_rtree()] Configuration uses blocks of %u bytes.\n",filename,tree->page_size);
 
 	if (fairness_threshold*(tree->internal_entries>>1) < 2) {
-		LOG (fatal,"[%s][load_rtree()] Cannot use configuration allowing underflows of just one record per page.\n",tree->filename);
+		LOG (fatal,"[%s][load_rtree()] Cannot use configuration allowing underflows of just one record per block.\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
-	LOG (info,"[%s][load_rtree()] Heapfile consists of %llu pages and has %llu %u-dimensional records.\n",
+	LOG (info,"[%s][load_rtree()] Heapfile consists of %lu blocks and has %lu %u-dimensional records.\n",
 				filename,tree->tree_size,tree->indexed_records,tree->dimensions);
 
 	tree->root_range = NULL;
@@ -176,19 +176,19 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	}else{
 		lseek (fd,0,SEEK_SET);
 		if (read (fd,&tree->dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
-			LOG (fatal,"[%s][new_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
+			LOG (fatal,"[%s][new_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint16_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->page_size,sizeof(uint32_t)) < sizeof(uint32_t)) {
-			LOG (fatal,"[%s][new_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
+			LOG (fatal,"[%s][new_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint32_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->tree_size,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (fatal,"[%s][new_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+			LOG (fatal,"[%s][new_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 			abort();
 		}
 		if (read (fd,&tree->indexed_records,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (fatal,"[%s][new_rtree()] Read less than %llu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
+			LOG (fatal,"[%s][new_rtree()] Read less than %lu bytes from heapfile '%s'...\n",tree->filename,sizeof(uint64_t),filename);
 			abort();
 		}
 		close (fd);
@@ -205,14 +205,14 @@ tree_t* new_rtree (char const filename[], uint32_t const page_size, uint32_t con
 	tree->internal_entries = (tree->page_size-sizeof(header_t)) / (sizeof(interval_t)*tree->dimensions);
 	tree->leaf_entries = (tree->page_size-sizeof(header_t)) / (sizeof(index_t)*tree->dimensions + sizeof(object_t));
 
-	LOG (info,"[%s][new_rtree()] Configuration uses pages of %u bytes.\n",filename,tree->page_size);
+	LOG (info,"[%s][new_rtree()] Configuration uses blocks of %u bytes.\n",filename,tree->page_size);
 
 	if (fairness_threshold*(tree->internal_entries>>1) < 2) {
-		LOG (fatal,"[%s][new_rtree()] Cannot use configuration allowing underflows of just one record per page.\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree()] Cannot use configuration allowing underflows of just one record per block.\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
-	LOG (info,"[%s][new_rtree()] Heapfile consists of %llu pages and has %llu %u-dimensional records.\n",
+	LOG (info,"[%s][new_rtree()] Heapfile consists of %lu blocks and has %lu %u-dimensional records.\n",
 				filename,tree->tree_size,tree->indexed_records,tree->dimensions);
 
 	tree->root_range = NULL;
@@ -248,13 +248,14 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		puts ("==============================================================");
 	}
 
+	uint64_t parent_id = PARENT_ID(position);
 	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,PARENT_ID(position));
-	LOG (info,"[%s][halve_internal()] HALVING INTERNAL NODE AT POSITION %llu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
+	page_t* parent = load_page (tree,parent_id);
+	LOG (info,"[%s][halve_internal()] HALVING NON-LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(PARENT_ID(position));
+	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	assert (page_lock != NULL);
@@ -274,15 +275,16 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	if (parent_records >= tree->internal_entries) {
 		if (position) {
 			insert_at_tail_of_queue (inception_queue,position);
-			uint64_t const parent_id = halve_internal (tree,PARENT_ID(position),inception_queue); //// split /////
+			parent_id = split_internal (tree,parent_id,inception_queue);
 			position = remove_tail_of_queue (inception_queue);
+			assert (parent_id == PARENT_ID(position));
 
-			parent = load_page (tree,PARENT_ID(position));
+			parent = load_page (tree,parent_id);
 			overloaded_page = load_page (tree,position);
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
 			page_lock = LOADED_LOCK(position);
-			parent_lock = LOADED_LOCK(PARENT_ID(position));
+			parent_lock = LOADED_LOCK(parent_id);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			assert (page_lock != NULL);
@@ -305,7 +307,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			do{
 				uint64_t inception = remove_head_of_queue (inception_queue);
 				if (inception != 0xffffffffffffffff) {
-					LOG (info,"[%s][halve_internal()] TRANSPOSING PAGE IDENTIFIER %llu TO %llu.\n",tree->filename,inception,TRANSPOSE_PAGE_POSITION(inception));
+					LOG (info,"[%s][halve_internal()] TRANSPOSING BLOCK IDENTIFIER %lu TO %lu.\n",tree->filename,inception,TRANSPOSE_PAGE_POSITION(inception));
 					insert_at_tail_of_queue (inception_queue,TRANSPOSE_PAGE_POSITION(inception));
 				}else break;
 			}while (true);
@@ -318,9 +320,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 	uint32_t const lo_offset = CHILD_OFFSET(position);
 	uint32_t const hi_offset = parent_records;
-
-	uint64_t const lo_id = position;
-	uint64_t const hi_id = CHILD_ID(PARENT_ID(position),hi_offset);
+	uint64_t const hi_id = CHILD_ID(parent_id,hi_offset);
 
 	lifo_t* lo_pages = NULL;
 	lifo_t* hi_pages = NULL;
@@ -475,9 +475,9 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		uint64_t const offset = remove_from_stack (lo_pages);
 		page_t *const page = load_page (tree,CHILD_ID(position,offset));
 		if (page != NULL) {
-			new_child = new_id = CHILD_ID(lo_id,i);
+			new_child = new_id = CHILD_ID(position,i);
 			old_child = CHILD_ID(position,offset);
-			LOG (info,"[%s][halve_internal()] Node with id %llu (compared against %llu) is now under %llu with new id %llu.\n",tree->filename,old_child,inception,lo_id,new_id);
+			LOG (info,"[%s][halve_internal()] Block with id %lu (compared against %lu) is now under %lu with new id %lu.\n",tree->filename,old_child,inception,position,new_id);
 			if (!update_flag && inception == old_child) {
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
@@ -503,7 +503,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			transposed_ids->tail = transposed_ids->size = new_size;
 			delete_queue (tmp_queue);
 		}else{
-			LOG (fatal,"[%s][halve_internal()] Unable to retrieve heapfile entry #%llu...\n",tree->filename,CHILD_ID(position,offset));
+			LOG (fatal,"[%s][halve_internal()] Unable to retrieve heapfile entry %lu...\n",tree->filename,CHILD_ID(position,offset));
 			exit (EXIT_FAILURE);
 		}
 	}
@@ -517,7 +517,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		if (page != NULL) {
 			new_child = new_id = CHILD_ID(hi_id,i);
 			old_child = CHILD_ID(position,offset);
-			LOG (info,"[%s][halve_internal()] Node with id %llu (compared against %llu) is now under %llu with new id %llu.\n",tree->filename,old_child,inception,hi_id,new_id);
+			LOG (info,"[%s][halve_internal()] Block with id %lu (compared against %lu) is now under %lu with new id %lu.\n",tree->filename,old_child,inception,hi_id,new_id);
 			if (!update_flag && inception == old_child) {
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
@@ -543,7 +543,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			transposed_ids->tail = transposed_ids->size = new_size;
 			delete_queue (tmp_queue);
 		}else{
-			LOG (fatal,"[%s][halve_internal()] Unable to retrieve heapfile entry #%llu...\n",tree->filename,CHILD_ID(position,offset));
+			LOG (fatal,"[%s][halve_internal()] Unable to retrieve heapfile entry %lu...\n",tree->filename,CHILD_ID(position,offset));
 			exit (EXIT_FAILURE);
 		}
 	}
@@ -562,10 +562,21 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	while (sorted_pages->size) {
 		symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
 
+		while(UNSET_PAGE(entry->key)!=NULL) {
+			LOG (error,"[%s][halve_internal()] Transposed block %lu is still in symbol-table...\n",tree->filename,entry->key);
+		}
 		assert (UNSET_PAGE(entry->key) == NULL);
+
+		while(UNSET_LOCK(entry->key)!=NULL) {
+			LOG (error,"[%s][halve_internal()] Transposed lock %lu is still in symbol-table...\n",tree->filename,entry->key);
+		}
 		assert (UNSET_LOCK(entry->key) == NULL);
-		assert (!is_active_identifier (tree->swap,entry->key));
+
+		while (UNSET_PRIORITY (entry->key) != NULL) {
+			LOG (error,"[%s][halve_internal()] Transposed block %lu is still in swap...\n",tree->filename,entry->key);
+		}
 		assert (UNSET_PRIORITY (entry->key) == NULL);
+		assert (!is_active_identifier (tree->swap,entry->key));
 
 		low_level_write_of_page_to_disk (tree,entry->value,entry->key);
 		delete_rtree_page (entry->value);
@@ -575,25 +586,23 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	delete_queue (transposed_ids);
 	delete_priority_queue (sorted_pages);
 
-	LOG (info,"[%s][halve_internal()] Node with id %llu is now under %llu.\n",tree->filename,lo_id,PARENT_ID(lo_id));
-	LOG (info,"[%s][halve_internal()] Node with id %llu is now under %llu.\n",tree->filename,hi_id,PARENT_ID(hi_id));
-	LOG (info,"[%s][halve_internal()] Halved internal node with new identifier %llu and sibling new node "
-			"%llu having %u records into two parts of %u and %u records.\n",tree->filename,
+	LOG (info,"[%s][halve_internal()] Block with id %lu is now under %lu.\n",tree->filename,position,parent_id);
+	LOG (info,"[%s][halve_internal()] Block with id %lu is now under %lu.\n",tree->filename,hi_id,parent_id);
+	LOG (info,"[%s][halve_internal()] Halved internal block with new identifier %lu and sibling new block "
+			"%lu having %u records into two parts of %u and %u records.\n",tree->filename,
 			new_position, hi_id, overloaded_page->header.records,
 			lo_page->header.records, hi_page->header.records);
 
 	assert (overloaded_page->header.records == lo_page->header.records + hi_page->header.records);
 	assert (update_flag);
 
-	assert (PARENT_ID(position) == PARENT_ID(hi_id));
-	parent = load_page (tree,PARENT_ID(position));
+	assert (parent_id == PARENT_ID(hi_id));
+	parent = load_page (tree,parent_id);
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	parent_lock = LOADED_LOCK(PARENT_ID(position));
+	parent_lock = LOADED_LOCK(parent_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 	assert (parent_lock != NULL);
 
-	//pthread_rwlock_unlock (page_lock);
-	//pthread_rwlock_wrlock (page_lock);
 	pthread_rwlock_wrlock (parent_lock);
 	for (register uint32_t i=0; i<lo_page->header.records; ++i) {
 		if (i) {
@@ -672,10 +681,10 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][halve_internal()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,hi_id);
+			LOG (info,"[%s][halve_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,hi_id);
 			assert (LOADED_PAGE(swapped) != NULL);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][halve_internal()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s][halve_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
@@ -693,17 +702,17 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		UNSET_PRIORITY (hi_id);
 
 		lo_page->header.is_dirty = true;
-		SET_PAGE(lo_id,lo_page);
+		SET_PAGE(position,lo_page);
 
-		uint64_t swapped = SET_PRIORITY (lo_id);
-		assert (is_active_identifier (tree->swap,lo_id));
-		assert (swapped != lo_id);
+		uint64_t swapped = SET_PRIORITY (position);
+		assert (is_active_identifier (tree->swap,position));
+		assert (swapped != position);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][halve_internal()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,lo_id);
+			LOG (info,"[%s][halve_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][halve_internal()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s][halve_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
@@ -724,7 +733,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		free (page_lock);
 	}
 
-	LOG (info,"[%s][halve_internal()] DONE HALVING INTERNAL NODE AT POSITION %llu WITH NEW ID %llu.\n",tree->filename,position,new_position);
+	LOG (info,"[%s][halve_internal()] DONE HALVING NON-LEAF BLOCK AT POSITION %lu WITH NEW ID %lu.\n",tree->filename,position,new_position);
 	delete_rtree_page (overloaded_page);
 
 	return new_position;
@@ -736,15 +745,16 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		puts ("==============================================================");
 	}
 
+	uint64_t parent_id = PARENT_ID(position);
 	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,PARENT_ID(position));
+	page_t* parent = load_page (tree,parent_id);
 	assert (parent != NULL);
 
-	LOG (info,"[%s][split_internal()] SPLITTING INTERNAL NODE AT POSITION %llu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
+	LOG (info,"[%s][split_internal()] SPLITTING NON-LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(PARENT_ID(position));
+	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	assert (page_lock != NULL);
@@ -762,8 +772,9 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	if (parent_records >= tree->internal_entries) {
 		if (position) {
 			insert_at_tail_of_queue (inception_queue,position);
-			uint64_t const parent_id = split_internal (tree,PARENT_ID(position),inception_queue);
+			parent_id = split_internal (tree,parent_id,inception_queue);
 			position = remove_tail_of_queue (inception_queue);
+			assert (parent_id == PARENT_ID(position));
 
 			parent = load_page (tree,parent_id);
 			overloaded_page = load_page (tree,position);
@@ -794,7 +805,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 				uint64_t inception = remove_head_of_queue (inception_queue);
 				if (inception != 0xffffffffffffffff) {
 					uint64_t transposed_inception = TRANSPOSE_PAGE_POSITION(inception);
-					LOG (info,"[%s][split_internal()] TRANSPOSING PAGE IDENTIFIER %llu TO %llu.\n",tree->filename,inception,transposed_inception);
+					LOG (info,"[%s][split_internal()] TRANSPOSING BLOCK IDENTIFIER %lu TO %lu.\n",tree->filename,inception,transposed_inception);
 					insert_at_tail_of_queue (inception_queue,transposed_inception);
 				}else break;
 			}while (true);
@@ -813,7 +824,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			box_container_t *const box_container_lo = (box_container_t *const) malloc (sizeof(box_container_t));
 			box_container_t *const box_container_hi = (box_container_t *const) malloc (sizeof(box_container_t));
 			if (box_container_lo == NULL || box_container_hi == NULL) {
-				LOG (fatal,"[%s][split_internal()] Unable to reserve additional memory to split page %llu...\n",tree->filename,position);
+				LOG (fatal,"[%s][split_internal()] Unable to reserve additional memory to split block %lu...\n",tree->filename,position);
 				exit (EXIT_FAILURE);
 			}
 
@@ -830,7 +841,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			insert_into_priority_queue (priority_queue,box_container_hi);
 		}
 		if (priority_queue->size != (tree->internal_entries<<1)) {
-			LOG (fatal,"[%s][split_internal()] %llu != %lu \n",tree->filename,priority_queue->size,(tree->internal_entries<<1));
+			LOG (fatal,"[%s][split_internal()] %lu != %u \n",tree->filename,priority_queue->size,(tree->internal_entries<<1));
 		}
 		assert (priority_queue->size == (tree->internal_entries<<1));
 
@@ -890,13 +901,12 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 	if (fairness >= fairness_threshold) {
 		uint64_t new_position = position;
-		uint64_t const lo_id = position;
 
 		pthread_rwlock_rdlock (parent_lock);
 		parent_records = parent->header.records;
 		pthread_rwlock_unlock (parent_lock);
 
-		uint64_t const hi_id = CHILD_ID(PARENT_ID(position),parent_records);
+		uint64_t const hi_id = CHILD_ID(parent_id,parent_records);
 		uint64_t old_child = 0, new_child = 0, new_id = 0;
 
 		fifo_t* transposed_ids = new_queue();
@@ -921,9 +931,9 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 			old_child = CHILD_ID(position,i);
 			if (box_ptr[splitdim].end <= splitzone.start) {
-				new_child = new_id = CHILD_ID(lo_id,lo_page->header.records);
+				new_child = new_id = CHILD_ID(position,lo_page->header.records);
 				memcpy(lo_page->node.internal.BOX(lo_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-				LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,lo_id,new_id);
+				LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,position,new_id);
 				if (!update_flag && inception == old_child) {
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
@@ -951,7 +961,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			}else if (box_ptr[splitdim].start >= splitzone.end) {
 				new_child = new_id = CHILD_ID(hi_id,hi_page->header.records);
 				memcpy(hi_page->node.internal.BOX(hi_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-				LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,hi_id,new_id);
+				LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,hi_id,new_id);
 				if (!update_flag && inception == old_child) {
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
@@ -996,7 +1006,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 				LOG (error,"[%s][split_internal()] %u \n",tree->filename,box_ptr[splitdim].start >= splitzone.start && box_ptr[splitdim].end <= splitzone.end);
 				LOG (error,"[%s][split_internal()] %u \n",tree->filename,box_ptr[splitdim].start < splitzone.start);
 				LOG (error,"[%s][split_internal()] %u \n",tree->filename,box_ptr[splitdim].end > splitzone.end);
-				LOG (fatal,"[%s][split_internal()] Unclaimed page #%llu while moving it from page #%llu...\n",tree->filename,old_child,position);
+				LOG (fatal,"[%s][split_internal()] Unclaimed block %lu while moving it from block %lu...\n",tree->filename,old_child,position);
 				exit (EXIT_FAILURE);
 			}
 		}
@@ -1010,7 +1020,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 				new_child = new_id = CHILD_ID(hi_id,hi_page->header.records);
 				memcpy(hi_page->node.internal.BOX(hi_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-				LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,hi_id,new_id);
+				LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,hi_id,new_id);
 				if (!update_flag && inception == old_child) {
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
@@ -1044,9 +1054,9 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 				interval_t* box_ptr = box_container->box;
 				free (box_container);
 
-				new_child = new_id = CHILD_ID(lo_id,lo_page->header.records);
+				new_child = new_id = CHILD_ID(position,lo_page->header.records);
 				memcpy(lo_page->node.internal.BOX(lo_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-				LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,lo_id,new_id);
+				LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,position,new_id);
 				if (!update_flag && inception == old_child) {
 					insert_at_head_of_queue (inception_queue,new_id);
 					do{
@@ -1080,9 +1090,9 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			interval_t* box_ptr = box_container->box;
 			free (box_container);
 
-			new_child = new_id = CHILD_ID(lo_id,lo_page->header.records);
+			new_child = new_id = CHILD_ID(position,lo_page->header.records);
 			memcpy(lo_page->node.internal.BOX(lo_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-			LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,lo_id,new_id);
+			LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,position,new_id);
 			if (!update_flag && inception == old_child) {
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
@@ -1117,7 +1127,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 			new_child = new_id = CHILD_ID(hi_id,hi_page->header.records);
 			memcpy(hi_page->node.internal.BOX(hi_page->header.records++),box_ptr,tree->dimensions*sizeof(interval_t));
-			LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu with new id %llu.\n",tree->filename,old_child,hi_id,new_id);
+			LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu with new id %lu.\n",tree->filename,old_child,hi_id,new_id);
 			if (!update_flag && inception == old_child) {
 				insert_at_head_of_queue (inception_queue,new_id);
 				do{
@@ -1156,10 +1166,21 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		while (sorted_pages->size) {
 			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
 
+			while (UNSET_PAGE(entry->key)!=NULL) {
+				LOG (error,"[%s][split_internal()] Transposed block %lu is still in symbol-table...\n",tree->filename,entry->key);
+			}
 			assert (UNSET_PAGE(entry->key) == NULL);
+
+			while (UNSET_LOCK(entry->key)!=NULL) {
+				LOG (error,"[%s][split_internal()] Transposed lock %lu is still in symbol-table...\n",tree->filename,entry->key);
+			}
 			assert (UNSET_LOCK(entry->key) == NULL);
-			assert (!is_active_identifier (tree->swap,entry->key));
+
+			while (UNSET_PRIORITY (entry->key) != NULL) {
+				LOG (error,"[%s][split_internal()] Transposed block %lu is still in swap...\n",tree->filename,entry->key);
+			}
 			assert (UNSET_PRIORITY (entry->key) == NULL);
+			assert (!is_active_identifier (tree->swap,entry->key));
 
 			low_level_write_of_page_to_disk (tree,entry->value,entry->key);
 			delete_rtree_page (entry->value);
@@ -1169,10 +1190,10 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		delete_queue (transposed_ids);
 		delete_priority_queue (sorted_pages);
 
-		LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu.\n",tree->filename,lo_id,PARENT_ID(lo_id));
-		LOG (info,"[%s][split_internal()] Node with id %llu is now under %llu.\n",tree->filename,hi_id,PARENT_ID(hi_id));
-		LOG (info,"[%s][split_internal()] Split by dimension %u leaf node with new identifier %llu and sibling new node "
-				"%llu having %u records into two parts of %u and %u records.\n",tree->filename,
+		LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu.\n",tree->filename,position,parent_id);
+		LOG (info,"[%s][split_internal()] Block with id %lu is now under %lu.\n",tree->filename,hi_id,parent_id);
+		LOG (info,"[%s][split_internal()] Split by dimension %u leaf block with new identifier %lu and sibling new block "
+				"%lu having %u records into two parts of %u and %u records.\n",tree->filename,
 				splitdim, position, hi_id, overloaded_page->header.records,
 				lo_page->header.records, hi_page->header.records);
 
@@ -1181,15 +1202,13 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		assert (hi_page->header.records >= fairness_threshold*(tree->internal_entries>>1));
 		assert (update_flag);
 
-		assert (PARENT_ID(position) == PARENT_ID(hi_id));
-		parent = load_page (tree,PARENT_ID(position));
+		assert (parent_id == PARENT_ID(hi_id));
+		parent = load_page (tree,parent_id);
 		pthread_rwlock_rdlock (&tree->tree_lock);
-		parent_lock = LOADED_LOCK(PARENT_ID(position));
+		parent_lock = LOADED_LOCK(parent_id);
 		pthread_rwlock_unlock (&tree->tree_lock);
 		assert (parent_lock != NULL);
 
-		pthread_rwlock_unlock (page_lock);
-		pthread_rwlock_wrlock (page_lock);
 		pthread_rwlock_wrlock (parent_lock);
 		uint32_t const lo_offset = CHILD_OFFSET(position);
 		uint32_t const hi_offset = parent->header.records;
@@ -1221,6 +1240,9 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			puts ("==============================================================");
 		}
 
+		pthread_rwlock_unlock (page_lock);
+		pthread_rwlock_wrlock (page_lock);
+
 		pthread_rwlock_wrlock (&tree->tree_lock);
 
 		tree->is_dirty = true;
@@ -1240,15 +1262,15 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 			uint64_t swapped = SET_PRIORITY (hi_id);
 			assert (is_active_identifier (tree->swap,hi_id));
-			assert (swapped != lo_id);
+			assert (swapped != position);
 			assert (swapped != hi_id);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			if (swapped != 0xffffffffffffffff) {
-				LOG (info,"[%s][split_internal()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,hi_id);
+				LOG (info,"[%s][split_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,hi_id);
 				assert (LOADED_PAGE(swapped) != NULL);
 				if (flush_page (tree,swapped) != swapped) {
-					LOG (fatal,"[%s][split_internal()] Unable to flush page %llu...\n",tree->filename,swapped);
+					LOG (fatal,"[%s][split_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
 				}
 			}
@@ -1266,17 +1288,17 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			UNSET_PRIORITY (hi_id);
 
 			lo_page->header.is_dirty = true;
-			SET_PAGE(lo_id,lo_page);
+			SET_PAGE(position,lo_page);
 
-			uint64_t swapped = SET_PRIORITY (lo_id);
-			assert (is_active_identifier (tree->swap,lo_id));
-			assert (swapped != lo_id);
+			uint64_t swapped = SET_PRIORITY (position);
+			assert (is_active_identifier (tree->swap,position));
+			assert (swapped != position);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			if (swapped != 0xffffffffffffffff) {
-				LOG (info,"[%s][split_internal()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,lo_id);
+				LOG (info,"[%s][split_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 				if (flush_page (tree,swapped) != swapped) {
-					LOG (fatal,"[%s][split_internal()] Unable to flush page %llu...\n",tree->filename,swapped);
+					LOG (fatal,"[%s][split_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
 				}
 			}
@@ -1289,15 +1311,15 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			low_level_write_of_page_to_disk (tree,hi_page,hi_id);
 			delete_rtree_page (hi_page);
 		}
-		pthread_rwlock_unlock (parent_lock);
 		pthread_rwlock_unlock (page_lock);
+		pthread_rwlock_unlock (parent_lock);
 
 		if (new_position != position) {
 			pthread_rwlock_destroy (page_lock);
 			free (page_lock);
 		}
 
-		LOG (info,"[%s][split_internal()] DONE SPLITTING INTERNAL NODE AT POSITION %llu WITH NEW ID %llu.\n",tree->filename,position,new_position);
+		LOG (info,"[%s][split_internal()] DONE SPLITTING NON-LEAF BLOCK AT POSITION %lu WITH NEW ID %lu.\n",tree->filename,position,new_position);
 		delete_rtree_page (overloaded_page);
 		return new_position;
 	}else{
@@ -1331,24 +1353,25 @@ index_t expansion_volume (index_t const key[], interval_t const box[], uint32_t 
 
 static
 uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[]) {
+	uint64_t parent_id = PARENT_ID(position);
 	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,PARENT_ID(position));
-	LOG (info,"[%s][split_leaf()] SPLITTING LEAF NODE AT POSITION %llu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
+	page_t* parent = load_page (tree,parent_id);
+	LOG (info,"[%s][split_leaf()] SPLITTING LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
 	pthread_rwlock_rdlock (&tree->tree_lock);
 	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(PARENT_ID(position));
+	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	assert (page_lock != NULL);
 	assert (parent_lock != NULL);
 
 	if (overloaded_page == NULL) {
-		LOG (fatal,"[%s][split_leaf()] Unable to split node corresponding to an invalid page...\n",tree->filename);
+		LOG (fatal,"[%s][split_leaf()] Unable to split block corresponding to an invalid block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 	if (!overloaded_page->header.is_leaf) {
-		LOG (fatal,"[%s][split_leaf()] Splitting should start from a leaf-node...\n",tree->filename);
+		LOG (fatal,"[%s][split_leaf()] Splitting should start from a leaf-block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -1363,20 +1386,19 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		if (parent_records >= tree->internal_entries) {
 			fifo_t* inception_queue = new_queue();
 			insert_at_tail_of_queue (inception_queue,position);
-			uint64_t const parent_id = halve_internal (tree,PARENT_ID(position),inception_queue); ///// split /////
+			parent_id = split_internal (tree,parent_id,inception_queue);
 			position = remove_tail_of_queue (inception_queue);
+			assert (PARENT_ID(position) == parent_id);
 
 			assert (!inception_queue->size);
 			delete_queue (inception_queue);
-
-			assert (PARENT_ID(position) == parent_id);
 
 			parent = load_page (tree,parent_id);
 			overloaded_page = load_page (tree,position);
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
 			page_lock = LOADED_LOCK(position);
-			parent_lock = LOADED_LOCK(PARENT_ID(position));
+			parent_lock = LOADED_LOCK(parent_id);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			assert (page_lock != NULL);
@@ -1411,12 +1433,12 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		assert (is_active_identifier (tree->swap,0));
 		assert (swapped);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][split_leaf()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,0);
+			LOG (info,"[%s][split_leaf()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,0L);
 			assert (LOADED_PAGE(swapped) != NULL);
 			assert (LOADED_LOCK(swapped) != NULL);
 			pthread_rwlock_unlock (&tree->tree_lock);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][split_leaf()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s][split_leaf()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 			assert (LOADED_PAGE(swapped) == NULL);
@@ -1438,7 +1460,7 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 	uint32_t const hi_offset = parent->header.records;
 	pthread_rwlock_unlock (parent_lock);
 
-	uint64_t const hi_id = CHILD_ID(PARENT_ID(position),hi_offset);
+	uint64_t const hi_id = CHILD_ID(parent_id,hi_offset);
 
 	page_t *const lo_page = new_leaf(tree);
 	page_t *const hi_page = new_leaf(tree);
@@ -1471,8 +1493,6 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 
 	assert (priority_queue->size == overloaded_page->header.records);
 
-	pthread_rwlock_unlock (page_lock);
-	pthread_rwlock_wrlock (page_lock);
 	pthread_rwlock_wrlock (parent_lock);
 
 	for (register uint32_t i=0; i<(overloaded_page->header.records>>1); ++i) {
@@ -1528,8 +1548,8 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 
 	assert (overloaded_page->header.records == lo_page->header.records + hi_page->header.records);
 
-	LOG (info,"[%s][split_leaf()] Split by dimension %u leaf node with new identifier %llu and sibling new node "
-			"%llu having %u records into two parts of %u and %u records.\n",tree->filename,
+	LOG (info,"[%s][split_leaf()] Split by dimension %u leaf block with new identifier %lu and sibling new block "
+			"%lu having %u records into two parts of %u and %u records.\n",tree->filename,
 			splitdim, position, hi_id, overloaded_page->header.records,
 			lo_page->header.records, hi_page->header.records);
 
@@ -1543,9 +1563,14 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		lo_volume_expansion = expansion_volume (key,parent->node.internal.BOX(lo_offset),tree->dimensions);
 		hi_volume_expansion = expansion_volume (key,parent->node.internal.BOX(hi_offset),tree->dimensions);
 	}
+
+	pthread_rwlock_unlock (page_lock);
+	pthread_rwlock_wrlock (page_lock);
+
 	pthread_rwlock_wrlock (&tree->tree_lock);
 	tree->is_dirty = true;
 	tree->tree_size++;
+
 	boolean key_goes_hi = false;
 	if ((hi_key_containment && !lo_key_containment)
 		|| (!hi_key_containment && !lo_key_containment && lo_page->header.records > hi_page->header.records)
@@ -1562,9 +1587,9 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		pthread_rwlock_unlock (&tree->tree_lock);
 		assert (swapped != hi_id);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][split_leaf()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,hi_id);
+			LOG (info,"[%s][split_leaf()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,hi_id);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][split_leaf()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s][split_leaf()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
@@ -1586,9 +1611,9 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		pthread_rwlock_unlock (&tree->tree_lock);
 		assert (swapped != position);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][split_leaf()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+			LOG (info,"[%s][split_leaf()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s][split_leaf()] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s][split_leaf()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
@@ -1601,8 +1626,9 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		delete_rtree_page (hi_page);
 		lo_page->header.is_dirty = true;
 	}
-	pthread_rwlock_unlock (parent_lock);
 	pthread_rwlock_unlock (page_lock);
+	pthread_rwlock_unlock (parent_lock);
+
 	if (key_goes_hi) {
 		pthread_rwlock_destroy (page_lock);
 		free (page_lock);
@@ -1649,8 +1675,8 @@ object_t delete_from_rtree (tree_t *const tree, index_t const key[]) {
 						 * over disk-utilization. Eventually will be overwritten, or if it is of
 						 * subsequent level, search would stop at the first encountered leaf without
 						 * proceeding any deeper, and hence, will never be accessed even again.
-						 * Normally, the heapfile should be truncated so as to include all pages
-						 * up to the last valid page.
+						 * Normally, the heapfile should be truncated so as to include all blocks
+						 * up to the last valid block.
 						 */
 
 						pthread_rwlock_wrlock (&tree->tree_lock);
@@ -1748,7 +1774,7 @@ void process_records_from_textfile (tree_t *const tree, char const filename[], b
 			}else if (sizeof(object_t) == sizeof(long)) {
 				fscanf (fptr,"%lu ",&id);
 			}else if (sizeof(object_t) == sizeof(long long)) {
-				fscanf (fptr,"%llu ",&id);
+				fscanf (fptr,"%lu ",&id);
 			}
 
 			if (insert) {
@@ -1896,9 +1922,10 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 
 		if (minleaf_records >= tree->leaf_entries) {
 			//page_t *const nca = load_page (tree,PARENT_ID(minexp));
-LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK #%llu.\n",tree->filename,minpos);
+LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK %lu.\n",tree->filename,minpos);
 			minpos = split_leaf (tree,minpos,key);
-			uint64_t const sibling = CHILD_ID(PARENT_ID(minpos),load_page (tree,PARENT_ID(minpos))->header.records-1);
+			uint64_t const parent_id = PARENT_ID(minpos);
+			uint64_t const sibling = CHILD_ID(parent_id,load_page(tree,parent_id)->header.records-1);
 
 			boolean former = key_enclosed_by_box(key,MBB(minpos),tree->dimensions);
 			boolean latter = key_enclosed_by_box(key,MBB(sibling),tree->dimensions);
@@ -1908,18 +1935,18 @@ LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK #%llu.\n",tree->fi
 			else if (latter) minpos = sibling;
 			else if (former) ;
 			else{
-				index_t tempvol = expansion_volume(key,load_page (tree,PARENT_ID(minpos))->node.internal.BOX(CHILD_OFFSET(minpos)),tree->dimensions);
+				index_t tempvol = expansion_volume(key,load_page (tree,parent_id)->node.internal.BOX(CHILD_OFFSET(minpos)),tree->dimensions);
 				if (tempvol < minvol && load_page (tree,minpos) != NULL) {
 					minexp = minpos;
 					minvol = tempvol;
 				}
 
-				tempvol = expansion_volume(key,load_page (tree,PARENT_ID(sibling))->node.internal.BOX(CHILD_OFFSET(sibling)),tree->dimensions);
+				tempvol = expansion_volume(key,load_page (tree,parent_id)->node.internal.BOX(CHILD_OFFSET(sibling)),tree->dimensions);
 				if (tempvol < minvol && load_page (tree,sibling) != NULL) {
 					minexp = sibling;
 					minvol = tempvol;
 				}
-				LOG (info,"[%s][insert_into_rtree()] EXPANDED HERE PAGE #%llu...\n",tree->filename,minexp);
+				LOG (info,"[%s][insert_into_rtree()] EXPANDED HERE BLOCK %lu...\n",tree->filename,minexp);
 
 				goto expand;
 			}
@@ -1967,11 +1994,12 @@ LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK #%llu.\n",tree->fi
 			if (page->header.is_leaf) {
 				if (page->header.records >= tree->leaf_entries) {
 					pthread_rwlock_unlock (page_lock);
-LOG (info,"[%s][insert_into_rtree()] EXPANSION SPLIT FOR BLOCK #%llu.\n",tree->filename,position);
+LOG (info,"[%s][insert_into_rtree()] EXPANSION SPLIT FOR BLOCK %lu.\n",tree->filename,position);
 					position = split_leaf (tree,position,key);
-LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID #%llu.\n",tree->filename,position);
+LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID %lu.\n",tree->filename,position);
 
-					uint64_t const sibling = CHILD_ID(PARENT_ID(position),load_page (tree,PARENT_ID(position))->header.records-1);
+					uint64_t const parent_id = PARENT_ID (position);
+					uint64_t const sibling = CHILD_ID(parent_id,load_page(tree,parent_id)->header.records-1);
 
 					boolean former = key_enclosed_by_box(key,MBB(position),tree->dimensions);
 					boolean latter = key_enclosed_by_box(key,MBB(sibling),tree->dimensions);
@@ -1999,11 +2027,11 @@ LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID #%llu.\n",
 
 				pthread_rwlock_unlock (page_lock);
 
-				for (;position;position=PARENT_ID(position)) {
-					page_t *const parent = load_page (tree,PARENT_ID(position));
+				for (uint64_t parent_id = PARENT_ID(position); position; parent_id = PARENT_ID(position)) {
+					page_t *const parent = load_page (tree,parent_id);
 
 					pthread_rwlock_rdlock (&tree->tree_lock);
-					pthread_rwlock_t *const parent_lock = LOADED_LOCK(PARENT_ID(position));
+					pthread_rwlock_t *const parent_lock = LOADED_LOCK(parent_id);
 					pthread_rwlock_unlock (&tree->tree_lock);
 
 					assert (parent_lock != NULL);
@@ -2029,6 +2057,8 @@ LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID #%llu.\n",
 					parent->header.is_dirty = true;
 
 					pthread_rwlock_unlock (parent_lock);
+
+					position = parent_id;
 				}
 
 				page = load_page (tree,position);
@@ -2077,7 +2107,7 @@ LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID #%llu.\n",
 		delete_priority_queue (volume_expansion_priority_queue);
 
 		if (!is_inserted) {
-			LOG (fatal,"[%s][insert_into_rtree()] Unable to locate a page for the new tuple...\n",tree->filename);
+			LOG (fatal,"[%s][insert_into_rtree()] Unable to locate a block for the new tuple...\n",tree->filename);
 			exit (EXIT_FAILURE);
 		}
 	}

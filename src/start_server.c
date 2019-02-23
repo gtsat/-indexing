@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+pthread_mutex_t lmx = PTHREAD_MUTEX_INITIALIZER;
+
 uint32_t PORT;
 char const* HOST;
 char const* FOLDER;
@@ -150,7 +152,7 @@ void process_arguments (int argc,char *argv[]) {
 		case -1:
 			break;
 		case '?':
-			LOG (error,"Unknown option parameter: %s\n",optarg);
+			LOG (error,"[%s] Unknown option parameter: %s\n",argv[0],optarg);
 		default:
 			print_usage (argv[0]);
 			exit (EXIT_FAILURE);
@@ -161,8 +163,8 @@ void process_arguments (int argc,char *argv[]) {
 
 static
 void handle (int fd, char const method[], char url[], char const body[], char const folder[]) {
-	//LOG (info,"Server received request: %s %s %s\n",method,url,body);
-	LOG (info,"Server received request: %s %s\n",method,url);
+	//LOG (info,"[start#server] Server received request: %s %s %s\n",method,url,body);
+	LOG (info,"[start#server] Server received request: %s %s\n",method,url);
 
 	boolean write_through = true;
 	char* request = url;
@@ -187,7 +189,7 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		if (!strcmp(method,"GET")) {
 			if (write_through) {
 				if (write (fd,ok_data,strlen(ok_data)*sizeof(char)) < strlen(ok_data)*sizeof(char)) {
-					LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+					LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 					data = NULL;
 				}else{
 					data = qprocessor (request,folder,message,&io_blocks_counter,&io_mb_counter,fd);
@@ -246,7 +248,7 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 					io_blocks_counter,io_mb_counter,
 					((end-start)*1000/CLOCKS_PER_SEC));
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else{
 			char response[strlen(ok_response)+strlen(result_code)+strlen(request)+strlen(message)+1];
@@ -254,11 +256,11 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 					io_blocks_counter,io_mb_counter,
 					((end-start)*1000/CLOCKS_PER_SEC));
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 			}
 
 			if (write (fd,data,strlen(data)*sizeof(char)) < strlen(data)*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}
 
@@ -269,13 +271,13 @@ void handle (int fd, char const method[], char url[], char const body[], char co
 		char body_end[] = "}\n";
 
 		if (write (fd,body_end,strlen(body_end)*sizeof(char)) < strlen(body_end)*sizeof(char)) {
-			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 		}
 	}else{
 		char response[strlen(not_found_response_template)+strlen(url)+strlen(request)+1];
 		snprintf (response,sizeof(response),not_found_response_template,url,request);
 		if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-			LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+			LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 		}
 	}
 }
@@ -292,7 +294,7 @@ void handle_connection (void *const args) {
 	int const fd = ((handler_args const*const)args)->connection;
 	free (args);
 
-	LOG (info,"Handling new connection for file descriptor %u.\n",fd)
+	LOG (info,"[start#server] Handling new connection for file descriptor %u.\n",fd)
 
 	char buffer[BUFSIZ<<1];
 	ssize_t bytes_read = read (fd,buffer,sizeof(buffer));
@@ -302,7 +304,7 @@ void handle_connection (void *const args) {
 		char protocol[BUFSIZ];
 
 		buffer[bytes_read] = '\0';
-		//LOG (info,"BUFFER:\n%s\n",buffer);
+		//LOG (debug,"[start#server] BUFFER:\n%s\n",buffer);
 
 		sscanf (buffer,"%s %s %s",method,url,protocol);
 
@@ -316,7 +318,7 @@ void handle_connection (void *const args) {
 
 				if (cl_ptr != NULL) {
 					cl_ptr += strlen("content-length: ");
-					sscanf (cl_ptr,"%u",&content_length);
+					sscanf (cl_ptr,"%lu",&content_length);
 
 					if (*content == '\r') ++content;
 					if (*content == '\n') ++content;
@@ -330,12 +332,12 @@ void handle_connection (void *const args) {
 							;
 
 						if (content_stack->size < content_length) {
-LOG (info,"Emptying and refilling network buffer...\n");
+LOG (debug,"[start#server] Emptying and refilling network buffer...\n");
 							bzero (buffer,sizeof(buffer));
 							bytes_read = read (fd,buffer,sizeof(buffer));
 							buffer[bytes_read] = '\0';
 							content = buffer;
-//LOG (info,"BUFFER:\n%s\n",buffer);
+//LOG (debug,"[start#server] BUFFER:\n%s\n",buffer);
 						}else{
 							insert_into_stack (content_stack,'\0');
 							break;
@@ -355,20 +357,20 @@ LOG (info,"Emptying and refilling network buffer...\n");
 			*to = '\0';
 			delete_stack (content_stack);
 		}
-LOG (info,"FULL BODY:\n%s\n",body);
+LOG (debug,"[start#server] FULL BODY:\n%s\n",body);
 		char response[BUFSIZ];
 		if (strcmp(protocol,"HTTP/1.0") && strcmp(protocol,"HTTP/1.1")) {
 			snprintf (response,sizeof(response),bad_request_response,url);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else if (strcmp(method,"GET") && strcmp(method,"POST") && strcmp(method,"PUT") && strcmp(method,"DELETE")) {
 			snprintf (response,sizeof(response),bad_method_response_template,url,method);
 			if (write (fd,response,strlen(response)*sizeof(char)) < strlen(response)*sizeof(char)) {
-				LOG (error,"Error while sending data using file-descriptor %u.\n",fd);
+				LOG (error,"[start#server] Error while sending data using file-descriptor %u.\n",fd);
 			}
 		}else handle (fd,method,url,body,folder);
-	}else LOG (error,"Problematic IPC...\n");
+	}else LOG (error,"[start#server] Problematic IPC...\n");
 	close (fd);
 }
 
@@ -381,23 +383,23 @@ void server_run (struct in_addr const local_address, uint16_t const port, char c
 	socket_address.sin_port = port;
 
 	int server_socket = socket (PF_INET,SOCK_STREAM,0);
-	if (server_socket < 0) LOG (error,"Cannot create a TCP socket...\n");
+	if (server_socket < 0) LOG (error,"[start#server] Cannot create a TCP socket...\n");
 
 	if (bind (server_socket,&socket_address,sizeof(socket_address))) {
-		LOG (error,"Unable to bind address. Try a different address/port pair...\n");
+		LOG (error,"[start#server] Unable to bind address. Try a different address/port pair...\n");
 		return;
 	}
 
 	if (listen (server_socket,5)) {
-		LOG (error,"Cannot set-up server for listening for new connections...\n");
+		LOG (error,"[start#server] Cannot set-up server for listening for new connections...\n");
 		return;
 	}
 
 	socklen_t address_length = sizeof (socket_address);
 	if (getsockname (server_socket,&socket_address,&address_length))
-		LOG (warn,"Problem setting up socket-server...\n");
+		LOG (warn,"[start#server] Problem setting up socket-server...\n");
 
-	LOG (info,"Server listening on '%s':%d\n",
+	LOG (info,"[start#server] Server listening on '%s':%d\n",
 				inet_ntoa(socket_address.sin_addr),
 				ntohs(socket_address.sin_port));
 
@@ -409,13 +411,13 @@ void server_run (struct in_addr const local_address, uint16_t const port, char c
 		if (connection < 0) {
 			/* the call to accept failed. */
 			if (errno == EINTR) continue;
-			else LOG (error,"Error while accepting new connection...\n");
+			else LOG (error,"[start#server] Error while accepting new connection...\n");
 		}else{
 			address_length = sizeof (socket_address);
 			if (getpeername (connection,&socket_address,&address_length)) {
-				LOG (warn,"Problem establishing connection with '%s'...\n",inet_ntoa(socket_address.sin_addr));
+				LOG (warn,"[start#server] Problem establishing connection with '%s'...\n",inet_ntoa(socket_address.sin_addr));
 			}else{
-				LOG (info,"Server accepted new connection from '%s'.\n",inet_ntoa(socket_address.sin_addr));
+				LOG (info,"[start#server] Server accepted new connection from '%s'.\n",inet_ntoa(socket_address.sin_addr));
 			}
 
 			handler_args *const args = (handler_args* const) malloc (sizeof (handler_args));
@@ -429,7 +431,7 @@ void server_run (struct in_addr const local_address, uint16_t const port, char c
 			pthread_attr_setstacksize (&attr,THREAD_STACK_SIZE);
 			pthread_attr_setdetachstate (&attr,PTHREAD_CREATE_DETACHED);
 			if (pthread_create (&thread,&attr,&handle_connection,args)) {
-				LOG (fatal,"Unable to create new thread...\n");
+				LOG (fatal,"[start#server] Unable to create new thread...\n");
 				exit (EXIT_FAILURE);
 			}
 			pthread_attr_destroy (&attr);
@@ -456,19 +458,21 @@ int main (int argc, char* argv[]) {
 	process_arguments (argc,argv);
 
 	if (!PORT) {
-		LOG (error,"Please specify a port number...\n");
+		LOG (error,"[%s] Please specify a port number...\n",argv[0]);
 	}
 	if (!FOLDER) {
-		LOG (error,"Please specify the directory containing the heapfiles...\n");
+		LOG (error,"[%s] Please specify the directory containing the heapfiles...\n",argv[0]);
 	}
 
 
 	if (PORT && FOLDER) {
 		puts (pull_random_quote());
-		server_start (HOST,PORT,FOLDER) ;
+		server_start (HOST,PORT,FOLDER);
+		pthread_mutex_destroy (&lmx);
 		return EXIT_SUCCESS;
 	}else{
 		print_usage (argv[0]);
+		pthread_mutex_destroy (&lmx);
 		return EXIT_FAILURE;
 	}
 }

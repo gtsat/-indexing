@@ -37,7 +37,7 @@ static
 page_t* new_rtree_leaf (tree_t const*const tree) {
 	page_t *const page = (page_t *const) malloc (sizeof(page_t));
 	if (page == NULL) {
-		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -47,13 +47,13 @@ page_t* new_rtree_leaf (tree_t const*const tree) {
 
 	page->node.leaf.objects = (object_t *const) malloc (tree->leaf_entries*sizeof(object_t));
 	if (page->node.leaf.objects == NULL) {
-		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for the objects of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for the objects of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
 	page->node.leaf.keys = (index_t *const) malloc (tree->leaf_entries*tree->dimensions*sizeof(index_t));
 	if (page->node.leaf.keys == NULL) {
-		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for the keys of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree_leaf()] Unable to allocate additional memory for the keys of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -64,7 +64,7 @@ static
 page_t* new_rtree_internal (tree_t const*const tree) {
 	page_t *const page = (page_t *const) malloc (sizeof(page_t));
 	if (page == NULL) {
-		LOG (fatal,"[%s][new_rtree_internal()] Unable to allocate additional memory for a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree_internal()] Unable to allocate additional memory for a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -74,7 +74,7 @@ page_t* new_rtree_internal (tree_t const*const tree) {
 
 	page->node.internal.intervals = (interval_t*) malloc (tree->dimensions*tree->internal_entries*sizeof(interval_t));
 	if (page->node.internal.intervals == NULL) {
-		LOG (fatal,"[%s][new_rtree_internal()] Unable to allocate additional memory for the entries of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_rtree_internal()] Unable to allocate additional memory for the entries of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -85,7 +85,7 @@ static
 page_t* new_ntree_leaf (tree_t const*const tree) {
 	page_t *const page = (page_t*) malloc (sizeof(page_t));
 	if (page == NULL) {
-		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -95,25 +95,25 @@ page_t* new_ntree_leaf (tree_t const*const tree) {
 
 	page->node.subgraph.from = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
 	if (page->node.subgraph.from == NULL) {
-		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc origins of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc origins of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
 	page->node.subgraph.pointers = (arc_pointer_t*) malloc (tree->leaf_entries*sizeof(arc_pointer_t));
 	if (page->node.subgraph.pointers == NULL) {
-		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc pointers of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc pointers of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
 	page->node.subgraph.to = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
 	if (page->node.subgraph.to == NULL) {
-		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc targets of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc targets of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
 	page->node.subgraph.weights = (arc_weight_t*) malloc (tree->leaf_entries*sizeof(arc_weight_t));
 	if (page->node.subgraph.weights == NULL) {
-		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc weights of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_leaf()] Unable to allocate additional memory for the arc weights of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -124,7 +124,7 @@ static
 page_t* new_ntree_internal (tree_t const*const tree) {
 	page_t *const page = (page_t*) malloc (sizeof(page_t));
 	if (page == NULL) {
-		LOG (fatal,"[%s][new_ntree_internal()] Unable to allocate additional memory for a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_internal()] Unable to allocate additional memory for a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -134,7 +134,7 @@ page_t* new_ntree_internal (tree_t const*const tree) {
 
 	page->node.group.ranges = (object_range_t*) malloc (tree->internal_entries*sizeof(object_range_t));
 	if (page->node.group.ranges == NULL) {
-		LOG (fatal,"[%s][new_ntree_internal()] Unable to allocate additional memory for the lookup list of a new page...\n",tree->filename);
+		LOG (fatal,"[%s][new_ntree_internal()] Unable to allocate additional memory for the lookup list of a new block...\n",tree->filename);
 		exit (EXIT_FAILURE);
 	}
 
@@ -188,7 +188,7 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 
 		if (original_id == transposed_id) continue;
 
-		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %llu will be transposed to position %llu.\n",tree->filename,original_id,transposed_id);
+		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %lu will be transposed to position %lu.\n",tree->filename,original_id,transposed_id);
 
 		page_t *const page = load_page (tree,original_id);
 		assert (page != NULL);
@@ -375,12 +375,12 @@ void new_root (tree_t *const tree) {
 	assert (is_active_identifier (tree->swap,0));
 	assert (swapped);
 	if (swapped != 0xffffffffffffffff) {
-		LOG (info,"[%s][new_root()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,0);
+		LOG (info,"[%s][new_root()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,0L);
 		assert (LOADED_PAGE(swapped) != NULL);
 		assert (LOADED_LOCK(swapped) != NULL);
 		pthread_rwlock_unlock (&tree->tree_lock);
 		if (flush_page (tree,swapped) != swapped) {
-			LOG (fatal,"[%s][new_root()] Unable to flush page %llu...\n",tree->filename,swapped);
+			LOG (fatal,"[%s][new_root()] Unable to flush block %lu...\n",tree->filename,swapped);
 			exit (EXIT_FAILURE);
 		}
 		assert (LOADED_PAGE(swapped) == NULL);
@@ -416,15 +416,15 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 			assert (swapped != position);
 			if (swapped != 0xffffffffffffffff) {
-				LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+				LOG (info,"[%s][load_rtree_page()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 				if (flush_page (tree,swapped) != swapped) {
-					LOG (fatal,"[%s][load_rtree_page()] Unable to flush page %llu...\n",tree->filename,swapped);
+					LOG (fatal,"[%s][load_rtree_page()] Unable to flush block %lu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
 				}
 			}
 			return page;
 		}else{
-			LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_rtree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 			exit (EXIT_FAILURE);
 		}
 	}else if (page == NULL) {
@@ -439,25 +439,25 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 		}
 
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
-			LOG (error,"[%s][load_rtree_page()] There are less than %llu pages in file '%s'...\n",tree->filename,position+1,tree->filename);
+			LOG (error,"[%s][load_rtree_page()] There are less than %lu blocks in file '%s'...\n",tree->filename,position+1,tree->filename);
 			close (fd);
 			return page;
 		}
 
 		page = (page_t*) malloc (sizeof(page_t));
 		if (page == NULL) {
-			LOG (fatal,"[%s][load_rtree_page()] Unable to reserve additional memory to load page %llu from the external memory...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_rtree_page()] Unable to reserve additional memory to load block %lu from the external memory...\n",tree->filename,position);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
 		if (buffer == NULL) {
-			LOG (fatal,"[%s][load_rtree_page()] Unable to buffer page %llu from the external memory...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_rtree_page()] Unable to buffer block %lu from the external memory...\n",tree->filename,position);
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {
-			LOG (warn,"[%s][load_rtree_page()] Read less than %u bytes for block %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+			LOG (warn,"[%s][load_rtree_page()] Read less than %u bytes for block %lu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
 		}
 
 		memcpy (&page->header,buffer,sizeof(header_t));
@@ -569,7 +569,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 		if (!position) update_rootbox (tree);
 
-		LOG (info,"[%s][load_rtree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
+		LOG (info,"[%s][load_rtree_page()] Loaded from '%s' block %lu with %u records from the disk.\n",tree->filename,
 								tree->filename,position,page->header.records);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -578,14 +578,14 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 		assert (swapped != position);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][load_rtree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+			LOG (info,"[%s][load_rtree_page()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
 	}else{
-		LOG (fatal,"[%s][load_rtree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+		LOG (fatal,"[%s][load_rtree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 		exit (EXIT_FAILURE);
 	}
 	return page;
@@ -607,15 +607,15 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 			assert (swapped != position);
 			if (swapped != 0xffffffffffffffff) {
-				LOG (info,"[%s][load_ntree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+				LOG (info,"[%s][load_ntree_page()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 				if (flush_page (tree,swapped) != swapped) {
-					LOG (fatal,"[%s][load_ntree_page()] Unable to flush page %llu...\n",tree->filename,swapped);
+					LOG (fatal,"[%s][load_ntree_page()] Unable to flush block %lu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
 				}
 			}
 			return page;
 		}else{
-			LOG (fatal,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_ntree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 			exit (EXIT_FAILURE);
 		}
 	}else if (page == NULL) {
@@ -630,25 +630,25 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 		}
 
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
-			LOG (error,"[%s][load_ntree_page()] There are less than %llu pages in file '%s'...\n",tree->filename,position+1,tree->filename);
+			LOG (error,"[%s][load_ntree_page()] There are less than %lu blocks in file '%s'...\n",tree->filename,position+1,tree->filename);
 			close (fd);
 			return page;
 		}
 
 		page = (page_t*) malloc (sizeof(page_t));
 		if (page == NULL) {
-			LOG (fatal,"[%s][load_ntree_page()] Unable to reserve additional memory to load page %llu from the external memory...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_ntree_page()] Unable to reserve additional memory to load block %lu from the external memory...\n",tree->filename,position);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
 		if (buffer == NULL) {
-			LOG (fatal,"[%s][load_ntree_page()] Unable to buffer page %llu from the external memory...\n",tree->filename,position);
+			LOG (fatal,"[%s][load_ntree_page()] Unable to buffer block %lu from the external memory...\n",tree->filename,position);
 			abort ();
 		}
 		if (read (fd,buffer,tree->page_size) < tree->page_size) {
-			LOG (warn,"[%s][load_ntree_page()] Read less than %u bytes for block %llu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
+			LOG (warn,"[%s][load_ntree_page()] Read less than %u bytes for block %lu in '%s'...\n",tree->filename,tree->page_size,position,tree->filename);
 		}
 
 		memcpy (&page->header,buffer,sizeof(header_t));
@@ -734,7 +734,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 			for (register uint32_t i=0; i<page->header.records; ++i) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
-			LOG (debug,"[%s][load_ntree_page()] Deserializing %llu bytes.\n",tree->filename,
+			LOG (debug,"[%s][load_ntree_page()] Deserializing %lu bytes.\n",tree->filename,
 					(sizeof(header_t)+sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 
 			memcpy (page->node.subgraph.to,ptr,sizeof(object_t)*total_arcs_number);
@@ -790,7 +790,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				exit (EXIT_FAILURE);
 			}
 			memcpy (page->node.group.ranges,ptr,page->header.records*sizeof(object_range_t));
-			LOG (debug,"[%s][load_ntree_page()] About to deserialize %llu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
+			LOG (debug,"[%s][load_ntree_page()] About to deserialize %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
 			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
@@ -827,7 +827,7 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 		if (!position) update_rootrange (tree);
 
-		LOG (info,"[%s][load_ntree_page()] Loaded from '%s' page %llu with %u records from the disk.\n",tree->filename,
+		LOG (info,"[%s][load_ntree_page()] Loaded from '%s' block %lu with %u records from the disk.\n",tree->filename,
 								tree->filename,position,page->header.records);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -836,14 +836,14 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 		assert (swapped != position);
 		if (swapped != 0xffffffffffffffff) {
-			LOG (info,"[%s][load_ntree_page()] Swapping page %llu for page %llu from the disk.\n",tree->filename,swapped,position);
+			LOG (info,"[%s][load_ntree_page()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,position);
 			if (flush_page (tree,swapped) != swapped) {
-				LOG (fatal,"[%s] Unable to flush page %llu...\n",tree->filename,swapped);
+				LOG (fatal,"[%s] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
 		}
 	}else{
-		LOG (fatal,"[%s][load_ntree_page()] Inconsistency in page/lock %llu...\n",tree->filename,position);
+		LOG (fatal,"[%s][load_ntree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 		exit (EXIT_FAILURE);
 	}
 	return page;
@@ -924,10 +924,10 @@ uint64_t flush_page (tree_t *const tree, uint64_t const page_id) {
 
 	if ((page != NULL && page_lock == NULL)
 		|| (page == NULL && page_lock != NULL)) {
-		LOG (fatal,"[%s][flush_page()] Page/Lock inconsistency while flushing page: %llu...\n",tree->filename,page_id);
+		LOG (fatal,"[%s][flush_page()] Block/Lock inconsistency while flushing block: %lu...\n",tree->filename,page_id);
 		abort();
 	}else if (page == NULL && page_lock == NULL) {
-		LOG (warn,"[%s][flush_page()] Page %llu has already been flushed!\n",tree->filename,page_id);
+		LOG (warn,"[%s][flush_page()] Block %lu has already been flushed!\n",tree->filename,page_id);
 		return 0xffffffffffffffff;
 	}
 
@@ -962,7 +962,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		return 0xffffffffffffffff;
 	}else{
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
-			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Cannot dump page at position %llu in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Cannot dump block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
@@ -970,7 +970,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
 		if (buffer == NULL) {
-			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to allocate enough memory so as to dump page...\n",tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to allocate enough memory so as to dump block...\n",tree->filename);
 			exit (EXIT_FAILURE);
 		}
 		bzero (buffer,tree->page_size);
@@ -980,9 +980,9 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		((header_t *const)ptr)->records = htole32(((header_t *const)ptr)->records);
 		ptr += sizeof(header_t);
 		if (page->header.is_leaf) {
-			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping leaf-node at position %llu with %u records.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping leaf-block at position %lu with %u records.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(index_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
@@ -1006,7 +1006,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			ptr += sizeof(index_t)*tree->dimensions*page->header.records;
 
 			memcpy (ptr,page->node.leaf.objects,sizeof(object_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -1029,9 +1029,9 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			}
 			ptr += sizeof(object_t)*page->header.records;
 		}else{
-			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping internal page at position %llu with %u children.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping non-leaf block at position %lu with %u children.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(interval_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %llu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
@@ -1056,16 +1056,16 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		}
 		uint64_t bytelength = ptr - buffer;
 		if (bytelength > tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Over-flown page at position %llu occupying %llu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
+			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Over-flown block at position %lu occupying %lu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 		if (write (fd,buffer,tree->page_size) != tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to dump page at position %llu in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to dump block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}else{
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] Done dumping %llu bytes of binary data.\n",tree->filename,bytelength);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] Done dumping %lu bytes of binary data.\n",tree->filename,bytelength);
 		}
 		free (buffer);
 	}
@@ -1081,7 +1081,7 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 		return 0xffffffffffffffff;
 	}else{
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Cannot write page %llu at the appropriate position in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Cannot write block %lu at the appropriate position in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
@@ -1089,7 +1089,7 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 
 		void *const buffer = (void *const) malloc (tree->page_size), *ptr;
 		if (buffer == NULL) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to allocate enough memory so as to dump page...\n",tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to allocate enough memory so as to dump block...\n",tree->filename);
 			exit (EXIT_FAILURE);
 		}
 		bzero (buffer,tree->page_size);
@@ -1099,12 +1099,12 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 		((header_t *const)ptr)->records = htole32(((header_t *const)ptr)->records);
 		ptr += sizeof(header_t);
 		if (page->header.is_leaf) {
-			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing leaf-node %llu with %u records.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing leaf-block %lu with %u records.\n",tree->filename,position,page->header.records);
 			uint64_t total_arcs_number = 0;
 			for (register uint32_t i=0; i<page->header.records; ++i) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %llu bytes.\n",tree->filename,
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %lu bytes.\n",tree->filename,
 					sizeof(header_t)+(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 			memcpy (ptr,page->node.subgraph.from,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
@@ -1198,9 +1198,9 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			}
 			ptr += sizeof(arc_weight_t)*total_arcs_number;
 		}else{
-			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing internal page %llu with %u children.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing non-leaf block %lu with %u children.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %llu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
 			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
 				uint16_t* le_ptr = buffer;
 				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
@@ -1225,16 +1225,16 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 		}
 		uint64_t bytelength = ptr - buffer;
 		if (bytelength > tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Over-flown page at position %llu occupying %llu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Over-flown block at position %lu occupying %lu bytes when block-size is %u...\n",tree->filename,position,bytelength,tree->page_size);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 		if (write (fd,buffer,tree->page_size) != tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to dump page at position %llu in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to dump block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}else{
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] Done dumping %llu bytes of binary data.\n",tree->filename,bytelength);
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] Done dumping %lu bytes of binary data.\n",tree->filename,bytelength);
 		}
 		free (buffer);
 	}
@@ -1284,28 +1284,28 @@ uint64_t flush_tree (tree_t *const tree) {
 		lseek (fd,0,SEEK_SET);
 		uint16_t le_tree_dimensions = htole16(tree->dimensions);
 		if (write (fd,&le_tree_dimensions,sizeof(uint16_t)) < sizeof(uint16_t)) {
-			LOG (fatal,"[%s][flush_tree()] Wrote less than %llu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint16_t),tree->filename);
+			LOG (fatal,"[%s][flush_tree()] Wrote less than %lu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint16_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
 		uint32_t le_tree_page_size = htole32(tree->page_size);
 		if (write (fd,&le_tree_page_size,sizeof(uint32_t)) < sizeof(uint32_t)) {
-			LOG (fatal,"[%s][flush_tree()] Wrote less than %llu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint32_t),tree->filename);
+			LOG (fatal,"[%s][flush_tree()] Wrote less than %lu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint32_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
 		uint64_t le_tree_tree_size = htole64(tree->tree_size);
 		if (write (fd,&le_tree_tree_size,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (fatal,"[%s][flush_tree()] Wrote less than %llu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint64_t),tree->filename);
+			LOG (fatal,"[%s][flush_tree()] Wrote less than %lu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint64_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
 
 		uint64_t le_tree_indexed_records = htole64(tree->indexed_records);
 		if (write (fd,&le_tree_indexed_records,sizeof(uint64_t)) < sizeof(uint64_t)) {
-			LOG (fatal,"[%s][flush_tree()] Wrote less than %llu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint64_t),tree->filename);
+			LOG (fatal,"[%s][flush_tree()] Wrote less than %lu bytes in heapfile '%s'...\n",tree->filename,sizeof(uint64_t),tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}
@@ -1357,7 +1357,7 @@ uint64_t flush_tree (tree_t *const tree) {
 		LOG (warn,"[%s][flush_tree()] Deleting heapfile for it indexes no data anymore!\n",tree->filename);
 		unlink (tree->filename);
 	}
-	LOG (warn,"[%s][flush_tree()] Done flushing tree hierarchy. Overall %llu dirty blocks were found!\n",tree->filename,count_dirty_pages);
+	LOG (warn,"[%s][flush_tree()] Done flushing tree hierarchy. Overall %lu dirty blocks were found!\n",tree->filename,count_dirty_pages);
 
 	pthread_rwlock_wrlock (&tree->tree_lock);
 	tree->is_dirty = false;
@@ -1517,7 +1517,7 @@ boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
 	pthread_rwlock_unlock (page_lock);
 
 	if (is_updated) {
-		LOG(debug,"[%s][update_internal_range()] Updated internal range corresponding to page %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
+		LOG(debug,"[%s][update_internal_range()] Updated internal range corresponding to block %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
 		pthread_rwlock_wrlock (&tree->tree_lock);
 		tree->is_dirty = true;
 		pthread_rwlock_unlock (&tree->tree_lock);
@@ -1528,7 +1528,7 @@ boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
 void update_upwards (tree_t *const tree, uint64_t page_id) {
 	for (;page_id; page_id = PARENT_ID(page_id)) {
 		if (tree->root_range == NULL) {
-			if (update_box (tree,page_id)) {
+			if (!update_box (tree,page_id)) {
 				return;
 			}
 		}else{
@@ -1548,7 +1548,7 @@ void update_upwards (tree_t *const tree, uint64_t page_id) {
 }
 
 void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t const offset) {
-	LOG(info,"[%s][cascade_deletion()] CASCADED DELETION TO PAGE %llu.\n",tree->filename,page_id);
+	LOG(info,"[%s][cascade_deletion()] CASCADED DELETION TO BLOCK %lu.\n",tree->filename,page_id);
 
 	page_t *const page = load_page (tree,page_id);
 
@@ -1570,11 +1570,11 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 	if (page->header.records >= fairness_threshold*(tree->internal_entries>>1)
 		|| (!page_id && page->header.records > 2)) {
 
-		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE 0 (Another page obtains the identifier of the removed page)\n",tree->filename);
+		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE 0 (Another block obtains the identifier of the removed block)\n",tree->filename);
 
 		/**
-		 * Another page obtains the identifier of the removed child of the root
-		 * and the pages under the moved replacement have to change accordingly.
+		 * Another block obtains the identifier of the removed child of the root
+		 * and the block under the moved replacement have to change accordingly.
 		 */
 
 		uint64_t const deleted_page_id = CHILD_ID(page_id,offset);
@@ -1586,7 +1586,10 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 						page->node.internal.BOX(page->header.records-1),
 						tree->dimensions*sizeof(interval_t));
 			}else{
-				page->node.group.ranges [offset] = page->node.group.ranges [page->header.records-1];
+				//page->node.group.ranges [offset] = page->node.group.ranges [page->header.records-1];
+				memcpy (page->node.group.ranges+offset,
+						page->node.group.ranges+page->header.records-1,
+						sizeof(object_range_t));
 			}
 
 			fifo_t* transposed_ids = transpose_subsumed_pages (tree,replacement_page_id,deleted_page_id);
@@ -1611,10 +1614,10 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 			delete_priority_queue (sorted_pages);
 		}
 	}else if (page_id) {
-		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE I (Under-loaded non-root page.)\n",tree->filename);
+		LOG (info,"[%s][cascade_deletion()] Cascaded deletion: CASE I (Under-loaded non-root block.)\n",tree->filename);
 
 		/**
-		 * Under-loaded non-leaf non-root page.
+		 * Under-loaded non-leaf non-root block.
 		 */
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -1700,16 +1703,18 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 
 		cascade_deletion (tree,PARENT_ID(page_id),CHILD_OFFSET(page_id));
 
-		/**** Reinsert the data subsumed by the removed page ****/
+		/**** Reinsert the data subsumed by the removed block ****/
 		while (leaf_entries->size) {
 			data_pair_t* pair = (data_pair_t*) remove_from_stack (leaf_entries);
 			if (tree->root_range == NULL) {
 				insert_into_rtree (tree, pair->key, pair->object);
+				free (pair->key);
+				free (pair);
 			}else{
-				//insert_into_ntree (); ////////////////////////////////////////////////////////////////////////////////////////////
+				arc_t* arc = (arc_t*) remove_from_stack (leaf_entries);
+				insert_into_ntree (tree,arc->from,arc->to,arc->weight);
+				free (arc);
 			}
-			free (pair->key);
-			free (pair);
 		}
 		delete_stack (leaf_entries);
 		/*************************************************/
@@ -1743,8 +1748,8 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 		while (sorted_pages->size) {
 			symbol_table_entry_t *const entry = (symbol_table_entry_t *const) remove_from_priority_queue (sorted_pages);
 
-			if (UNSET_PRIORITY (entry->key) != NULL) {
-				LOG (error,"[%s][cascade_deletion()] Transposed block#%llu is still in swap...\n",tree->filename,entry->key);
+			while (UNSET_PRIORITY (entry->key) != NULL) {
+				LOG (error,"[%s][cascade_deletion()] Transposed block %lu is still in swap...\n",tree->filename,entry->key);
 			}
 			assert (UNSET_PAGE(entry->key) == NULL);
 			assert (UNSET_LOCK(entry->key) == NULL);
@@ -1782,7 +1787,7 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 		}
 		is_current_page_removed = true;
 	}else{
-		LOG(fatal,"[%s][cascade_deletion()] Erroneous cascaded deletion to remove page %llu enacted from page %llu...\n",
+		LOG(fatal,"[%s][cascade_deletion()] Erroneous cascaded deletion to remove block %lu enacted from block %lu...\n",
 					tree->filename,page_id,CHILD_ID(page_id,offset));
 		exit (EXIT_FAILURE);
 	}
