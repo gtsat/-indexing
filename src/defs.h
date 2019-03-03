@@ -462,7 +462,7 @@ extern pthread_mutex_t lmx;
 				struct tm *timeinfo = localtime (&t);\
 				struct timeval tv;\
 				gettimeofday (&tv,NULL);\
-				fprintf(stderr,"[%d/%02d/%02d %02d:%02d:%02d:%06ld] ",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,tv.tv_usec);\
+				fprintf(stderr,"[%u/%02u/%02u %02u:%02u:%02u:%06lu] ",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,tv.tv_usec);\
 				switch (level) {\
 				case debug:\
 					fprintf(stderr,"DEBUG "message);\

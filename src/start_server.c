@@ -34,6 +34,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <fenv.h>
 
 pthread_mutex_t lmx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -447,7 +448,6 @@ void server_start (char const hostname[], uint32_t const port_number, char const
 	local_address.s_addr = hostname != NULL ? inet_addr (hostname) : INADDR_ANY;
 
 	uint16_t port = htons(port_number);
-
 	server_run (local_address,port,folder);
 }
 
@@ -467,6 +467,9 @@ int main (int argc, char* argv[]) {
 
 	if (PORT && FOLDER) {
 		puts (pull_random_quote());
+		if (feraiseexcept (FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID)){
+			LOG (error,"[%s] FE ENABLE EXCEPTIONS FAILED...\n",argv[0]);
+		}
 		server_start (HOST,PORT,FOLDER);
 		pthread_mutex_destroy (&lmx);
 		return EXIT_SUCCESS;

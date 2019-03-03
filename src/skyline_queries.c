@@ -323,7 +323,7 @@ fifo_t* multiskyline_sort_merge (lifo_t *const trees, boolean const corner[]) {
 
 		insert_at_tail_of_queue (result,result_tuple);
 
-		fprintf (stdout," !! Retrieved object %u with distance %lf.\n",multiskyline_tuple->object,multiskyline_tuple->sort_key);
+		fprintf (stdout," !! Retrieved object %lu with distance %lf.\n",multiskyline_tuple->object,multiskyline_tuple->sort_key);
 
 		free (multiskyline_tuple);
 	}
@@ -788,7 +788,7 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 								}
 
 								if (is_object_encountered_in_all_domains) {
-//fprintf (stdout," ++ Retrieved object %u with distance %f.\n",data->object,data->sort_key);
+//fprintf (stdout," ++ Retrieved object %lu with distance %f.\n",data->object,data->sort_key);
 									double key_distance = key_to_key_distance (data->key,reference_point,full_dimensionality);
 									data->sort_key = key_distance * key_distance;
 									insert_into_priority_queue (complete_distance_objects,data);
@@ -820,7 +820,7 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 							uint64_t subsumed_page_id = page_id*TREE(i)->internal_entries+j+1;
 							box_container_t *const subcontainer = (box_container_t *const) malloc (sizeof(box_container_t));
 							if (subcontainer == NULL) {
-								LOG (fatal,"Unable to allocate additional memory in multiskyline_indisk() to expand the branch from block %u.\n",subsumed_page_id);
+								LOG (fatal,"Unable to allocate additional memory in multiskyline_indisk() to expand the branch from block %lu.\n",subsumed_page_id);
 								abort();
 							}
 
@@ -865,7 +865,7 @@ fifo_t* multiskyline (lifo_t *const trees, boolean const corner[]) {
 
 			insert_at_tail_of_queue (multiskyline,multiskyline_tuple);
 
-//fprintf (stdout," !! Retrieved skyline object %u with distance %f.\n",data->object,data->sort_key);
+//fprintf (stdout," !! Retrieved skyline object %lu with distance %f.\n",data->object,data->sort_key);
 		}else{
 			free (data->key);
 		}

@@ -575,7 +575,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		while (UNSET_PRIORITY (entry->key) != NULL) {
 			LOG (error,"[%s][halve_internal()] Transposed block %lu is still in swap...\n",tree->filename,entry->key);
 		}
-		assert (UNSET_PRIORITY (entry->key) == NULL);
+		assert (!UNSET_PRIORITY (entry->key));
 		assert (!is_active_identifier (tree->swap,entry->key));
 
 		low_level_write_of_page_to_disk (tree,entry->value,entry->key);
@@ -692,7 +692,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		assert (UNSET_PAGE(position) == NULL);
 		assert (UNSET_LOCK(position) == NULL);
 		assert (!is_active_identifier (tree->swap,position));
-		assert (UNSET_PRIORITY (position) == NULL);
+		assert (!UNSET_PRIORITY (position));
 
 		low_level_write_of_page_to_disk (tree,lo_page,position);
 		delete_rtree_page (lo_page);
@@ -720,7 +720,7 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		assert (UNSET_PAGE(hi_id) == NULL);
 		assert (UNSET_LOCK(hi_id) == NULL);
 		assert (!is_active_identifier (tree->swap,hi_id));
-		assert (UNSET_PRIORITY (hi_id) == NULL);
+		assert (!UNSET_PRIORITY (hi_id));
 
 		low_level_write_of_page_to_disk (tree,hi_page,hi_id);
 		delete_rtree_page (hi_page);
@@ -1179,7 +1179,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			while (UNSET_PRIORITY (entry->key) != NULL) {
 				LOG (error,"[%s][split_internal()] Transposed block %lu is still in swap...\n",tree->filename,entry->key);
 			}
-			assert (UNSET_PRIORITY (entry->key) == NULL);
+			assert (!UNSET_PRIORITY (entry->key));
 			assert (!is_active_identifier (tree->swap,entry->key));
 
 			low_level_write_of_page_to_disk (tree,entry->value,entry->key);
@@ -1278,7 +1278,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			assert (UNSET_PAGE(position) == NULL);
 			assert (UNSET_LOCK(position) == NULL);
 			assert (!is_active_identifier (tree->swap,position));
-			assert (UNSET_PRIORITY (position) == NULL);
+			assert (!UNSET_PRIORITY (position));
 
 			low_level_write_of_page_to_disk (tree,lo_page,position);
 			delete_rtree_page (lo_page);
@@ -1306,7 +1306,7 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			assert (UNSET_PAGE(hi_id) == NULL);
 			assert (UNSET_LOCK(hi_id) == NULL);
 			assert (!is_active_identifier (tree->swap,hi_id));
-			assert (UNSET_PRIORITY (hi_id) == NULL);
+			assert (!UNSET_PRIORITY (hi_id));
 
 			low_level_write_of_page_to_disk (tree,hi_page,hi_id);
 			delete_rtree_page (hi_page);
@@ -1555,8 +1555,8 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 
 	delete_priority_queue (priority_queue);
 	delete_rtree_page (overloaded_page);
-	boolean lo_key_containment = key_enclosed_by_box(key,lo_page->node.internal.BOX(lo_offset),tree->dimensions);
-	boolean hi_key_containment = key_enclosed_by_box(key,hi_page->node.internal.BOX(hi_offset),tree->dimensions);
+	boolean lo_key_containment = key_enclosed_by_box(key,parent->node.internal.BOX(lo_offset),tree->dimensions);
+	boolean hi_key_containment = key_enclosed_by_box(key,parent->node.internal.BOX(hi_offset),tree->dimensions);
 	index_t lo_volume_expansion = 0;
 	index_t hi_volume_expansion = 0;
 	if (!lo_key_containment && !hi_key_containment) {
@@ -1597,7 +1597,7 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		assert (UNSET_LOCK(position) == NULL);
 		assert (is_active_identifier (tree->swap,hi_id));
 		assert (!is_active_identifier (tree->swap,position));
-		assert (UNSET_PRIORITY (position) == NULL);
+		assert (!UNSET_PRIORITY (position));
 		low_level_write_of_page_to_disk (tree,lo_page,position);
 		delete_rtree_page (lo_page);
 		hi_page->header.is_dirty = true;
@@ -1621,7 +1621,7 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 		assert (UNSET_LOCK(hi_id) == NULL);
 		assert (is_active_identifier (tree->swap,position));
 		assert (!is_active_identifier (tree->swap,hi_id));
-		assert (UNSET_PRIORITY (hi_id) == NULL);
+		assert (!UNSET_PRIORITY (hi_id));
 		low_level_write_of_page_to_disk (tree,hi_page,hi_id);
 		delete_rtree_page (hi_page);
 		lo_page->header.is_dirty = true;

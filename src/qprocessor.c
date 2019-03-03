@@ -21,11 +21,8 @@
 #include<limits.h>
 #include<unistd.h>
 #include"QL.tab.h"
-#include"lex.QL_.h"
 #include"PUT.tab.h"
-#include"lex.PUT_.h"
 #include"DELETE.tab.h"
-#include"lex.DELETE_.h"
 #include"symbol_table.h"
 #include"skyline_queries.h"
 #include"spatial_standard_queries.h"
@@ -439,9 +436,25 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 	return buffer;
 }
 
+#include <signal.h>
+#include <setjmp.h>
+#include <fenv.h>
+
+sigjmp_buf fpejmp;
+
+void shandler (int signal_number) {
+    if (feclearexcept(FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID)) {
+    	LOG (error,"[start#server] Unable to clear SIGFPE...\n");
+    }else{
+    	LOG (warn,"[start#server] SIGFPE has been cleared.\n");
+    }
+    siglongjmp(fpejmp,1);
+}
+
 
 static
 fifo_t* process_command (lifo_t *const stack, char const folder[], char message[], uint64_t *const io_blocks_counter, double *const io_mb_counter) {
+	signal(SIGFPE,shandler);
 	if (stack->size) {
 		if (remove_from_stack (stack) != (void*)';') {
 			LOG (error,"[process_command()] Syntax error: Command was not ended properly.\n");
@@ -521,7 +534,7 @@ fifo_t* process_command (lifo_t *const stack, char const folder[], char message[
 					insert_into_stack (to_be_joined,top);
 				}
 
-				LOG (info,"[process_command()] Executing join \#%lu...\n",partial_results->size);
+				LOG (info,"[process_command()] Executing join %lu...\n",partial_results->size);
 
 				fifo_t *const partial_result = is_closest_pairs_operation
 					? x_tuples (threshold,closest,use_avg,pairwise,to_be_joined)
@@ -997,10 +1010,19 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		strcat (filepath,filename);
 		free (filename);
 
+		if (sigsetjmp(fpejmp,1)) {
+			LOG (error,"[process_subquery()] Cannot perform operation on invalid heapfile %s.\n",filepath);
+			sprintf (message,"Cannot perform an operation on invalid heapfile '%s'.",filepath);
+			clear_stack (stack);
+			return NULL;
+		}
+
 		tree_t* tree = get_rtree (filepath);
+		free (filepath);
 		if (tree == NULL) {
 			sprintf (message,"Cannot perform an operation on heapfile '%s' because it does not exist.",filepath);
 			LOG (error,"[process_subquery()] Cannot perform an operation on heapfile '%s' because it does not exist.\n",filepath);
+			clear_stack (stack);
 			return NULL;
 		}
 
@@ -1059,7 +1081,6 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 					}else{
 						insert_into_stack (lookups,lookup);
 					}
-
 					break;
 				case FROM:
 					LOG (debug,"FROM ");
@@ -1229,15 +1250,12 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 				}
 				delete_priority_queue (max_heap);
 			}
-
 			result_tree = create_temp_rtree (skyline_result_list,tree->page_size,tree->dimensions);
 		}else{
 			fifo_t *const range_result_list = range (tree,from,to,tree->dimensions);
 			LOG (info,"[process_subquery()] Range query result contains %lu tuples.\n",range_result_list->size);
-
 			result_tree = create_temp_rtree (range_result_list,tree->page_size,tree->dimensions);
 		}
-
 
 		delete_stack (lookups);
 		if (delete_rtree_flag) {
