@@ -23,8 +23,7 @@ boolean equal_keys (index_t const key1[],
 			index_t const key2[],
 			uint32_t const dimensions) {
 	for (uint32_t j=0; j<dimensions; ++j) {
-		double tmp = key1[j] - key2[j];
-		if (tmp > DBL_MIN || tmp < -DBL_MIN) {
+		if (key1[j] != key2[j]) {
 			return false;
 		}
 	}

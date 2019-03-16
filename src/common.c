@@ -462,9 +462,7 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 
 		memcpy (&page->header,buffer,sizeof(header_t));
 		page->header.records = le32toh (page->header.records);
-
 		ptr = buffer + sizeof(header_t);
-
 		if (page->header.is_leaf) {
 			page->node.leaf.objects = (object_t*) malloc (tree->leaf_entries*sizeof(object_t));
 			if (page->node.leaf.objects == NULL) {
@@ -535,17 +533,17 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 			memcpy (page->node.internal.intervals,ptr,sizeof(interval_t)*tree->dimensions*page->header.records);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = page->node.internal.intervals;
-				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
 			}else if (sizeof(index_t) == sizeof(uint32_t)) {
 				uint32_t* le_ptr = page->node.internal.intervals;
-				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
 			}else if (sizeof(index_t) == sizeof(uint64_t)) {
 				uint64_t* le_ptr = page->node.internal.intervals;
-				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -686,18 +684,18 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 			memcpy (page->node.subgraph.from,ptr,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
-				uint16_t* le_ptr = ptr;
+				uint16_t* le_ptr = page->node.subgraph.from;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint32_t)) {
-				uint32_t* le_ptr = ptr;
+				uint32_t* le_ptr = page->node.subgraph.from;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = ptr;
-				for (register uint64_t i=0; i<page->header.records; ++i) {
+				uint64_t* le_ptr = page->node.subgraph.from;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -709,18 +707,18 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 			memcpy (page->node.subgraph.pointers,ptr,sizeof(arc_pointer_t)*page->header.records);
 			if (sizeof(arc_pointer_t) == sizeof(uint16_t)) {
-				uint16_t* le_ptr = ptr;
+				uint16_t* le_ptr = page->node.subgraph.pointers;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
 			}else if (sizeof(arc_pointer_t) == sizeof(uint32_t)) {
-				uint32_t* le_ptr = ptr;
+				uint32_t* le_ptr = page->node.subgraph.pointers;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
 			}else if (sizeof(arc_pointer_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<page->header.records; ++i) {
+				uint64_t* le_ptr = page->node.subgraph.pointers;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -735,22 +733,22 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
 			LOG (debug,"[%s][load_ntree_page()] Deserializing %lu bytes.\n",tree->filename,
-					(sizeof(header_t)+sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
+					sizeof(header_t)+(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 
 			memcpy (page->node.subgraph.to,ptr,sizeof(object_t)*total_arcs_number);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
-				uint16_t* le_ptr = ptr;
+				uint16_t* le_ptr = page->node.subgraph.to;
 				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint32_t)) {
-				uint32_t* le_ptr = ptr;
+				uint32_t* le_ptr = page->node.subgraph.to;
 				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+				uint64_t* le_ptr = page->node.subgraph.to;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -762,18 +760,18 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 
 			memcpy (page->node.subgraph.weights,ptr,sizeof(arc_weight_t)*total_arcs_number);
 			if (sizeof(arc_weight_t) == sizeof(uint16_t)) {
-				uint16_t* le_ptr = ptr;
+				uint16_t* le_ptr = page->node.subgraph.weights;
 				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
 			}else if (sizeof(arc_weight_t) == sizeof(uint32_t)) {
-				uint32_t* le_ptr = ptr;
+				uint32_t* le_ptr = page->node.subgraph.weights;
 				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
 			}else if (sizeof(arc_weight_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+				uint64_t* le_ptr = page->node.subgraph.weights;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -789,21 +787,21 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 				close (fd);
 				exit (EXIT_FAILURE);
 			}
-			memcpy (page->node.group.ranges,ptr,page->header.records*sizeof(object_range_t));
+			memcpy (page->node.group.ranges,ptr,tree->page_size-sizeof(header_t));
 			LOG (debug,"[%s][load_ntree_page()] About to deserialize %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
-			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
-				uint16_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = page->node.group.ranges;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = le16toh (le_ptr[i]);
 				}
-			}else if (sizeof(object_range_t) == sizeof(uint32_t)<<1) {
-				uint32_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = page->node.group.ranges;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = le32toh (le_ptr[i]);
 				}
-			}else if (sizeof(object_range_t) == sizeof(uint64_t)<<1) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<page->header.records<<1; ++i) {
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = page->node.group.ranges;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = le64toh (le_ptr[i]);
 				}
 			}else{
@@ -995,7 +993,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 				}
 			}else if (sizeof(index_t) == sizeof(uint64_t)) {
 				uint64_t* le_ptr = ptr;
-				for (register uint64_t i=0; i<tree->dimensions*page->header.records; ++i) {
+				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1018,8 +1016,8 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<page->header.records; ++i) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1033,18 +1031,18 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			memcpy (ptr,page->node.leaf.keys,sizeof(interval_t)*tree->dimensions*page->header.records);
 			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
-				uint16_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = htole16 (le_ptr[i]);
 				}
 			}else if (sizeof(index_t) == sizeof(uint32_t)) {
-				uint32_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
 			}else if (sizeof(index_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<tree->dimensions*page->header.records<<1; ++i) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1119,7 +1117,7 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 				}
 			}else if (sizeof(object_t) == sizeof(uint64_t)) {
 				uint64_t* le_ptr = ptr;
-				for (register uint64_t i=0; i<page->header.records; ++i) {
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1141,8 +1139,8 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
 			}else if (sizeof(arc_pointer_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<page->header.records; ++i) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<page->header.records; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1164,8 +1162,8 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
 			}else if (sizeof(object_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1187,8 +1185,8 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
 			}else if (sizeof(arc_weight_t) == sizeof(uint64_t)) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<total_arcs_number; ++i) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<total_arcs_number; ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1201,19 +1199,19 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing non-leaf block %lu with %u children.\n",tree->filename,position,page->header.records);
 			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records);
 			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
-			if (sizeof(object_range_t) == sizeof(uint16_t)<<1) {
-				uint16_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+			if (sizeof(object_t) == sizeof(uint16_t)) {
+				uint16_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = htole16 (le_ptr[i]);
 				}
-			}else if (sizeof(object_range_t) == sizeof(uint32_t)<<1) {
-				uint32_t* le_ptr = buffer;
-				for (register uint32_t i=0; i<page->header.records<<1; ++i) {
+			}else if (sizeof(object_t) == sizeof(uint32_t)) {
+				uint32_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = htole32 (le_ptr[i]);
 				}
-			}else if (sizeof(object_range_t) == sizeof(uint64_t)<<1) {
-				uint64_t* le_ptr = buffer;
-				for (register uint64_t i=0; i<page->header.records<<1; ++i) {
+			}else if (sizeof(object_t) == sizeof(uint64_t)) {
+				uint64_t* le_ptr = ptr;
+				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
 					le_ptr[i] = htole64 (le_ptr[i]);
 				}
 			}else{
@@ -1312,11 +1310,14 @@ uint64_t flush_tree (tree_t *const tree) {
 		close (fd);
 	}
 
-	boolean allow_dump = tree->indexed_records > 0;
+	LOG (debug,"[%s][flush_tree()] tree_size: %lu, indexed_records: %lu\n",tree->filename,tree->tree_size,tree->indexed_records);
+	boolean allow_dump = tree->tree_size > 0;
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	if (allow_dump) {
 		pthread_rwlock_rdlock (&tree->tree_lock);
+		assert (tree->tree_size);
+		assert (tree->indexed_records);
 		fifo_t* queue = get_entries (tree->heapfile_index);
 		pthread_rwlock_unlock (&tree->tree_lock);
 
@@ -1354,6 +1355,8 @@ uint64_t flush_tree (tree_t *const tree) {
 		}
 		delete_priority_queue (sorted_pages);
 	}else{
+		assert (tree->tree_size == 0);
+		assert (tree->indexed_records == 0);
 		LOG (warn,"[%s][flush_tree()] Deleting heapfile for it indexes no data anymore!\n",tree->filename);
 		unlink (tree->filename);
 	}
@@ -1517,7 +1520,7 @@ boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
 	pthread_rwlock_unlock (page_lock);
 
 	if (is_updated) {
-		LOG(debug,"[%s][update_internal_range()] Updated internal range corresponding to block %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
+		LOG(info,"[%s][update_internal_range()] Updated internal range corresponding to block %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
 		pthread_rwlock_wrlock (&tree->tree_lock);
 		tree->is_dirty = true;
 		pthread_rwlock_unlock (&tree->tree_lock);
@@ -1653,34 +1656,25 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 				if (tree->root_range == NULL) {
 					for (register uint32_t i=0; i<subsumed_page->header.records; ++i) {
 						data_pair_t *const pair = (data_pair_t *const) malloc (sizeof(data_pair_t));
-
 						pair->key = (index_t*) malloc (sizeof(index_t)*tree->dimensions);
 						memcpy (pair->key,subsumed_page->node.leaf.keys+i*tree->dimensions,sizeof(index_t)*tree->dimensions);
-
 						pair->object = subsumed_page->node.leaf.objects[i];
-
 						insert_into_stack (leaf_entries,pair);
-
-						pthread_rwlock_wrlock (&tree->tree_lock);
-						tree->indexed_records--;
-						pthread_rwlock_unlock (&tree->tree_lock);
 					}
 					delete_rtree_page (subsumed_page);
 				}else{
 					uint32_t start=0, end=0;
 					for (register uint32_t i=0; i<subsumed_page->header.records; ++i) {
-							start = end;
-							end += subsumed_page->node.subgraph.pointers[i];
+						start = end;
+						end += subsumed_page->node.subgraph.pointers[i];
 
-							for (uint32_t j=start; j<end; ++j) {
-								arc_t* arc = (arc_t*) malloc (sizeof(arc_t));
-
-								arc->from = subsumed_page->node.subgraph.from[i];
-								arc->to = subsumed_page->node.subgraph.to[j];
-								arc->weight = subsumed_page->node.subgraph.weights[j];
-
-								insert_into_stack (leaf_entries,arc);
-							}
+						for (uint32_t j=start; j<end; ++j) {
+							arc_t* arc = (arc_t*) malloc (sizeof(arc_t));
+							arc->from = subsumed_page->node.subgraph.from[i];
+							arc->to = subsumed_page->node.subgraph.to[j];
+							arc->weight = subsumed_page->node.subgraph.weights[j];
+							insert_into_stack (leaf_entries,arc);
+						}
 					}
 					delete_ntree_page (subsumed_page);
 				}
@@ -1694,6 +1688,9 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 					delete_ntree_page (subsumed_page);
 				}
 			}
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			tree->tree_size--;
+			pthread_rwlock_unlock (&tree->tree_lock);
 
 			pthread_rwlock_unlock (subsumed_lock);
 			pthread_rwlock_destroy (subsumed_lock);
@@ -1705,14 +1702,19 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 
 		/**** Reinsert the data subsumed by the removed block ****/
 		while (leaf_entries->size) {
-			data_pair_t* pair = (data_pair_t*) remove_from_stack (leaf_entries);
+			pthread_rwlock_wrlock (&tree->tree_lock);
+			tree->indexed_records--;
+			pthread_rwlock_unlock (&tree->tree_lock);
+
 			if (tree->root_range == NULL) {
+				data_pair_t* pair = (data_pair_t*) remove_from_stack (leaf_entries);
 				insert_into_rtree (tree, pair->key, pair->object);
 				free (pair->key);
 				free (pair);
 			}else{
 				arc_t* arc = (arc_t*) remove_from_stack (leaf_entries);
-				insert_into_ntree (tree,arc->from,arc->to,arc->weight);
+				LOG(debug,"[%s][cascade_deletion()] Reindexing arc (%lu,%lu,%f).\n",tree->filename,arc->from,arc->to,arc->weight);
+				//insert_into_ntree (tree,arc->from,arc->to,arc->weight);
 				free (arc);
 			}
 		}

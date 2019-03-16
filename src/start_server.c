@@ -333,12 +333,12 @@ void handle_connection (void *const args) {
 							;
 
 						if (content_stack->size < content_length) {
-LOG (debug,"[start#server] Emptying and refilling network buffer...\n");
+							LOG (debug,"[start#server] Emptying and refilling network buffer...\n");
 							bzero (buffer,sizeof(buffer));
 							bytes_read = read (fd,buffer,sizeof(buffer));
 							buffer[bytes_read] = '\0';
 							content = buffer;
-//LOG (debug,"[start#server] BUFFER:\n%s\n",buffer);
+							//LOG (debug,"[start#server] BUFFER:\n%s\n",buffer);
 						}else{
 							insert_into_stack (content_stack,'\0');
 							break;
@@ -358,7 +358,7 @@ LOG (debug,"[start#server] Emptying and refilling network buffer...\n");
 			*to = '\0';
 			delete_stack (content_stack);
 		}
-LOG (debug,"[start#server] FULL BODY:\n%s\n",body);
+		LOG (debug,"[start#server] FULL BODY:\n%s\n",body);
 		char response[BUFSIZ];
 		if (strcmp(protocol,"HTTP/1.0") && strcmp(protocol,"HTTP/1.1")) {
 			snprintf (response,sizeof(response),bad_request_response,url);
@@ -373,6 +373,7 @@ LOG (debug,"[start#server] FULL BODY:\n%s\n",body);
 		}else handle (fd,method,url,body,folder);
 	}else LOG (error,"[start#server] Problematic IPC...\n");
 	close (fd);
+	pthread_exit (NULL);
 }
 
 static

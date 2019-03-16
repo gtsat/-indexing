@@ -1801,8 +1801,14 @@ void process_records_from_textfile (tree_t *const tree, char const filename[], b
 				fprintf (stderr,").\n",tree->filename);
 			}
 
-			if (insert) insert_into_rtree (tree,coordinates,id);
-			else delete_from_rtree (tree,coordinates);
+			uint64_t previous_records = tree->indexed_records;
+			if (insert) {
+				insert_into_rtree (tree,coordinates,id);
+				assert (tree->indexed_records >= previous_records);
+			}else{
+				delete_from_rtree (tree,coordinates);
+				assert (tree->indexed_records <= previous_records);
+			}
 		}
 
 		if (ferror(fptr)) {

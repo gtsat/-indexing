@@ -456,28 +456,34 @@ enum message_t {debug=1,info,warn,error,fatal};
 extern pthread_mutex_t lmx;
 
 #define LOG(level,message...)	if (logging<=level){\
-				pthread_mutex_lock (&lmx);\
+				while (pthread_mutex_trylock(&lmx));\
 				time_t t;\
 				time (&t);\
 				struct tm *timeinfo = localtime (&t);\
 				struct timeval tv;\
 				gettimeofday (&tv,NULL);\
-				fprintf(stderr,"[%u/%02u/%02u %02u:%02u:%02u:%06lu] ",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,tv.tv_usec);\
+				/*fprintf(stderr,"[%u/%02u/%02u %02u:%02u:%02u:%06u] ",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,tv.tv_usec);*/\
+				fprintf(stderr,"\033[11;47;30m[%u/%02u/%02u %02u:%02u:%02u:%06u]\033[0m ",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,tv.tv_usec);\
 				switch (level) {\
 				case debug:\
-					fprintf(stderr,"DEBUG "message);\
+					/*fprintf(stderr,"DEBUG "message);*/\
+					fprintf(stderr,"\033[1;34mDEBUG\033[0m "message);\
 					break;\
 				case info:\
-					fprintf(stderr,"INFO "message);\
+					/*fprintf(stderr,"INFO "message);*/\
+					fprintf(stderr,"\033[1;32mINFO\033[0m "message);\
 					break;\
 				case warn: \
-					fprintf(stderr,"WARNING "message);\
+					/*fprintf(stderr,"WARNING "message);*/\
+					fprintf(stderr,"\033[1;33mWARNING\033[0m "message);\
 					break;\
 				case error: \
-					fprintf(stderr,"ERROR "message);\
+					/*fprintf(stderr,"ERROR "message);*/\
+					fprintf(stderr,"\033[1;31mERROR\033[0m "message);\
 					break;\
 				case fatal: \
-					fprintf(stderr,"FATAL "message);\
+					/*fprintf(stderr,"FATAL "message);*/\
+					fprintf(stderr,"\033[1;35mFATAL\033[0m "message);\
 					break;\
 				default: \
 					fprintf(stderr," "message);\

@@ -442,6 +442,7 @@ char* qprocessor (char command[], char const folder[], char message[], uint64_t 
 
 sigjmp_buf fpejmp;
 
+static
 void shandler (int signal_number) {
     if (feclearexcept(FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID)) {
     	LOG (error,"[start#server] Unable to clear SIGFPE...\n");
@@ -1018,13 +1019,13 @@ tree_t* process_subquery (lifo_t *const stack, char const folder[], char message
 		}
 
 		tree_t* tree = get_rtree (filepath);
-		free (filepath);
 		if (tree == NULL) {
 			sprintf (message,"Cannot perform an operation on heapfile '%s' because it does not exist.",filepath);
 			LOG (error,"[process_subquery()] Cannot perform an operation on heapfile '%s' because it does not exist.\n",filepath);
 			clear_stack (stack);
 			return NULL;
 		}
+		free (filepath);
 
 		index_t from [tree->dimensions];
 		index_t to [tree->dimensions];
