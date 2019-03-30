@@ -356,22 +356,22 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			free (top);
 		}
 
-		page_t *const lo_hi_page = new_internal(tree);
 		lifo_t *const lo_hi_pages = new_stack();
+		page_t *const lo_hi_page = new_internal(tree);
 		index_t lo_lo_bound = ((box_container_t const*const)peek_priority_queue (lo_priority_queue))->box[j].start;
 		while (lo_priority_queue->size) {
 			box_container_t const*const top = (box_container_t const*const) remove_from_priority_queue (lo_priority_queue);
 			memcpy(lo_hi_page->node.internal.BOX(lo_hi_page->header.records++),top->box,tree->dimensions*sizeof(interval_t));
-			if (top->box[j].start < lo_lo_bound) lo_lo_bound = top->box[j].end;
+			if (top->box[j].start < lo_lo_bound) lo_lo_bound = top->box[j].start;
 			insert_into_stack (lo_hi_pages,top->id);
 			free (top);
 		}
 
-		index_t lo_overlap = lo_hi_bound > lo_lo_bound ? lo_hi_bound - lo_lo_bound : 0;
+		index_t lo_overlap = lo_hi_bound - lo_lo_bound;
 
-		page_t* hi_lo_page = new_internal(tree);
 		lifo_t* hi_lo_pages = new_stack();
-		index_t hi_hi_bound = ((box_container_t const*const)peek_priority_queue (hi_priority_queue))->box[j].start;
+		page_t* hi_lo_page = new_internal(tree);
+		index_t hi_hi_bound = ((box_container_t const*const)peek_priority_queue (hi_priority_queue))->box[j].end;
 		while (hi_priority_queue->size > (overloaded_page->header.records>>1)) {
 			box_container_t const*const top = (box_container_t const*const) remove_from_priority_queue (hi_priority_queue);
 			memcpy (hi_lo_page->node.internal.BOX(hi_lo_page->header.records++),top->box,tree->dimensions*sizeof(interval_t));
@@ -380,18 +380,19 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			free (top);
 		}
 
-		page_t* hi_hi_page = new_internal(tree);
 		lifo_t* hi_hi_pages = new_stack();
+		page_t* hi_hi_page = new_internal(tree);
 		index_t hi_lo_bound = ((box_container_t const*const)peek_priority_queue (hi_priority_queue))->box[j].start;
 		while (hi_priority_queue->size) {
 			box_container_t const*const top = (box_container_t const*const) remove_from_priority_queue (hi_priority_queue);
 			memcpy (hi_hi_page->node.internal.BOX(hi_hi_page->header.records++),top->box,tree->dimensions*sizeof(interval_t));
-			if (top->box[j].start < hi_lo_bound) hi_lo_bound = top->box[j].end;
+			if (top->box[j].start < hi_lo_bound) hi_lo_bound = top->box[j].start;
 			insert_into_stack (hi_hi_pages,top->id);
 			free (top);
 		}
 
-		index_t hi_overlap = hi_hi_bound > hi_lo_bound ? hi_hi_bound - hi_lo_bound : 0;
+		index_t hi_overlap = hi_hi_bound - hi_lo_bound;
+
 		if (hi_overlap < lo_overlap) {
 			if (hi_overlap < overlap) {
 				overlap = hi_overlap;
@@ -604,46 +605,26 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	assert (parent_lock != NULL);
 
 	pthread_rwlock_wrlock (parent_lock);
-	for (register uint32_t i=0; i<lo_page->header.records; ++i) {
-		if (i) {
-			for (uint16_t j=0; j<tree->dimensions; ++j) {
-				if (lo_page->node.internal.INTERVALS(i,j).start
-						< parent->node.internal.INTERVALS(lo_offset,j).start)
-				parent->node.internal.INTERVALS(lo_offset,j).start
-						= lo_page->node.internal.INTERVALS(i,j).start;
-				if (lo_page->node.internal.INTERVALS(i,j).end
-						> parent->node.internal.INTERVALS(lo_offset,j).end)
-				parent->node.internal.INTERVALS(lo_offset,j).end
-						= lo_page->node.internal.INTERVALS(i,j).end;
+	memcpy(parent->node.internal.BOX(lo_offset),lo_page->node.internal.intervals,tree->dimensions*sizeof(interval_t));
+	for (register uint32_t i=1; i<lo_page->header.records; ++i) {
+		for (uint16_t j=0; j<tree->dimensions; ++j) {
+			if (lo_page->node.internal.INTERVALS(i,j).start < parent->node.internal.INTERVALS(lo_offset,j).start) {
+				parent->node.internal.INTERVALS(lo_offset,j).start = lo_page->node.internal.INTERVALS(i,j).start;
 			}
-		}else{
-			for (uint16_t j=0; j<tree->dimensions; ++j) {
-				parent->node.internal.INTERVALS(lo_offset,j).start
-						= lo_page->node.internal.INTERVALS(i,j).start;
-				parent->node.internal.INTERVALS(lo_offset,j).end
-						= lo_page->node.internal.INTERVALS(i,j).end;
+			if (lo_page->node.internal.INTERVALS(i,j).end > parent->node.internal.INTERVALS(lo_offset,j).end) {
+				parent->node.internal.INTERVALS(lo_offset,j).end = lo_page->node.internal.INTERVALS(i,j).end;
 			}
 		}
 	}
 
-	for (register uint32_t i=0; i<hi_page->header.records; ++i) {
-		if (i) {
-			for (uint16_t j=0; j<tree->dimensions; ++j) {
-				if (hi_page->node.internal.INTERVALS(i,j).start
-						< parent->node.internal.INTERVALS(hi_offset,j).start)
-				parent->node.internal.INTERVALS(hi_offset,j).start
-						= hi_page->node.internal.INTERVALS(i,j).start;
-				if (hi_page->node.internal.INTERVALS(i,j).end
-						> parent->node.internal.INTERVALS(hi_offset,j).end)
-				parent->node.internal.INTERVALS(hi_offset,j).end
-						= hi_page->node.internal.INTERVALS(i,j).end;
+	memcpy(parent->node.internal.BOX(hi_offset),hi_page->node.internal.intervals,tree->dimensions*sizeof(interval_t));
+	for (register uint32_t i=1; i<hi_page->header.records; ++i) {
+		for (uint16_t j=0; j<tree->dimensions; ++j) {
+			if (hi_page->node.internal.INTERVALS(i,j).start < parent->node.internal.INTERVALS(hi_offset,j).start) {
+				parent->node.internal.INTERVALS(hi_offset,j).start = hi_page->node.internal.INTERVALS(i,j).start;
 			}
-		}else{
-			for (uint16_t j=0; j<tree->dimensions; ++j) {
-				parent->node.internal.INTERVALS(hi_offset,j).start
-					= hi_page->node.internal.INTERVALS(i,j).start;
-				parent->node.internal.INTERVALS(hi_offset,j).end
-					= hi_page->node.internal.INTERVALS(i,j).end;
+			if (hi_page->node.internal.INTERVALS(i,j).end > parent->node.internal.INTERVALS(hi_offset,j).end) {
+				parent->node.internal.INTERVALS(hi_offset,j).end = hi_page->node.internal.INTERVALS(i,j).end;
 			}
 		}
 	}

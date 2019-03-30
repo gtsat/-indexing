@@ -188,10 +188,11 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 
 		if (original_id == transposed_id) continue;
 
-		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %lu will be transposed to position %lu.\n",tree->filename,original_id,transposed_id);
-
 		page_t *const page = load_page (tree,original_id);
 		assert (page != NULL);
+
+		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %lu with %u entries will be transposed to position %lu.\n",
+				tree->filename,original_id,page->header.records,transposed_id);
 
 		symbol_table_entry_t *const change = (symbol_table_entry_t *const) malloc (sizeof(symbol_table_entry_t));
 		change->key = transposed_id;
@@ -978,9 +979,10 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 		((header_t *const)ptr)->records = htole32(((header_t *const)ptr)->records);
 		ptr += sizeof(header_t);
 		if (page->header.is_leaf) {
-			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping leaf-block at position %lu with %u records.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Flushing leaf-block at position %lu with %u records.\n",tree->filename,position,page->header.records);
+			assert (page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(index_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to flush %lu bytes of %u-dimensional keys.\n",tree->filename,sizeof(index_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<tree->dimensions*page->header.records; ++i) {
@@ -1004,7 +1006,7 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			ptr += sizeof(index_t)*tree->dimensions*page->header.records;
 
 			memcpy (ptr,page->node.leaf.objects,sizeof(object_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to flush %lu bytes of identifiers.\n",tree->filename,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -1027,9 +1029,10 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			}
 			ptr += sizeof(object_t)*page->header.records;
 		}else{
-			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Dumping non-leaf block at position %lu with %u children.\n",tree->filename,position,page->header.records);
+			LOG (info,"[%s][low_level_write_of_rtree_page_to_disk()] Flushing non-leaf block at position %lu with %u children.\n",tree->filename,position,page->header.records);
+			assert (page->header.records);
 			memcpy (ptr,page->node.leaf.keys,sizeof(interval_t)*tree->dimensions*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to dump %lu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] About to flush %lu bytes of %u-dimensional boxes.\n",tree->filename,sizeof(interval_t)*tree->dimensions*page->header.records,tree->dimensions);
 			if (sizeof(index_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<(tree->dimensions*page->header.records<<1); ++i) {
@@ -1059,11 +1062,11 @@ uint64_t low_level_write_of_rtree_page_to_disk (tree_t *const tree, page_t *cons
 			exit (EXIT_FAILURE);
 		}
 		if (write (fd,buffer,tree->page_size) != tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to dump block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_rtree_page_to_disk()] Unable to flush block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}else{
-			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] Done dumping %lu bytes of binary data.\n",tree->filename,bytelength);
+			LOG (debug,"[%s][low_level_write_of_rtree_page_to_disk()] Done flushing %lu bytes of binary data.\n",tree->filename,bytelength);
 		}
 		free (buffer);
 	}
@@ -1098,11 +1101,12 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 		ptr += sizeof(header_t);
 		if (page->header.is_leaf) {
 			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing leaf-block %lu with %u records.\n",tree->filename,position,page->header.records);
+			assert (page->header.records);
 			uint64_t total_arcs_number = 0;
 			for (register uint32_t i=0; i<page->header.records; ++i) {
 				total_arcs_number += page->node.subgraph.pointers[i];
 			}
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %lu bytes.\n",tree->filename,
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to flush %lu bytes.\n",tree->filename,
 					sizeof(header_t)+(sizeof(object_t)+sizeof(arc_pointer_t))*page->header.records+(sizeof(object_t)+sizeof(arc_weight_t))*total_arcs_number);
 			memcpy (ptr,page->node.subgraph.from,sizeof(object_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
@@ -1197,8 +1201,9 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			ptr += sizeof(arc_weight_t)*total_arcs_number;
 		}else{
 			LOG (info,"[%s][low_level_write_of_ntree_page_to_disk()] Flushing non-leaf block %lu with %u children.\n",tree->filename,position,page->header.records);
+			assert (page->header.records);
 			memcpy (ptr,page->node.group.ranges,sizeof(object_range_t)*page->header.records);
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to dump %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] About to flush %lu bytes.\n",tree->filename,sizeof(header_t)+sizeof(object_range_t)*page->header.records);
 			if (sizeof(object_t) == sizeof(uint16_t)) {
 				uint16_t* le_ptr = ptr;
 				for (register uint32_t i=0; i<(page->header.records<<1); ++i) {
@@ -1228,11 +1233,11 @@ uint64_t low_level_write_of_ntree_page_to_disk (tree_t *const tree, page_t *cons
 			exit (EXIT_FAILURE);
 		}
 		if (write (fd,buffer,tree->page_size) != tree->page_size) {
-			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to dump block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
+			LOG (fatal,"[%s][low_level_write_of_ntree_page_to_disk()] Unable to flushing block at position %lu in '%s'...\n",tree->filename,position,tree->filename);
 			close (fd);
 			exit (EXIT_FAILURE);
 		}else{
-			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] Done dumping %lu bytes of binary data.\n",tree->filename,bytelength);
+			LOG (debug,"[%s][low_level_write_of_ntree_page_to_disk()] Done flushing %lu bytes of binary data.\n",tree->filename,bytelength);
 		}
 		free (buffer);
 	}
@@ -1520,7 +1525,7 @@ boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
 	pthread_rwlock_unlock (page_lock);
 
 	if (is_updated) {
-		LOG(info,"[%s][update_internal_range()] Updated internal range corresponding to block %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
+		LOG(debug,"[%s][update_internal_range()] Updated internal range corresponding to block %lu: [%lu,%lu]\n",tree->filename,page_id,parent->node.group.ranges[offset].start,parent->node.group.ranges[offset].end);
 		pthread_rwlock_wrlock (&tree->tree_lock);
 		tree->is_dirty = true;
 		pthread_rwlock_unlock (&tree->tree_lock);
