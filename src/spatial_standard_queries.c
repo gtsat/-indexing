@@ -63,12 +63,12 @@ object_t find_any_in_rtree (tree_t *const tree, index_t const key[], uint32_t pr
 		while (browse->size) {
 			uint64_t const page_id = remove_head_of_queue (browse);
 
-			page_t const*const page = load_page(tree,page_id);
+			load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+			pthread_rwlock_t *const page_lock = load_pair->page_lock;
+			page_t const*const page = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
+			assert (page != NULL);
 			assert (page_lock != NULL);
 
 			if (pthread_rwlock_tryrdlock (page_lock)) {
@@ -145,12 +145,12 @@ fifo_t* find_all_in_rtree (tree_t *const tree, index_t const key[], uint32_t pro
 	while (browse->size) {
 		uint64_t const page_id = remove_head_of_queue (browse);
 
-		page_t const*const page = load_page(tree,page_id);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
-
+		assert (page != NULL);
 		assert (page_lock != NULL);
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
@@ -222,12 +222,13 @@ fifo_t* range (tree_t *const tree, index_t const lo[], index_t const hi[], uint3
 
 	while (browse->size) {
 		uint64_t const page_id = remove_head_of_queue (browse);
-		page_t const*const page = load_page(tree,page_id);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
+		assert (page != NULL);
 		assert (page_lock != NULL);
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
@@ -311,16 +312,15 @@ fifo_t* bounded_search (tree_t *const tree,
 		}
 
 		uint64_t const page_id = container->id;
-		page_t const*const page = load_page(tree,page_id);
-
 		free (container);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
+		assert (page != NULL);
 		assert (page_lock != NULL);
-
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
 			while (browse->size) {
@@ -451,17 +451,15 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 		while (browse->size) {
 			container = remove_from_priority_queue (browse);
 			uint64_t const page_id = container->id;
-
 			free (container);
 
-			page_t const*const page = load_page(tree,page_id);
+			load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+			pthread_rwlock_t *const page_lock = load_pair->page_lock;
+			page_t const*const page = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
+			assert (page != NULL);
 			assert (page_lock != NULL);
-
 
 			if (pthread_rwlock_tryrdlock (page_lock)) {
 				while (browse->size) {
@@ -549,12 +547,13 @@ fifo_t* multichromatic_reverse_nearest_neighbors (index_t const query[],
 	insert_at_tail_of_queue (result_browse,0);
 	while (result_browse->size) {
 		uint64_t const page_id = remove_head_of_queue (result_browse);
-		page_t const*const page = load_page(tree,page_id);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
+		assert (page != NULL);
 		assert (page_lock != NULL);
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {

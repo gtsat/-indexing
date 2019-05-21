@@ -11,7 +11,7 @@ void delete_rtree_page (page_t *const page);
 void delete_ntree_page (page_t *const page);
 void delete_tree (tree_t *const);
 
-page_t* load_page (tree_t *const tree, uint64_t const position);
+load_page_return_pair_t* load_page (tree_t *const tree, uint64_t const position);
 
 uint64_t flush_tree (tree_t *const tree);
 uint64_t flush_page (tree_t *const tree, uint64_t const page_id);

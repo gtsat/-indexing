@@ -115,16 +115,15 @@ fifo_t* skyline_constrained (tree_t *const tree, boolean const corner[],
 	while (browse->size) {
 		container = remove_from_priority_queue(browse);
 		uint64_t const page_id = container->id;
-		page_t const*const page = load_page(tree,page_id);
-
 		free (container);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
+		assert (page != NULL);
 		assert (page_lock != NULL);
-
 
 		if (pthread_rwlock_tryrdlock (page_lock)) {
 			while (browse->size) {

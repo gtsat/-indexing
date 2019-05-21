@@ -163,6 +163,9 @@ typedef struct {
 	arc_pointer_t* pointers;
 } subgraph_node_t;
 
+/***** N-TREE DEFINITIONS END *****/
+
+
 typedef union {
 	leaf_node_t leaf;
 	internal_node_t internal;
@@ -182,7 +185,10 @@ typedef struct {
 	node_t node;
 } page_t;
 
-/***** N-TREE DEFINITIONS END *****/
+typedef struct {
+	page_t* page;
+	pthread_rwlock_t* page_lock;
+} load_page_return_pair_t;
 
 
 /*** SYMBOL-TABLE DEFINITIONS BEGIN ***/
@@ -292,7 +298,7 @@ typedef struct {
 #define BOX(i)			intervals+(i)*tree->dimensions
 #define INTERVALS(i,j)	intervals[(i)*tree->dimensions+(j)]
 
-#define MBB(id)			(id)?load_page(tree,PARENT_ID(id))->node.internal.BOX(CHILD_OFFSET(id)):tree->root_box
+#define MBB(id)			(id)?parent->node.internal.BOX(CHILD_OFFSET(id)):tree->root_box
 
 #define TRANSPOSE_PAGE_POSITION(id) CHILD_ID(anchor(tree,(id)),(id)-anchor(tree,(id)))
 

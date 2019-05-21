@@ -188,20 +188,12 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 
 		if (original_id == transposed_id) continue;
 
-		page_t *const page = load_page (tree,original_id);
+		load_page_return_pair_t *const load_pair = load_page (tree,original_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t *const page = load_pair->page;
+		free (load_pair);
+
 		assert (page != NULL);
-
-		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %lu with %u entries will be transposed to position %lu.\n",
-				tree->filename,original_id,page->header.records,transposed_id);
-
-		symbol_table_entry_t *const change = (symbol_table_entry_t *const) malloc (sizeof(symbol_table_entry_t));
-		change->key = transposed_id;
-		change->value = page;
-		insert_at_tail_of_queue (changes,change);
-
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(original_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
 		assert (page_lock != NULL);
 
 		pthread_rwlock_wrlock (&tree->tree_lock);
@@ -214,6 +206,14 @@ fifo_t* transpose_subsumed_pages (tree_t *const tree, uint64_t const from, uint6
 		pthread_rwlock_unlock (&tree->tree_lock);
 
 		pthread_rwlock_wrlock (page_lock);
+		LOG (info,"[%s][transpose_subsumed_pages()] Block at position %lu with %u entries will be transposed to position %lu.\n",
+				tree->filename,original_id,page->header.records,transposed_id);
+
+		symbol_table_entry_t *const change = (symbol_table_entry_t *const) malloc (sizeof(symbol_table_entry_t));
+		change->key = transposed_id;
+		change->value = page;
+		insert_at_tail_of_queue (changes,change);
+
 		page->header.is_dirty = true;
 		if (!page->header.is_leaf) {
 			for (register uint32_t offset=0;offset<page->header.records;++offset) {
@@ -241,15 +241,16 @@ static uint64_t transpose_page_position (uint64_t page_id,va_list args) {
 }
 **/
 void update_rootbox (tree_t *const tree) {
-	page_t const*const page = load_page (tree,0);
-
-	pthread_rwlock_wrlock (&tree->tree_lock);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(0);
-
-	assert (page_lock != NULL);
-	pthread_rwlock_rdlock (page_lock);
+	load_page_return_pair_t *const load_pair = load_page (tree,0);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t const*const page = load_pair->page;
+	free (load_pair);
 
 	assert (page != NULL);
+	assert (page_lock != NULL);
+
+	pthread_rwlock_wrlock (&tree->tree_lock);
+	pthread_rwlock_rdlock (page_lock);
 	if (page->header.is_leaf) {
 		for (register uint32_t i=0; i<page->header.records; ++i) {
 			for (uint16_t j=0; j<tree->dimensions; ++j) {
@@ -282,13 +283,15 @@ void update_rootbox (tree_t *const tree) {
 }
 
 void update_rootrange (tree_t *const tree) {
-	page_t const*const page = load_page (tree,0);
-	assert (page != NULL);
+	load_page_return_pair_t *const load_pair = load_page (tree,0);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t const*const page = load_pair->page;
+	free (load_pair);
 
-	pthread_rwlock_wrlock (&tree->tree_lock);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(0);
+	assert (page != NULL);
 	assert (page_lock != NULL);
 
+	pthread_rwlock_wrlock (&tree->tree_lock);
 	pthread_rwlock_rdlock (page_lock);
 	if (page->header.is_leaf) {
 		for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -377,9 +380,9 @@ void new_root (tree_t *const tree) {
 	assert (swapped);
 	if (swapped != 0xffffffffffffffff) {
 		LOG (info,"[%s][new_root()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,0L);
+		pthread_rwlock_unlock (&tree->tree_lock);
 		assert (LOADED_PAGE(swapped) != NULL);
 		assert (LOADED_LOCK(swapped) != NULL);
-		pthread_rwlock_unlock (&tree->tree_lock);
 		if (flush_page (tree,swapped) != swapped) {
 			LOG (fatal,"[%s][new_root()] Unable to flush block %lu...\n",tree->filename,swapped);
 			exit (EXIT_FAILURE);
@@ -402,10 +405,10 @@ void new_root (tree_t *const tree) {
 
 
 static
-page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
+load_page_return_pair_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	page_t* page = LOADED_PAGE(position);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
+	page_t* page = (page_t*)get(tree->heapfile_index,position);
+	pthread_rwlock_t* page_lock = (pthread_rwlock_t *const)get(tree->page_locks,position);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	if (page_lock != NULL) {
@@ -423,7 +426,10 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 					exit (EXIT_FAILURE);
 				}
 			}
-			return page;
+			load_page_return_pair_t *const return_pair = (load_page_return_pair_t*const) malloc (sizeof(load_page_return_pair_t));
+			return_pair->page_lock = page_lock;
+			return_pair->page = page;
+			return return_pair;
 		}else{
 			LOG (fatal,"[%s][load_rtree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 			exit (EXIT_FAILURE);
@@ -431,18 +437,18 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 	}else if (page == NULL) {
 		if (tree->filename == NULL) {
 			LOG (info,"[%s][load_rtree_page()] No binary file was provided...\n",tree->filename);
-			return page;
+			return NULL;
 		}
 		int fd = open (tree->filename,O_RDONLY,0);
 		if (fd < 0) {
 			LOG (warn,"[%s][load_rtree_page()] Cannot open file '%s' for reading...\n",tree->filename,tree->filename);
-			return page;
+			return NULL;
 		}
 
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
 			LOG (error,"[%s][load_rtree_page()] There are less than %lu blocks in file '%s'...\n",tree->filename,position+1,tree->filename);
 			close (fd);
-			return page;
+			return NULL;
 		}
 
 		page = (page_t*) malloc (sizeof(page_t));
@@ -587,14 +593,17 @@ page_t* load_rtree_page (tree_t *const tree, uint64_t const position) {
 		LOG (fatal,"[%s][load_rtree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 		exit (EXIT_FAILURE);
 	}
-	return page;
+	load_page_return_pair_t *const return_pair = (load_page_return_pair_t*const) malloc (sizeof(load_page_return_pair_t));
+	return_pair->page_lock = page_lock;
+	return_pair->page = page;
+	return return_pair;
 }
 
 static
-page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
+load_page_return_pair_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	page_t* page = LOADED_PAGE(position);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
+	page_t* page = (page_t*)get(tree->heapfile_index,position);
+	pthread_rwlock_t* page_lock = (pthread_rwlock_t *const)get(tree->page_locks,position);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	if (page_lock != NULL) {
@@ -612,7 +621,10 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 					exit (EXIT_FAILURE);
 				}
 			}
-			return page;
+			load_page_return_pair_t *const return_pair = (load_page_return_pair_t*const) malloc (sizeof(load_page_return_pair_t));
+			return_pair->page_lock = page_lock;
+			return_pair->page = page;
+			return return_pair;
 		}else{
 			LOG (fatal,"[%s][load_ntree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 			exit (EXIT_FAILURE);
@@ -620,18 +632,18 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 	}else if (page == NULL) {
 		if (tree->filename == NULL) {
 			LOG (info,"[%s][load_ntree_page()] No binary file was provided...\n",tree->filename);
-			return page;
+			return NULL;
 		}
 		int fd = open (tree->filename,O_RDONLY,0);
 		if (fd < 0) {
 			LOG (warn,"[%s][load_ntree_page()] Cannot open file '%s' for reading...\n",tree->filename,tree->filename);
-			return page;
+			return NULL;
 		}
 
 		if (lseek (fd,(1+position)*tree->page_size,SEEK_SET) < 0) {
 			LOG (error,"[%s][load_ntree_page()] There are less than %lu blocks in file '%s'...\n",tree->filename,position+1,tree->filename);
 			close (fd);
-			return page;
+			return NULL;
 		}
 
 		page = (page_t*) malloc (sizeof(page_t));
@@ -845,10 +857,13 @@ page_t* load_ntree_page (tree_t *const tree, uint64_t const position) {
 		LOG (fatal,"[%s][load_ntree_page()] Inconsistency in block/lock %lu...\n",tree->filename,position);
 		exit (EXIT_FAILURE);
 	}
-	return page;
+	load_page_return_pair_t *const return_pair = (load_page_return_pair_t*const) malloc (sizeof(load_page_return_pair_t));
+	return_pair->page_lock = page_lock;
+	return_pair->page = page;
+	return return_pair;
 }
 
-page_t* load_page (tree_t *const tree, uint64_t const position) {
+load_page_return_pair_t* load_page (tree_t *const tree, uint64_t const position) {
 	return tree->root_range == NULL ?
 			load_rtree_page (tree,position)
 			:load_ntree_page (tree,position);
@@ -917,8 +932,8 @@ void delete_ntree_page (page_t *const page) {
 
 uint64_t flush_page (tree_t *const tree, uint64_t const page_id) {
 	pthread_rwlock_rdlock (&tree->tree_lock);
-	page_t *const page = LOADED_PAGE(page_id);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
+	page_t *const page = (page_t*)get(tree->heapfile_index,page_id);
+	pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const)get(tree->page_locks,page_id);
 	pthread_rwlock_unlock (&tree->tree_lock);
 
 	if ((page != NULL && page_lock == NULL)
@@ -1337,7 +1352,7 @@ uint64_t flush_tree (tree_t *const tree) {
 			page_t *const page = entry->value;
 
 			pthread_rwlock_rdlock (&tree->tree_lock);
-			pthread_rwlock_t *const page_lock = LOADED_LOCK(entry->key);
+			pthread_rwlock_t *const page_lock = (pthread_rwlock_t *const)get(tree->page_locks,entry->key);
 
 			UNSET_PAGE (entry->key);
 			UNSET_LOCK (entry->key);
@@ -1379,21 +1394,26 @@ static
 boolean update_box (tree_t *const tree, uint64_t const page_id) {
 	if (!page_id) return false;
 
-	page_t *const parent = load_page (tree,PARENT_ID(page_id));
-	page_t const*const page = load_page (tree,page_id);
+	load_page_return_pair_t *load_pair = load_page (tree,PARENT_ID(page_id));
+	pthread_rwlock_t *const parent_lock = load_pair->page_lock;
+	page_t *const parent = load_pair->page;
+	free (load_pair);
 
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	pthread_rwlock_t *const parent_lock = LOADED_LOCK(PARENT_ID(page_id));
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-	pthread_rwlock_unlock (&tree->tree_lock);
-
+	assert (parent != NULL);
 	assert (parent_lock != NULL);
+
+	load_pair = load_page (tree,page_id);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t const*const page = load_pair->page;
+	free (load_pair);
+
+	assert (page != NULL);
 	assert (page_lock != NULL);
 
 	boolean is_updated = false;
 
-	pthread_rwlock_wrlock (parent_lock);
-	pthread_rwlock_rdlock (page_lock);
+	pthread_rwlock_rdlock (page_lock);   //////////////////////////////////////////////////////////////////////////// TURN!
+	pthread_rwlock_wrlock (parent_lock); //////////////////////////////////////////////////////////////////////////// CHECK
 
 	uint64_t const offset = CHILD_OFFSET(page_id);
 	if (page->header.is_leaf) {
@@ -1439,13 +1459,15 @@ boolean update_box (tree_t *const tree, uint64_t const page_id) {
 }
 
 void update_root_range (tree_t *const tree) {
-	page_t const*const page = load_page (tree,0);
-	assert (page != NULL);
+	load_page_return_pair_t *const load_pair = load_page (tree,0);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t const*const page = load_pair->page;
+	free (load_pair);
 
-	pthread_rwlock_wrlock (&tree->tree_lock);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(0);
+	assert (page != NULL);
 	assert (page_lock != NULL);
 
+	pthread_rwlock_wrlock (&tree->tree_lock);
 	pthread_rwlock_rdlock (page_lock);
 	if (page->header.is_leaf) {
 		for (register uint32_t i=0; i<page->header.records; ++i) {
@@ -1477,17 +1499,21 @@ void update_root_range (tree_t *const tree) {
 static
 boolean update_internal_range (tree_t *const tree, uint64_t const page_id) {
 	if (!page_id) return false;
-	page_t const*const page = load_page (tree,page_id);
-	page_t *const parent = load_page (tree,PARENT_ID(page_id));
-	assert (page != NULL);
+
+	load_page_return_pair_t *load_pair = load_page (tree,PARENT_ID(page_id));
+	pthread_rwlock_t *const parent_lock = load_pair->page_lock;
+	page_t *const parent = load_pair->page;
+	free (load_pair);
+
 	assert (parent != NULL);
-
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
-	pthread_rwlock_t *const parent_lock = LOADED_LOCK(PARENT_ID(page_id));
-	pthread_rwlock_unlock (&tree->tree_lock);
-
 	assert (parent_lock != NULL);
+
+	load_pair = load_page (tree,page_id);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t const*const page = load_pair->page;
+	free (load_pair);
+
+	assert (page != NULL);
 	assert (page_lock != NULL);
 
 	pthread_rwlock_rdlock (page_lock);
@@ -1558,19 +1584,20 @@ void update_upwards (tree_t *const tree, uint64_t page_id) {
 void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t const offset) {
 	LOG(info,"[%s][cascade_deletion()] CASCADED DELETION TO BLOCK %lu.\n",tree->filename,page_id);
 
-	page_t *const page = load_page (tree,page_id);
+	load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+	pthread_rwlock_t *const page_lock = load_pair->page_lock;
+	page_t *const page = load_pair->page;
+	free (load_pair);
+
+	assert (page != NULL);
+	assert (page_lock != NULL);
 
 	pthread_rwlock_wrlock (&tree->tree_lock);
-	pthread_rwlock_t *const page_lock = LOADED_LOCK(page_id);
 	tree->is_dirty = true;
 	pthread_rwlock_unlock (&tree->tree_lock);
 
-	assert (page_lock != NULL);
-
 	pthread_rwlock_wrlock (page_lock);
-
 	assert (offset < page->header.records);
-
 	page->header.is_dirty = true;
 
 	/***** Cascade deletion upward, or update the root if necessary *****/
@@ -1644,16 +1671,23 @@ void cascade_deletion (tree_t *const tree, uint64_t const page_id, uint32_t cons
 
 		while (browse->size) {
 			uint64_t const subsumed_id = remove_from_stack (browse);
-			load_page (tree,subsumed_id);
+
+			load_page_return_pair_t *const subsumed_pair = load_page (tree,subsumed_id);
+			pthread_rwlock_t *const subsumed_lock = subsumed_pair->page_lock;
+			page_t *const subsumed_page = subsumed_pair->page;
+			free (subsumed_pair);
 
 			pthread_rwlock_wrlock (&tree->tree_lock);
-			page_t* subsumed_page = UNSET_PAGE(subsumed_id);
-			pthread_rwlock_t* subsumed_lock = UNSET_LOCK(subsumed_id);
+			page_t const*const unset_page = UNSET_PAGE(subsumed_id);
+			pthread_rwlock_t const*const unset_lock = UNSET_LOCK(subsumed_id);
 			UNSET_PRIORITY (subsumed_id);
 			pthread_rwlock_unlock (&tree->tree_lock);
 
 			assert (subsumed_lock != NULL);
 			assert (subsumed_page != NULL);
+			assert (subsumed_lock == unset_lock);
+			assert (subsumed_page == unset_page);
+			assert (!UNSET_PRIORITY(subsumed_id));
 
 			pthread_rwlock_wrlock (subsumed_lock);
 			subsumed_page->header.is_dirty = true;

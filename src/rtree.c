@@ -249,17 +249,24 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	}
 
 	uint64_t parent_id = PARENT_ID(position);
-	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,parent_id);
-	LOG (info,"[%s][halve_internal()] HALVING NON-LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
-	pthread_rwlock_unlock (&tree->tree_lock);
+	load_page_return_pair_t *load_pair = load_page (tree,parent_id);
+	pthread_rwlock_t *parent_lock = load_pair->page_lock;
+	page_t *parent = load_pair->page;
+	free (load_pair);
 
-	assert (page_lock != NULL);
+	assert (parent != NULL);
 	assert (parent_lock != NULL);
+
+	load_pair = load_page (tree,position);
+	pthread_rwlock_t *page_lock = load_pair->page_lock;
+	page_t const* overloaded_page = load_pair->page;
+	free (load_pair);
+
+	assert (overloaded_page != NULL);
+	assert (page_lock != NULL);
+
+	LOG (info,"[%s][halve_internal()] HALVING NON-LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
 	page_t* lo_page = NULL;
 	page_t* hi_page = NULL;
@@ -279,29 +286,40 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			position = remove_tail_of_queue (inception_queue);
 			assert (parent_id == PARENT_ID(position));
 
-			parent = load_page (tree,parent_id);
-			overloaded_page = load_page (tree,position);
+			load_pair = load_page (tree,parent_id);
+			pthread_rwlock_t *parent_lock = load_pair->page_lock;
+			page_t *parent = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			page_lock = LOADED_LOCK(position);
-			parent_lock = LOADED_LOCK(parent_id);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
-			assert (page_lock != NULL);
+			assert (parent != NULL);
 			assert (parent_lock != NULL);
+
+			load_pair = load_page (tree,position);
+			pthread_rwlock_t *page_lock = load_pair->page_lock;
+			page_t const* overloaded_page = load_pair->page;
+			free (load_pair);
+
+			assert (overloaded_page != NULL);
+			assert (page_lock != NULL);
 		}else{
 			position = 1;
 			new_root(tree);
-			parent = load_page (tree,0);
-			overloaded_page = load_page (tree,position);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			page_lock = LOADED_LOCK(1);
-			parent_lock = LOADED_LOCK(0);
-			pthread_rwlock_unlock (&tree->tree_lock);
+			load_pair = load_page (tree,0);
+			pthread_rwlock_t *parent_lock = load_pair->page_lock;
+			page_t *parent = load_pair->page;
+			free (load_pair);
 
-			assert (page_lock != NULL);
+			assert (parent != NULL);
 			assert (parent_lock != NULL);
+
+			load_pair = load_page (tree,position);
+			pthread_rwlock_t *page_lock = load_pair->page_lock;
+			page_t const* overloaded_page = load_pair->page;
+			free (load_pair);
+
+			assert (overloaded_page != NULL);
+			assert (page_lock != NULL);
 
 			insert_at_tail_of_queue (inception_queue,0xffffffffffffffff);
 			do{
@@ -474,7 +492,15 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	assert (lo_page->header.records == lo_pages->size);
 	for (register uint32_t i=lo_page->header.records-1; lo_pages->size; --i) {
 		uint64_t const offset = remove_from_stack (lo_pages);
-		page_t *const page = load_page (tree,CHILD_ID(position,offset));
+
+		load_pair = load_page (tree,CHILD_ID(position,offset));
+		pthread_rwlock_t *page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
+
+		assert (page != NULL);
+		assert (page_lock != NULL);
+
 		if (page != NULL) {
 			new_child = new_id = CHILD_ID(position,i);
 			old_child = CHILD_ID(position,offset);
@@ -514,7 +540,15 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	assert (hi_page->header.records == hi_pages->size);
 	for (register uint32_t i=hi_page->header.records-1; hi_pages->size; --i) {
 		uint64_t const offset = remove_from_stack (hi_pages);
-		page_t *const page = load_page (tree,CHILD_ID(position,offset));
+
+		load_pair = load_page (tree,CHILD_ID(position,offset));
+		pthread_rwlock_t *page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
+
+		assert (page != NULL);
+		assert (page_lock != NULL);
+
 		if (page != NULL) {
 			new_child = new_id = CHILD_ID(hi_id,i);
 			old_child = CHILD_ID(position,offset);
@@ -598,10 +632,13 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	assert (update_flag);
 
 	assert (parent_id == PARENT_ID(hi_id));
-	parent = load_page (tree,parent_id);
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	parent_lock = LOADED_LOCK(parent_id);
-	pthread_rwlock_unlock (&tree->tree_lock);
+
+	load_pair = load_page (tree,parent_id);
+	parent_lock = load_pair->page_lock;
+	parent = load_pair->page;
+	free (load_pair);
+
+	assert (parent != NULL);
 	assert (parent_lock != NULL);
 
 	pthread_rwlock_wrlock (parent_lock);
@@ -663,7 +700,6 @@ uint64_t halve_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 		if (swapped != 0xffffffffffffffff) {
 			LOG (info,"[%s][halve_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,hi_id);
-			assert (LOADED_PAGE(swapped) != NULL);
 			if (flush_page (tree,swapped) != swapped) {
 				LOG (fatal,"[%s][halve_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
@@ -727,19 +763,24 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 	}
 
 	uint64_t parent_id = PARENT_ID(position);
-	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,parent_id);
+
+	load_page_return_pair_t *load_pair = load_page (tree,parent_id);
+	pthread_rwlock_t *parent_lock = load_pair->page_lock;
+	page_t *parent = load_pair->page;
+	free (load_pair);
+
 	assert (parent != NULL);
+	assert (parent_lock != NULL);
+
+	load_pair = load_page (tree,position);
+	pthread_rwlock_t *page_lock = load_pair->page_lock;
+	page_t *overloaded_page = load_pair->page;
+	free (load_pair);
+
+	assert (overloaded_page != NULL);
+	assert (page_lock != NULL);
 
 	LOG (info,"[%s][split_internal()] SPLITTING NON-LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
-
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
-	pthread_rwlock_unlock (&tree->tree_lock);
-
-	assert (page_lock != NULL);
-	assert (parent_lock != NULL);
 
 	if (verbose_splits) {
 		print_box(false,tree,parent->node.internal.BOX(CHILD_OFFSET(position)));
@@ -757,29 +798,40 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 			position = remove_tail_of_queue (inception_queue);
 			assert (parent_id == PARENT_ID(position));
 
-			parent = load_page (tree,parent_id);
-			overloaded_page = load_page (tree,position);
+			load_pair = load_page (tree,parent_id);
+			parent_lock = load_pair->page_lock;
+			parent = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			page_lock = LOADED_LOCK(position);
-			parent_lock = LOADED_LOCK(parent_id);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
-			assert (page_lock != NULL);
+			assert (parent != NULL);
 			assert (parent_lock != NULL);
+
+			load_pair = load_page (tree,position);
+			page_lock = load_pair->page_lock;
+			overloaded_page = load_pair->page;
+			free (load_pair);
+
+			assert (overloaded_page != NULL);
+			assert (page_lock != NULL);
 		}else{
 			position = 1;
 			new_root(tree);
-			parent = load_page (tree,0);
-			overloaded_page = load_page (tree,position);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			parent_lock = LOADED_LOCK(0);
-			page_lock = LOADED_LOCK(1);
-			pthread_rwlock_unlock (&tree->tree_lock);
+			load_pair = load_page (tree,0);
+			parent_lock = load_pair->page_lock;
+			parent = load_pair->page;
+			free (load_pair);
 
-			assert (page_lock != NULL);
+			assert (parent != NULL);
 			assert (parent_lock != NULL);
+
+			load_pair = load_page (tree,position);
+			page_lock = load_pair->page_lock;
+			overloaded_page = load_pair->page;
+			free (load_pair);
+
+			assert (overloaded_page != NULL);
+			assert (page_lock != NULL);
 
 			insert_at_tail_of_queue (inception_queue,0xffffffffffffffff);
 			do{
@@ -1184,10 +1236,12 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 		assert (update_flag);
 
 		assert (parent_id == PARENT_ID(hi_id));
-		parent = load_page (tree,parent_id);
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		parent_lock = LOADED_LOCK(parent_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *load_pair = load_page (tree,parent_id);
+		pthread_rwlock_t *parent_lock = load_pair->page_lock;
+		page_t *parent = load_pair->page;
+		free (load_pair);
+
+		assert (parent != NULL);
 		assert (parent_lock != NULL);
 
 		pthread_rwlock_wrlock (parent_lock);
@@ -1249,7 +1303,6 @@ uint64_t split_internal (tree_t *const tree, uint64_t position, fifo_t *const in
 
 			if (swapped != 0xffffffffffffffff) {
 				LOG (info,"[%s][split_internal()] Swapping block %lu for block %lu from the disk.\n",tree->filename,swapped,hi_id);
-				assert (LOADED_PAGE(swapped) != NULL);
 				if (flush_page (tree,swapped) != swapped) {
 					LOG (fatal,"[%s][split_internal()] Unable to flush block %lu...\n",tree->filename,swapped);
 					exit (EXIT_FAILURE);
@@ -1335,14 +1388,24 @@ index_t expansion_volume (index_t const key[], interval_t const box[], uint32_t 
 static
 uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[]) {
 	uint64_t parent_id = PARENT_ID(position);
-	page_t* overloaded_page = load_page (tree,position);
-	page_t* parent = load_page (tree,parent_id);
-	LOG (info,"[%s][split_leaf()] SPLITTING LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
-	pthread_rwlock_rdlock (&tree->tree_lock);
-	pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-	pthread_rwlock_t* parent_lock = LOADED_LOCK(parent_id);
-	pthread_rwlock_unlock (&tree->tree_lock);
+	load_page_return_pair_t *load_pair = load_page (tree,parent_id);
+	pthread_rwlock_t *parent_lock = load_pair->page_lock;
+	page_t *parent = load_pair->page;
+	free (load_pair);
+
+	assert (parent != NULL);
+	assert (parent_lock != NULL);
+
+	load_pair = load_page (tree,position);
+	pthread_rwlock_t *page_lock = load_pair->page_lock;
+	page_t const* overloaded_page = load_pair->page;
+	free (load_pair);
+
+	assert (overloaded_page != NULL);
+	assert (page_lock != NULL);
+
+	LOG (info,"[%s][split_leaf()] SPLITTING LEAF BLOCK AT POSITION %lu HAVING %u ENTRIES.\n",tree->filename,position,overloaded_page->header.records);
 
 	assert (page_lock != NULL);
 	assert (parent_lock != NULL);
@@ -1374,17 +1437,21 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 			assert (!inception_queue->size);
 			delete_queue (inception_queue);
 
-			parent = load_page (tree,parent_id);
-			overloaded_page = load_page (tree,position);
+			load_pair = load_page (tree,parent_id);
+			parent_lock = load_pair->page_lock;
+			parent = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			page_lock = LOADED_LOCK(position);
-			parent_lock = LOADED_LOCK(parent_id);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
-			assert (page_lock != NULL);
+			assert (parent != NULL);
 			assert (parent_lock != NULL);
+
+			load_pair = load_page (tree,position);
+			page_lock = load_pair->page_lock;
+			overloaded_page = load_pair->page;
+			free (load_pair);
+
 			assert (overloaded_page != NULL);
+			assert (page_lock != NULL);
 		}
 	}else{
 		parent = new_internal(tree);
@@ -1422,9 +1489,9 @@ uint64_t split_leaf (tree_t *const tree, uint64_t position, index_t const key[])
 				LOG (fatal,"[%s][split_leaf()] Unable to flush block %lu...\n",tree->filename,swapped);
 				exit (EXIT_FAILURE);
 			}
+			pthread_rwlock_wrlock (&tree->tree_lock);
 			assert (LOADED_PAGE(swapped) == NULL);
 			assert (LOADED_LOCK(swapped) == NULL);
-			pthread_rwlock_wrlock (&tree->tree_lock);
 		}
 	}
 	assert (overloaded_page->header.records == tree->leaf_entries);
@@ -1632,11 +1699,14 @@ object_t delete_from_rtree (tree_t *const tree, index_t const key[]) {
 
 	while (browse->size) {
 		uint64_t const page_id = remove_from_stack (browse);
-		page_t *const page = load_page (tree,page_id);
 
-		pthread_rwlock_wrlock (&tree->tree_lock);
-		pthread_rwlock_t* page_lock = LOADED_LOCK(page_id);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,page_id);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t *const page = load_pair->page;
+		free (load_pair);
+
+		assert (page != NULL);
+		assert (page_lock != NULL);
 
 		pthread_rwlock_rdlock (page_lock);
 		if (page->header.is_leaf) {
@@ -1817,17 +1887,38 @@ typedef struct {
 
 static
 int compare_expansion_dummy (void const*const xcontainer, void const*const ycontainer) {
-	tree_t const*const tree=((dummy_t*)xcontainer)->tree;
+	tree_t *const tree = ((dummy_t*)xcontainer)->tree;
 	index_t const*const key = ((dummy_t*)xcontainer)->key;
 
 	uint64_t const x = ((dummy_t*)xcontainer)->page_id;
 	uint64_t const y = ((dummy_t*)ycontainer)->page_id;
 
-	//assert (load_page (tree,PARENT_ID(x))->header.is_valid);
-	//assert (load_page (tree,PARENT_ID(y))->header.is_valid);
+	uint64_t const parent_id_x = PARENT_ID(x);
+	load_page_return_pair_t *load_pair = load_page (tree,parent_id_x);
+	pthread_rwlock_t *const parent_lock_x = load_pair->page_lock;
+	page_t *const parent_x = load_pair->page;
+	free (load_pair);
 
-	index_t volx = expansion_volume (key,x==0?tree->root_box:load_page ((tree_t *const)tree,PARENT_ID(x))->node.internal.BOX(CHILD_OFFSET(x)),tree->dimensions);
-	index_t voly = expansion_volume (key,y==0?tree->root_box:load_page ((tree_t *const)tree,PARENT_ID(y))->node.internal.BOX(CHILD_OFFSET(y)),tree->dimensions);
+	assert (parent_x != NULL);
+	assert (parent_lock_x != NULL);
+
+	pthread_rwlock_rdlock (parent_lock_x);
+	index_t volx = expansion_volume (key,x==0?tree->root_box:parent_x->node.internal.BOX(CHILD_OFFSET(x)),tree->dimensions);
+	pthread_rwlock_unlock (parent_lock_x);
+
+
+	uint64_t const parent_id_y = PARENT_ID(y);
+	load_pair = load_page (tree,parent_id_y);
+	pthread_rwlock_t *const parent_lock_y = load_pair->page_lock;
+	page_t *const parent_y = load_pair->page;
+	free (load_pair);
+
+	assert (parent_y != NULL);
+	assert (parent_lock_y != NULL);
+
+	pthread_rwlock_rdlock (parent_lock_y);
+	index_t voly = expansion_volume (key,y==0?tree->root_box:parent_y->node.internal.BOX(CHILD_OFFSET(y)),tree->dimensions);
+	pthread_rwlock_unlock (parent_lock_y);
 
 	if (volx<voly) return -1;
 	else if (volx>voly) return 1;
@@ -1865,12 +1956,13 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 
 	while (browse->size) {
 		uint64_t const position = remove_from_stack (browse);
-		page_t *const page = load_page (tree,position);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t *const page_lock = LOADED_LOCK(position);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_page_return_pair_t *const load_pair = load_page (tree,position);
+		pthread_rwlock_t *const page_lock = load_pair->page_lock;
+		page_t const*const page = load_pair->page;
+		free (load_pair);
 
+		assert (page != NULL);
 		assert (page_lock != NULL);
 
 		pthread_rwlock_rdlock (page_lock);
@@ -1885,7 +1977,7 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 					insert_into_stack (browse,CHILD_ID(position,i));
 				}else{
 					index_t tempvol = expansion_volume(key,page->node.internal.BOX(i),tree->dimensions);
-					if (tempvol < minvol && LOADED_PAGE(CHILD_ID(position,i)) != NULL) {
+					if (tempvol < minvol) { //&& LOADED_PAGE(CHILD_ID(position,i)) != NULL) {
 						minexp = CHILD_ID(position,i);
 						minvol = tempvol;
 					}
@@ -1897,40 +1989,75 @@ void insert_into_rtree (tree_t *const tree, index_t const key[], object_t const 
 	delete_stack (browse);
 
 	if (minpos != 0xffffffffffffffff) {
-		page_t* minleaf = load_page (tree,minpos);
+		load_page_return_pair_t *load_pair = load_page (tree,minpos);
+		pthread_rwlock_t *minleaf_lock = load_pair->page_lock;
+		page_t *minleaf = load_pair->page;
+		free (load_pair);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		pthread_rwlock_t* minleaf_lock = LOADED_LOCK(minpos);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		assert (minleaf != NULL);
 		assert (minleaf_lock != NULL);
+
 		pthread_rwlock_rdlock (minleaf_lock);
 		uint32_t minleaf_records = minleaf->header.records;
 		pthread_rwlock_unlock (minleaf_lock);
 
 		if (minleaf_records >= tree->leaf_entries) {
 			//page_t *const nca = load_page (tree,PARENT_ID(minexp));
-LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK %lu.\n",tree->filename,minpos);
+			LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK %lu.\n",tree->filename,minpos);
 			minpos = split_leaf (tree,minpos,key);
+
 			uint64_t const parent_id = PARENT_ID(minpos);
-			uint64_t const sibling = CHILD_ID(parent_id,load_page(tree,parent_id)->header.records-1);
+			load_pair = load_page (tree,parent_id);
+			pthread_rwlock_t *const parent_lock = load_pair->page_lock;
+			page_t *const parent = load_pair->page;
+			free (load_pair);
+
+			assert (parent != NULL);
+			assert (parent_lock != NULL);
+
+			pthread_rwlock_rdlock (parent_lock);
+			uint64_t const sibling_id = CHILD_ID(parent_id,parent->header.records-1);
+			pthread_rwlock_unlock (parent_lock);
 
 			boolean former = key_enclosed_by_box(key,MBB(minpos),tree->dimensions);
-			boolean latter = key_enclosed_by_box(key,MBB(sibling),tree->dimensions);
+			boolean latter = key_enclosed_by_box(key,MBB(sibling_id),tree->dimensions);
 
-			if (former && latter)
-				minpos = load_page (tree,minpos)->header.records < load_page (tree,sibling)->header.records ? minpos : sibling;
-			else if (latter) minpos = sibling;
+			load_pair = load_page (tree,minpos);
+			minleaf_lock = load_pair->page_lock;
+			minleaf = load_pair->page;
+			free (load_pair);
+
+			assert (minleaf != NULL);
+			assert (minleaf_lock != NULL);
+
+			if (former && latter) {
+				load_pair = load_page (tree,sibling_id);
+				pthread_rwlock_t *const sibling_lock = load_pair->page_lock;
+				page_t *const sibling = load_pair->page;
+				free (load_pair);
+
+				assert (sibling != NULL);
+				assert (sibling_lock != NULL);
+
+				pthread_rwlock_rdlock (minleaf_lock);
+				pthread_rwlock_rdlock (sibling_lock);
+				if (minleaf->header.records > sibling->header.records) {
+					minpos = sibling_id;
+				}
+				pthread_rwlock_unlock (sibling_lock);
+				pthread_rwlock_unlock (minleaf_lock);
+			}else if (latter) minpos = sibling_id;
 			else if (former) ;
 			else{
-				index_t tempvol = expansion_volume(key,load_page (tree,parent_id)->node.internal.BOX(CHILD_OFFSET(minpos)),tree->dimensions);
-				if (tempvol < minvol && load_page (tree,minpos) != NULL) {
+				index_t tempvol = expansion_volume(key,parent->node.internal.BOX(CHILD_OFFSET(minpos)),tree->dimensions);
+				if (tempvol < minvol && minleaf != NULL) {
 					minexp = minpos;
 					minvol = tempvol;
 				}
 
-				tempvol = expansion_volume(key,load_page (tree,parent_id)->node.internal.BOX(CHILD_OFFSET(sibling)),tree->dimensions);
-				if (tempvol < minvol && load_page (tree,sibling) != NULL) {
-					minexp = sibling;
+				tempvol = expansion_volume(key,parent->node.internal.BOX(CHILD_OFFSET(sibling_id)),tree->dimensions);
+				if (tempvol < minvol) { //&& load_page (tree,sibling_id) != NULL) {
+					minexp = sibling_id;
 					minvol = tempvol;
 				}
 				LOG (info,"[%s][insert_into_rtree()] EXPANDED HERE BLOCK %lu...\n",tree->filename,minexp);
@@ -1938,11 +2065,14 @@ LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK %lu.\n",tree->file
 				goto expand;
 			}
 		}
-		minleaf = load_page (tree,minpos);
 
-		pthread_rwlock_rdlock (&tree->tree_lock);
-		minleaf_lock = LOADED_LOCK(minpos);
-		pthread_rwlock_unlock (&tree->tree_lock);
+		load_pair = load_page (tree,minpos);
+		minleaf_lock = load_pair->page_lock;
+		minleaf = load_pair->page;
+		free (load_pair);
+
+		assert (minleaf != NULL);
+		assert (minleaf_lock != NULL);
 
 		pthread_rwlock_wrlock (minleaf_lock);
 		minleaf->header.is_dirty = true;
@@ -1966,15 +2096,14 @@ LOG (info,"[%s][insert_into_rtree()] MIN-LOAD SPLIT FOR BLOCK %lu.\n",tree->file
 		while (!is_inserted && volume_expansion_priority_queue->size) {
 			dummy_t *const container = (dummy_t *const) remove_from_priority_queue (volume_expansion_priority_queue);
 			uint64_t position = container->page_id;
-
 			free (container);
 
-			page_t* page = load_page (tree,position);
+			load_page_return_pair_t *load_pair = load_page (tree,position);
+			pthread_rwlock_t *page_lock = load_pair->page_lock;
+			page_t *page = load_pair->page;
+			free (load_pair);
 
-			pthread_rwlock_rdlock (&tree->tree_lock);
-			pthread_rwlock_t* page_lock = LOADED_LOCK(position);
-			pthread_rwlock_unlock (&tree->tree_lock);
-
+			assert (page != NULL);
 			assert (page_lock != NULL);
 
 			pthread_rwlock_rdlock (page_lock);
@@ -1985,22 +2114,47 @@ LOG (info,"[%s][insert_into_rtree()] EXPANSION SPLIT FOR BLOCK %lu.\n",tree->fil
 					position = split_leaf (tree,position,key);
 LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID %lu.\n",tree->filename,position);
 
-					uint64_t const parent_id = PARENT_ID (position);
-					uint64_t const sibling = CHILD_ID(parent_id,load_page(tree,parent_id)->header.records-1);
+					uint64_t const parent_id = PARENT_ID(position);
+					load_pair = load_page (tree,parent_id);
+					pthread_rwlock_t *const parent_lock = load_pair->page_lock;
+					page_t *const parent = load_pair->page;
+					free (load_pair);
+
+					assert (parent != NULL);
+					assert (parent_lock != NULL);
+
+					pthread_rwlock_rdlock (parent_lock);
+					uint64_t const sibling_id = CHILD_ID(parent_id,parent->header.records-1);
+					pthread_rwlock_unlock (parent_lock);
 
 					boolean former = key_enclosed_by_box(key,MBB(position),tree->dimensions);
-					boolean latter = key_enclosed_by_box(key,MBB(sibling),tree->dimensions);
+					boolean latter = key_enclosed_by_box(key,MBB(sibling_id),tree->dimensions);
 
-					if (former && latter)
-						position = load_page (tree,position)->header.records < load_page (tree,sibling)->header.records ? position : sibling;
-					else if (latter) position = sibling;
+					load_pair = load_page (tree,position);
+					page_lock = load_pair->page_lock;
+					page = load_pair->page;
+					free (load_pair);
 
-					page = load_page (tree,position);
-
-					pthread_rwlock_rdlock (&tree->tree_lock);
-					page_lock = LOADED_LOCK(position);
-					pthread_rwlock_unlock (&tree->tree_lock);
+					assert (page != NULL);
 					assert (page_lock != NULL);
+
+					if (former && latter) {
+						load_pair = load_page (tree,sibling_id);
+						pthread_rwlock_t *const sibling_lock = load_pair->page_lock;
+						page_t *const sibling = load_pair->page;
+						free (load_pair);
+
+						assert (sibling != NULL);
+						assert (sibling_lock != NULL);
+
+						pthread_rwlock_rdlock (page_lock);
+						pthread_rwlock_rdlock (sibling_lock);
+						if (page->header.records > sibling->header.records) {
+							position = sibling_id;
+						}
+						pthread_rwlock_unlock (sibling_lock);
+						pthread_rwlock_unlock (page_lock);
+					}else if (latter) position = sibling_id;
 
 					pthread_rwlock_rdlock (page_lock);
 				}
@@ -2015,18 +2169,16 @@ LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID %lu.\n",tr
 				pthread_rwlock_unlock (page_lock);
 
 				for (uint64_t parent_id = PARENT_ID(position); position; parent_id = PARENT_ID(position)) {
-					page_t *const parent = load_page (tree,parent_id);
+					load_page_return_pair_t *const load_pair = load_page (tree,parent_id);
+					pthread_rwlock_t *const parent_lock = load_pair->page_lock;
+					page_t *const parent = load_pair->page;
+					free (load_pair);
 
-					pthread_rwlock_rdlock (&tree->tree_lock);
-					pthread_rwlock_t *const parent_lock = LOADED_LOCK(parent_id);
-					pthread_rwlock_unlock (&tree->tree_lock);
-
+					assert (parent != NULL);
 					assert (parent_lock != NULL);
 
-					uint32_t const offset = CHILD_OFFSET(position);
-
 					pthread_rwlock_wrlock (parent_lock);
-
+					uint32_t const offset = CHILD_OFFSET(position);
 					if (key_enclosed_by_box (key,
 									parent->node.internal.BOX(offset),
 									tree->dimensions)) {
@@ -2042,21 +2194,19 @@ LOG (info,"[%s][insert_into_rtree()] DONE SPLIT FOR BLOCK WITH NEW ID %lu.\n",tr
 							parent->node.internal.INTERVALS(offset,j).end = key[j];
 					}
 					parent->header.is_dirty = true;
-
 					pthread_rwlock_unlock (parent_lock);
-
 					position = parent_id;
 				}
 
-				page = load_page (tree,position);
+				load_page_return_pair_t *const load_pair = load_page (tree,position);
+				pthread_rwlock_t *const page_lock = load_pair->page_lock;
+				page_t const*const page = load_pair->page;
+				free (load_pair);
 
-				pthread_rwlock_rdlock (&tree->tree_lock);
-				page_lock = LOADED_LOCK(position);
-				pthread_rwlock_unlock (&tree->tree_lock);
+				assert (page != NULL);
 				assert (page_lock != NULL);
 
 				pthread_rwlock_rdlock (page_lock);
-
 				pthread_rwlock_wrlock (&tree->tree_lock);
 				if (!position) {
 					if (page->header.records) {
